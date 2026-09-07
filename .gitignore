@@ -1,70 +1,27 @@
-# Unity generated files
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
-[Mm]emoryCaptures/
-UserSettings/
-Recordings/
-
-# Unity IDE and generated project files
-.vs/
-.idea/
-.vscode/
-*.csproj
-*.sln
-*.suo
-*.user
-*.userprefs
-*.pidb
-*.booproj
-*.svd
-*.pdb
-*.mdb
-*.opendb
-*.VC.db
-
-# Python and computer vision
+# Python
+.venv/
 __pycache__/
 *.py[cod]
-*.pyd
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
-venv/
-env/
 
-# Secrets and local configuration
-.env
-.env.*
-!.env.example
-*.key
-*.pem
+# Local capture and private research data
+data/raw/
+data/private/
+data/interviews/
+data/consent/
 
-# Research data that must stay private
-data/raw/*
-data/private/*
-data/interviews/*
-data/consent/*
-!data/raw/README.md
-!data/private/README.md
-!data/interviews/README.md
-!data/consent/README.md
+# Unity generated folders
+unity/Library/
+unity/Temp/
+unity/Logs/
+unity/Obj/
+unity/Build/
+unity/Builds/
+unity/UserSettings/
 
-# Large generated media and exports
-media/recordings/*
-media/exports/*
-*.mp4
-*.mov
-*.avi
-
-# OS and editor files
+# Editors and operating system
+.idea/
+.vs/
+.vscode/
 .DS_Store
 Thumbs.db
-Desktop.ini
-*.tmp
-*.bak
-*.swp

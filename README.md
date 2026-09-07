@@ -49,7 +49,7 @@ urban-wildlife-simulation/
 
 第 1 周目标是完成技术闭环并冻结第一阶段 Scope：
 
-- [ ] 确认 MVP 与明确不做项
+- [x] 确认 MVP 与明确不做项
 - [ ] 固定摄像头、桌面与光照条件
 - [ ] 稳定识别单个 Marker Token
 - [ ] 识别高饱和彩绳并输出 Path Mask
@@ -57,6 +57,15 @@ urban-wildlife-simulation/
 - [ ] 输出统一数据包并完成技术 Spike 演示
 
 今天的工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)。
+
+## 第一天交付
+
+- [`docs/PROJECT_SCOPE.md`](docs/PROJECT_SCOPE.md)：Scope Freeze V1 与 P0 验收边界。
+- [`docs/HARDWARE_SOFTWARE_CHECKLIST.md`](docs/HARDWARE_SOFTWARE_CHECKLIST.md)：设备、材料与软件的确认及待验证状态。
+- [`docs/RESEARCH_LOG.md`](docs/RESEARCH_LOG.md)：研究问题、核心设计原则与 V1 到 V2 叙事。
+- [`docs/RISK_REGISTER.md`](docs/RISK_REGISTER.md)：风险清单 V0.1 与触发信号。
+- [`docs/DECISIONS.md`](docs/DECISIONS.md)：截至 2026-09-07 的已确定决策。
+- [`docs/SCENARIOS.md`](docs/SCENARIOS.md)：P0 场景 S001 与首轮约束。
 
 ## 开发约定
 
@@ -66,6 +75,7 @@ urban-wildlife-simulation/
 - 提交信息使用简短动词开头，例如 `Add marker detection spike`。
 - 每周至少更新一次开发日志，并记录失败尝试和 Scope 变化。
 - 不要提交参与者身份信息、同意书、访谈原始文件、密钥或未脱敏研究数据。
+- 网页实验 Demo 保留在独立仓库，本仓库只记录最终实体与 Unity 原型。
 
 ## 许可
 

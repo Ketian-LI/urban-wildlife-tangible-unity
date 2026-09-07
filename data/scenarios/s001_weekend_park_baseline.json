@@ -1,0 +1,126 @@
+{
+  "schema_version": "0.1",
+  "scenario_id": "S001",
+  "scenario_name": "weekend_park_replanning",
+  "board": {
+    "origin": "top_left",
+    "width_cm": 90,
+    "height_cm": 60
+  },
+  "fixed_regions": {
+    "entrance_a": {
+      "shape": "rounded_rectangle",
+      "center_cm": [3, 30],
+      "center_norm": [0.033, 0.5],
+      "size_cm": [6, 8]
+    },
+    "exit_b": {
+      "shape": "rounded_rectangle",
+      "center_cm": [87, 30],
+      "center_norm": [0.967, 0.5],
+      "size_cm": [6, 8]
+    },
+    "central_plaza": {
+      "shape": "ellipse",
+      "center_cm": [45, 18],
+      "center_norm": [0.5, 0.3],
+      "size_cm": [20, 14]
+    },
+    "pond": {
+      "shape": "irregular_horizontal_oval",
+      "center_cm": [50, 42],
+      "center_norm": [0.556, 0.7],
+      "bounding_size_cm": [18, 12]
+    },
+    "calibration_safe_zones": {
+      "corner_size_cm": [8, 8]
+    }
+  },
+  "baseline_layout": {
+    "tokens": [
+      {
+        "id": 10,
+        "type": "food_hotspot",
+        "center_cm": [45, 18],
+        "center_norm": [0.5, 0.3],
+        "expected_valid": false,
+        "reason": "overlaps_planned_path"
+      },
+      {
+        "id": 11,
+        "type": "food_hotspot",
+        "center_cm": [67, 14],
+        "center_norm": [0.744, 0.233],
+        "expected_valid": true,
+        "path_centerline_distance_cm": 6.71
+      },
+      {
+        "id": 12,
+        "type": "food_hotspot",
+        "center_cm": [12, 48],
+        "center_norm": [0.133, 0.8],
+        "expected_valid": false,
+        "reason": "path_centerline_distance_exceeds_10_cm",
+        "path_centerline_distance_cm": 12.37
+      },
+      {
+        "id": 20,
+        "type": "woodland",
+        "center_cm": [31, 45],
+        "center_norm": [0.344, 0.75]
+      },
+      {
+        "id": 21,
+        "type": "woodland",
+        "center_cm": [71, 44],
+        "center_norm": [0.789, 0.733]
+      }
+    ],
+    "planned_human_path": {
+      "format": "polyline",
+      "width_cm": 1.5,
+      "physical_effective_length_cm": 100,
+      "polyline_length_cm": 96.75,
+      "points_cm": [
+        [3, 30],
+        [15, 36],
+        [27, 27],
+        [36, 20],
+        [45, 18],
+        [58, 17],
+        [70, 23],
+        [78, 32],
+        [87, 30]
+      ],
+      "points_norm": [
+        [0.033, 0.5],
+        [0.167, 0.6],
+        [0.3, 0.45],
+        [0.4, 0.333],
+        [0.5, 0.3],
+        [0.644, 0.283],
+        [0.778, 0.383],
+        [0.867, 0.533],
+        [0.967, 0.5]
+      ],
+      "continuous": true,
+      "self_intersects": false,
+      "required_order": ["entrance_a", "central_plaza", "exit_b"]
+    }
+  },
+  "expected_constraint_check_before_player_changes": {
+    "human_connected": true,
+    "animal_reachable": true,
+    "food_hotspot_valid": false,
+    "changes_used": 0,
+    "changes_allowed": 3
+  },
+  "design_intent": {
+    "required_repairs": [
+      "move_food_hotspot_10_off_the_path",
+      "move_food_hotspot_12_into_a_valid_human_activity_influence_zone"
+    ],
+    "optional_third_change": "adjust_any_one_woodland_or_the_path_to_change_animal_disturbance_outcomes",
+    "unique_solution_required": false
+  }
+}

@@ -1,0 +1,12 @@
+* text=auto eol=lf
+*.cs text diff=csharp
+*.py text diff=python
+*.md text
+*.json text
+*.yml text
+*.yaml text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.wav binary
+*.fbx binary

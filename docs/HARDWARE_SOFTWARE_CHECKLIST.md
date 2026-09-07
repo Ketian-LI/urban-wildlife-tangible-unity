@@ -39,13 +39,13 @@
 | OpenCV | opencv-contrib-python 4.14.0.94 | 未安装到项目环境 | 安装后验证 `cv2.aruco.DICT_4X4_50` |
 | NumPy | 2.4.6 | 未安装到项目环境 | 与 OpenCV 一起执行导入测试 |
 | OBS Studio | 32.0.4 | 已安装于 `D:\obs-studio` | 记录画布、Pocket 3 视频输入、色彩和帧率设置 |
-| Git | 2.51.0.windows.2 | 已安装 | 推送独立远端后验证克隆和恢复流程 |
+| Git | 2.51.0.windows.2 | 已安装并完成首次推送 | 从干净目录验证克隆和恢复流程 |
 
 ## 文件与安全检查
 
 - [x] `.gitignore` 排除 Unity 缓存、Python 虚拟环境和原始研究数据。
 - [x] 网页实验 Demo 与最终实体 Unity 项目使用不同仓库。
 - [x] `data/` 只提交 schema、场景和脱敏样例。
-- [ ] 独立 GitHub 远端已建立并完成首次推送。
+- [x] 独立 GitHub 远端已建立并完成首次推送：<https://github.com/Ketian-LI/urban-wildlife-tangible-unity>。
 - [ ] 从干净目录克隆后能够恢复项目结构。
 - [ ] 摄像头与灯光现场照片已归档到 `hardware/evidence/`。

@@ -8,16 +8,34 @@
 
 ## P0 MVP
 
+### 实物端
+
+- 使用 60 × 90 cm 黑色磁吸板，90 cm 横向、60 cm 纵向平放在桌面。
+- 摄像头固定在板面正上方，镜头尽量与板面垂直。
+- 四角安装固定的白底校准 Marker，用于识别边界、方向和透视校正。
+- 使用可移动的 Food 与 Woodland 临时 Token，以及至少一条高饱和彩绳。
+- P0 阶段允许使用纸板、打印 Marker 和现成磁铁，不要求最终木制工艺。
+
+### 视觉识别端
+
+- 识别 Marker Token 的 ID、位置和角度。
+- 完成彩色路径的 HSV 分割、去噪与 Path Mask 输出。
+- 根据四角校准 Marker 完成 Camera 到 Game 的坐标标准化。
+
+### Unity 端
+
 - 单张 2D 公园地图。
-- 固定俯视摄像头与可重复的四角校准。
-- Marker Token 的 ID、位置和角度识别。
-- 彩色路径的 HSV 分割、去噪与 Path Mask 输出。
-- Camera 到 Game 的坐标标准化。
 - Food 与 Woodland 两类核心条件。
 - Walker、Dweller 或 Visitor 等基础人类行为。
 - 鸽子、松鼠和狐狸三种动物的基础状态机。
-- Plan、Confirm、Run、Observe 的完整单周期。
-- 最小可用的研究日志输出。
+
+### 系统闭环与研究记录
+
+- 实体布局能够通过标准数据包传入 Unity。
+- 完成 Plan、Confirm、Run、Observe 的完整单周期。
+- 输出最小可用的研究日志。
+
+P0 验收：玩家在磁吸板上移动 Food、Woodland Token 和彩绳后，摄像头能够识别并传入 Unity，使数字公园中的人类与三种动物产生可观察的变化。
 
 ## P1 Final Target
 

@@ -14,10 +14,28 @@ namespace UrbanWildlife.Input
         public string scenario_id;
         public string calibration_id;
         public LayoutCoordinateSystem coordinate_system;
+        public LayoutCapture capture;
         public LayoutRecognition recognition;
         public LayoutToken[] tokens;
         public LayoutPath path;
         public LayoutValidation validation;
+    }
+
+    [Serializable]
+    public sealed class LayoutCapture
+    {
+        public string mode;
+        public bool stable;
+        public float stable_seconds_required;
+        public float elapsed_seconds;
+        public float maximum_changed_fraction;
+        public float last_changed_fraction;
+        public int frames_observed;
+        public int difference_pixel_threshold;
+        public int analysis_width;
+        public int source;
+        public int[] actual_frame_size;
+        public string note;
     }
 
     [Serializable]

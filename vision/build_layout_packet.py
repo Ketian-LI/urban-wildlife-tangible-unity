@@ -15,8 +15,9 @@ import cv2
 import numpy as np
 
 from calibrate_corners import calibrate_frame, camera_to_normalized, transform_point
+from capture_stability import capture_stable_camera_frame
 from detect_contour_tokens import detect_contour_tokens
-from detect_markers import detect_frame, load_camera_frame
+from detect_markers import detect_frame
 from detect_path import detect_path
 from io_utils import read_image, write_image
 
@@ -166,6 +167,7 @@ def build_layout_packet(
     timestamp_ms: int,
     token_backend: str = "aruco",
     contour_config: dict[str, object] | None = None,
+    capture_metadata: dict[str, object] | None = None,
 ) -> tuple[dict[str, object], dict[str, object], np.ndarray, np.ndarray, np.ndarray]:
     width = int(calibration_config["board_size_mm"]["width"])
     height = int(calibration_config["board_size_mm"]["height"])
@@ -224,6 +226,7 @@ def build_layout_packet(
             "token_backend": token_backend,
             "token_config_version": token_config_version,
         },
+        "capture": capture_metadata or {"mode": "unspecified", "stable": False},
         "tokens": tokens,
         "path": {
             "format": "polyline",
@@ -286,11 +289,26 @@ def main() -> int:
         else None
     )
     path_preset = args.path_preset or path_config["default_preset"]
-    if args.image:
-        frame = read_image(args.image)
-    else:
-        video = calibration_config["video"]
-        frame = load_camera_frame(args.camera, video["width"], video["height"], video["fps"])
+    try:
+        if args.image:
+            frame = read_image(args.image)
+            capture_metadata: dict[str, object] = {
+                "mode": "image_input",
+                "stable": True,
+                "note": "Deterministic image input; no live stability claim",
+            }
+        else:
+            video = calibration_config["video"]
+            frame, capture_metadata = capture_stable_camera_frame(
+                args.camera,
+                video["width"],
+                video["height"],
+                video["fps"],
+                calibration_config["stability"],
+            )
+    except (RuntimeError, ValueError) as error:
+        print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False, indent=2))
+        return 2
     timestamp_ms = args.timestamp_ms if args.timestamp_ms is not None else int(datetime.now(tz=timezone.utc).timestamp() * 1000)
 
     try:
@@ -306,6 +324,7 @@ def main() -> int:
             timestamp_ms,
             token_backend=args.token_backend,
             contour_config=contour_config,
+            capture_metadata=capture_metadata,
         )
     except ValueError as error:
         print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False, indent=2))
@@ -334,6 +353,7 @@ def main() -> int:
     atomic_write_json(archive_path, packet)
     atomic_write_json(latest_path, packet)
     atomic_write_json(args.output_dir / "calibration_used.json", calibration)
+    atomic_write_json(args.output_dir / "capture_stability.json", packet["capture"])
     write_image(args.output_dir / "path_mask.png", path_mask)
     write_image(args.output_dir / "packet_overlay.png", packet_overlay)
     write_image(args.output_dir / "calibration_overlay.png", calibration_overlay)

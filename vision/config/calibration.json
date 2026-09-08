@@ -19,6 +19,15 @@
     "height": 1080,
     "fps": 30
   },
+  "stability": {
+    "stable_seconds": 1.0,
+    "maximum_wait_seconds": 6.0,
+    "difference_pixel_threshold": 18,
+    "maximum_changed_fraction": 0.015,
+    "analysis_width": 320,
+    "minimum_frames": 3,
+    "status": "provisional_until_fixed_camera_test"
+  },
   "obs_executable": "D:/obs-studio/bin/64bit/obs64.exe",
   "token_id_ranges": {
     "food_hotspot": [10, 12],

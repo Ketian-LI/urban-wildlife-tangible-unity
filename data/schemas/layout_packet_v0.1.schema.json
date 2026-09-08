@@ -13,6 +13,8 @@
     "scenario_id",
     "calibration_id",
     "coordinate_system",
+    "capture",
+    "recognition",
     "tokens",
     "path",
     "validation"
@@ -36,6 +38,14 @@
       "properties": {
         "token_backend": { "enum": ["contour", "aruco"] },
         "token_config_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "required": ["mode", "stable"],
+      "properties": {
+        "mode": { "enum": ["stable_camera", "image_input", "unspecified"] },
+        "stable": { "type": "boolean" }
       }
     },
     "tokens": {

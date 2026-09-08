@@ -24,7 +24,9 @@ namespace UrbanWildlife.Cycle
         public event Action<P0Phase> PhaseChanged;
         public P0Phase Phase => state.Phase;
         public int CycleIndex => state.CycleIndex;
+        public int CyclesPerSession => cyclesPerSession;
         public float RemainingSeconds => state.RemainingSeconds;
+        public bool CanStartRun => state.CanStartRun;
 
         private void Awake()
         {

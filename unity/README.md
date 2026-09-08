@@ -10,6 +10,7 @@
 
 - Python 在 Confirm 后原子更新 `data/raw/layout-packets/latest_layout.json`。
 - Unity Input Manager 只接受 `schema_version = 0.1` 和 `packet_type = confirmed_layout`。
+- Unity只接受带有 `capture.stable = true` 的确认数据；实时摄像头包由Python先通过约1秒稳定门控。
 - 若时间戳不比上次读取的新、JSON 不完整或版本不支持，则保持上一份有效布局并记录错误。
 - `x_norm` 映射 Unity X，`y_norm` 映射 Unity Z；四角 Marker 不会出现在 Token 数组中。
 - 正式字段定义见 `data/schemas/layout_packet_v0.1.schema.json`；隐私安全示例见 `docs/images/vision/layout-packet-validation/latest_layout.json`。
@@ -19,9 +20,10 @@
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
 3. 在仓库根目录用Python生成真实或测试用 `data/raw/layout-packets/latest_layout.json`。
-4. 点击Play，在Hierarchy选择 `Layout Input Manager`，从 `P0CycleController` 组件菜单执行 **Confirm Current Plan**。
-5. 识别数据有效时会生成黑色板面、洋红路径、3个Food与2个Woodland调试物件，并输出Constraint Check。所有约束通过后执行 **Start Run**；未通过则自动回到Plan。
-6. 版本错误、旧时间戳、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。
+4. 点击Play，使用左上控制面板的大号 **CONFIRM LAYOUT** 按钮，或按一次空格键。
+5. 识别数据有效时会生成黑色板面、洋红路径、3个Food与2个Woodland调试物件，并在面板显示Constraint Check。所有约束通过后点击 **START RUN** 或再按一次空格；未通过则自动回到Plan。
+6. Run显示60秒倒计时，随后自动进入30秒Observe；三个周期结束后可用 **RESET SESSION** 重新开始。
+7. 版本错误、旧时间戳、未通过稳定门控、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。
 
 轮廓版无隐私输入样例位于 `docs/images/vision/layout-packet-contour-v02-validation/latest_layout.json`。编辑器批处理验证命令为：
 
@@ -32,7 +34,7 @@
   -quit -logFile ".\data\raw\unity-smoke.log"
 ```
 
-成功日志包含：`UNITY_INPUT_SMOKE_OK tokens=5 path_points=11 backend=contour`。
+成功日志包含：`UNITY_INPUT_SMOKE_OK`、`UNITY_CONSTRAINT_REPAIR_OK`、`UNITY_CYCLE_SMOKE_OK`、`UNITY_SESSION_SMOKE_OK` 与 `UNITY_UI_SMOKE_OK`。
 
 ## 已实现组件
 
@@ -41,6 +43,7 @@
 - `LayoutDebugView.cs`：把归一化坐标转换为9 × 6 Unity单位的俯视板面、路径与Token调试物件。
 - `P0ScenarioModels.cs`、`P0ConstraintEvaluator.cs` 与 `P0ConstraintManager.cs`：读取S001参数并输出人类连通、动物可达、Food有效性和改动次数。
 - `P0CycleStateMachine.cs` 与 `P0CycleController.cs`：管理Plan、Confirm、60秒Run、30秒Observe和每Session 3个周期；未通过约束不能进入Run。
+- `P0ControlPanel.cs`：提供大号阶段按钮、空格快捷键、周期/倒计时和四项约束反馈。
 - `P0InputSceneTools.cs`：可重复创建P0输入场景，并在批处理模式验证脱敏夹具、9个调试元素、S001初始失败状态及两次移动后的有效修复。
 
 ## 当前边界
@@ -48,5 +51,5 @@
 - Unity目前把输入实例化为纯调试几何，还没有最终公园美术、碰撞或行为逻辑。
 - `LayoutAccepted` 是下一步供 Environment Manager 与规划约束模块订阅的唯一入口。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
-- 当前阶段切换通过组件菜单验证，尚未制作屏幕按钮、倒计时文本和阶段面板。
+- 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

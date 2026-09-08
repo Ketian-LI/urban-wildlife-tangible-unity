@@ -123,6 +123,12 @@ namespace UrbanWildlife.Input
                 return false;
             }
 
+            if (packet.capture == null || string.IsNullOrWhiteSpace(packet.capture.mode) || !packet.capture.stable)
+            {
+                error = "Packet capture metadata is missing or the confirmed frame was not stable.";
+                return false;
+            }
+
             if (packet.recognition == null ||
                 (packet.recognition.token_backend != "contour" && packet.recognition.token_backend != "aruco"))
             {

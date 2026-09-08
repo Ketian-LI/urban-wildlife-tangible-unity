@@ -22,6 +22,7 @@
 - `calibrate_corners.py`：识别四角 Marker，计算透视矩阵，输出校准标注图、俯视矫正图和 Camera → Game 标准化坐标参数。
 - `detect_path.py`：按 HSV 颜色预设分割彩色路径，进行形态学去噪并输出 Path Mask、检查图和JSON统计。
 - `build_layout_packet.py`：从同一帧提取四角校准、Token 和路径，原子写入 Unity 使用的 `latest_layout.json` 并按 Session/Cycle 归档。
+- `capture_stability.py`：在Confirm时等待连续静止画面，避免把正在移动的手、Token或抖动帧写入Unity数据包。
 - `generate_layout_fixture.py`：生成不含真实环境与个人信息的完整流程测试画面。
 - `detect_contour_tokens.py`：在900 × 600矫正板面中识别无贴纸轮廓 Token 的逻辑ID、中心、标准化坐标和方向。
 - `generate_contour_token_fixture.py`：生成5个轮廓编码和一个干扰亮块的无隐私验证画面。
@@ -89,19 +90,20 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_vision.ps1
 
 ## 统一 Unity 数据包
 
-在 Plan 完成、双手离开并点击 Confirm 后，对一张稳定画面运行：
+在 Plan 完成、双手离开并点击 Confirm 后运行：
 
 ```powershell
 .\.venv\Scripts\python.exe vision\build_layout_packet.py --camera 1 --session-id pilot-001 --cycle-index 0 --scenario-id S001 --path-preset magenta
 ```
 
-程序用四角 ID 0–3完成透视矫正，再从矫正图读取无贴纸轮廓Token，把它们转换为0–1板面坐标和角度，并将最大路径区域采样为标准化折线。默认使用 `contour_tokens_v0.2.json`；旧ArUco Token夹具仍可通过 `--token-backend aruco` 回归。缺少或重复任一ID 10、11、12、20、21时不会确认布局。默认输出：
+摄像头模式会先等待画面连续稳定约1秒，最长等待6秒；手部持续移动或支架抖动时退出且不覆盖上一份有效布局。随后程序用四角 ID 0–3完成透视矫正，再从矫正图读取无贴纸轮廓Token，把它们转换为0–1板面坐标和角度，并将最大路径区域采样为标准化折线。默认使用 `contour_tokens_v0.2.json`；旧ArUco Token夹具仍可通过 `--token-backend aruco` 回归。缺少或重复任一ID 10、11、12、20、21时不会确认布局。默认输出：
 
 - `data/raw/layout-packets/latest_layout.json`：Unity 只读取这个完整文件。
 - `data/raw/layout-packets/archive/<session>/...json`：每个周期的不可变记录。
+- `capture_stability.json`：本次Confirm的输入方式、稳定状态、帧数、等待时间和最终变化比例。
 - `path_mask.png`、`packet_overlay.png`、`calibration_overlay.png`：本地 Debug 证据，不提交真实参与者画面。
 
-`latest_layout.json` 使用“先完整写临时文件、再原子替换”的方式，避免 Unity 读到半份 JSON。正式数据契约见 `data/schemas/layout_packet_v0.1.schema.json`。当前折线采样针对 P0 单条、从左至右且不自交的路径约束。
+`latest_layout.json` 使用“先完整写临时文件、再原子替换”的方式，避免 Unity 读到半份 JSON。正式数据契约见 `data/schemas/layout_packet_v0.1.schema.json`。稳定阈值在 `config/calibration.json` 的 `stability` 区块中；当前数值是固定俯拍实测前的暂定基线。图片输入只用于确定性测试，数据包会标记为 `image_input`，不作为真实摄像头稳定证据。当前折线采样针对 P0 单条、从左至右且不自交的路径约束。
 
 ## 无贴纸轮廓 Token
 

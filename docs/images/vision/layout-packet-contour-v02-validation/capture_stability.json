@@ -1,0 +1,5 @@
+{
+  "mode": "image_input",
+  "stable": true,
+  "note": "Deterministic image input; no live stability claim"
+}

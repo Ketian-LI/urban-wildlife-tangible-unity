@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &384967562
+--- !u!1 &546751780
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 384967564}
-  - component: {fileID: 384967563}
+  - component: {fileID: 546751782}
+  - component: {fileID: 546751781}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!108 &384967563
+--- !u!108 &546751781
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 384967562}
+  m_GameObject: {fileID: 546751780}
   m_Enabled: 1
   serializedVersion: 12
   m_Type: 1
@@ -201,13 +201,13 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!4 &384967564
+--- !u!4 &546751782
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 384967562}
+  m_GameObject: {fileID: 546751780}
   serializedVersion: 2
   m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -216,7 +216,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &782347651
+--- !u!1 &1325259293
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -224,8 +224,112 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 782347653}
-  - component: {fileID: 782347652}
+  - component: {fileID: 1325259299}
+  - component: {fileID: 1325259298}
+  - component: {fileID: 1325259297}
+  - component: {fileID: 1325259296}
+  - component: {fileID: 1325259295}
+  - component: {fileID: 1325259294}
+  m_Layer: 0
+  m_Name: Layout Input Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1325259294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1325259293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3e14f562c4fd5d45b34b37da860479c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Cycle.P0ControlPanel
+--- !u!114 &1325259295
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1325259293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46a292e938281e14d8f9dd85c9f667b8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Cycle.P0CycleController
+  runSeconds: 60
+  observeSeconds: 30
+  cyclesPerSession: 3
+--- !u!114 &1325259296
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1325259293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2566887019eda5c41ba6835f10791bdc, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Planning.P0ConstraintManager
+  scenarioPath: ../../data/scenarios/s001_weekend_park_baseline.json
+--- !u!114 &1325259297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1325259293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 358005aeb7abde9498bc2951aaab00a1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Input.LayoutDebugView
+  boardSizeUnits: {x: 9, y: 6}
+  pathWidthUnits: 0.15
+--- !u!114 &1325259298
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1325259293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e62fdc939ea831d49bdb6f586abbdb0f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Input.LayoutPacketReader
+  packetPath: ../../data/raw/layout-packets/latest_layout.json
+  loadOnStart: 0
+--- !u!4 &1325259299
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1325259293}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2104458113
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2104458115}
+  - component: {fileID: 2104458114}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -233,13 +337,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &782347652
+--- !u!20 &2104458114
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 782347651}
+  m_GameObject: {fileID: 2104458113}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -284,107 +388,16 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &782347653
+--- !u!4 &2104458115
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 782347651}
+  m_GameObject: {fileID: 2104458113}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 10, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1301806390
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1301806395}
-  - component: {fileID: 1301806394}
-  - component: {fileID: 1301806393}
-  - component: {fileID: 1301806392}
-  - component: {fileID: 1301806391}
-  m_Layer: 0
-  m_Name: Layout Input Manager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1301806391
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1301806390}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 46a292e938281e14d8f9dd85c9f667b8, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Cycle.P0CycleController
-  runSeconds: 60
-  observeSeconds: 30
-  cyclesPerSession: 3
---- !u!114 &1301806392
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1301806390}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2566887019eda5c41ba6835f10791bdc, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Planning.P0ConstraintManager
-  scenarioPath: ../../data/scenarios/s001_weekend_park_baseline.json
---- !u!114 &1301806393
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1301806390}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 358005aeb7abde9498bc2951aaab00a1, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Input.LayoutDebugView
-  boardSizeUnits: {x: 9, y: 6}
-  pathWidthUnits: 0.15
---- !u!114 &1301806394
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1301806390}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e62fdc939ea831d49bdb6f586abbdb0f, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::UrbanWildlife.Input.LayoutPacketReader
-  packetPath: ../../data/raw/layout-packets/latest_layout.json
-  loadOnStart: 0
---- !u!4 &1301806395
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1301806390}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -394,6 +407,6 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1301806395}
-  - {fileID: 782347653}
-  - {fileID: 384967564}
+  - {fileID: 1325259299}
+  - {fileID: 2104458115}
+  - {fileID: 546751782}

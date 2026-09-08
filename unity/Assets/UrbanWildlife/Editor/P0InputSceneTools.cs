@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Newtonsoft.Json;
 using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
 using UrbanWildlife.Cycle;
@@ -23,6 +24,7 @@ namespace UrbanWildlife.EditorTools
             inputManager.AddComponent<LayoutDebugView>();
             inputManager.AddComponent<P0ConstraintManager>();
             inputManager.AddComponent<P0CycleController>();
+            inputManager.AddComponent<P0ControlPanel>();
 
             GameObject cameraObject = new GameObject("Main Camera");
             Camera camera = cameraObject.AddComponent<Camera>();
@@ -68,10 +70,18 @@ namespace UrbanWildlife.EditorTools
             }
 
             if (packet.tokens.Length != 5 || packet.path.point_count != 11 ||
-                packet.recognition.token_backend != "contour")
+                packet.recognition.token_backend != "contour" || !packet.capture.stable)
             {
                 throw new InvalidOperationException("Contour layout fixture contains unexpected values.");
             }
+
+            packet.capture.stable = false;
+            string unstableJson = JsonConvert.SerializeObject(packet);
+            if (LayoutPacketReader.TryParseAndValidate(unstableJson, -1, out _, out _))
+            {
+                throw new InvalidOperationException("Unity accepted a layout without a stable Confirm frame.");
+            }
+            packet.capture.stable = true;
 
             GameObject smokeObject = new GameObject("Layout Debug Smoke");
             smokeObject.AddComponent<LayoutPacketReader>();
@@ -115,7 +125,8 @@ namespace UrbanWildlife.EditorTools
 
             Debug.Log(
                 $"UNITY_INPUT_SMOKE_OK tokens={packet.tokens.Length} " +
-                $"path_points={packet.path.point_count} backend={packet.recognition.token_backend} debug_elements=9");
+                $"path_points={packet.path.point_count} backend={packet.recognition.token_backend} " +
+                $"stable={packet.capture.stable} debug_elements=9");
             Debug.Log(
                 $"UNITY_CONSTRAINT_SMOKE_OK human_connected={constraintResult.human_connected} " +
                 $"animal_reachable={constraintResult.animal_reachable} " +
@@ -167,6 +178,18 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("Three complete cycles must end the P0 session.");
             }
             Debug.Log("UNITY_SESSION_SMOKE_OK cycles=3 phase=Complete");
+
+            GameObject uiObject = new GameObject("P0 UI Smoke");
+            uiObject.AddComponent<LayoutPacketReader>();
+            uiObject.AddComponent<P0ConstraintManager>();
+            uiObject.AddComponent<P0CycleController>();
+            P0ControlPanel panel = uiObject.AddComponent<P0ControlPanel>();
+            if (panel == null || uiObject.GetComponent<P0CycleController>() == null)
+            {
+                throw new InvalidOperationException("P0 control panel dependencies were not created.");
+            }
+            UnityEngine.Object.DestroyImmediate(uiObject);
+            Debug.Log("UNITY_UI_SMOKE_OK phase=Plan space_actions=Confirm/StartRun");
         }
     }
 }

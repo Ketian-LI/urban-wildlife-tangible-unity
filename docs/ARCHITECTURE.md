@@ -69,6 +69,12 @@ Trace renderer and Research Logger
     "range": [0.0, 1.0],
     "unity_plane_mapping": "x_norm -> Unity X; y_norm -> Unity Z"
   },
+  "capture": {
+    "mode": "stable_camera",
+    "stable": true,
+    "stable_seconds_required": 1.0,
+    "frames_observed": 34
+  },
   "recognition": {
     "token_backend": "contour",
     "token_config_version": "0.2"
@@ -148,7 +154,8 @@ Observed crossings, feeding, waiting and avoidance
 
 - P0 Confirm 使用屏幕大号按钮，并提供空格键快捷键；触发后要求画面连续稳定约 1 秒再输出 JSON。
 - 预测试默认 Plan 不倒计时、Run 60 秒、Observe 约 30 秒，每个 Session 3 个周期；正式研究参数可在预测试后调整并记录版本。
-- `P0CycleController` 已实现无UI的阶段门控：约束失败返回Plan，成功后才可从Confirm进入Run；Run与Observe到时自动推进，第三周期后进入Complete。
+- `P0CycleController` 实现阶段门控：约束失败返回Plan，成功后才可从Confirm进入Run；Run与Observe到时自动推进，第三周期后进入Complete。
+- `P0ControlPanel` 提供大号阶段按钮、空格快捷键、约束反馈和倒计时；它只调用状态机公开动作，不绕过布局或约束校验。
 - 最小日志包含 `session_id`、`cycle_index`、时间戳、输入布局、约束结果、改动元素、动物状态变化、关键事件和 Trace 摘要。
 - 默认不记录参与者姓名；如后续保存视频或其他可识别资料，必须另行经过研究伦理和同意流程。
 
@@ -156,7 +163,7 @@ Observed crossings, feeding, waiting and avoidance
 
 - `vision/` 只负责读取实体状态、校准、稳定和输出标准数据。
 - `build_layout_packet.py` 默认在四角矫正图上使用V0.2轮廓Token后端；旧ArUco Token后端只用于回归测试。两个后端输出相同Token字段。
-- `unity/` 只消费标准数据，不直接依赖摄像头实现；`LayoutPacketReader` 校验版本、新时间戳、完整P0 Token集合、坐标范围与连续路径后才发布 `LayoutAccepted` 事件。
+- `unity/` 只消费标准数据，不直接依赖摄像头实现；`LayoutPacketReader` 校验版本、新时间戳、稳定确认标记、完整P0 Token集合、坐标范围与连续路径后才发布 `LayoutAccepted` 事件。
 - `data/` 只定义可公开的数据结构和脱敏样例。
 - `unity/` 中的 Constraint Manager 负责规划限制与通行检查；Human 和 Animal 系统仍负责产生实际行为结果。
 - `P0ConstraintManager` 当前实现入口→广场→出口、人类活动来源、路径安全间距、池塘避让和改动次数；动物可达性以S001只有一个不接触边界的池塘为前提，路径只增加成本而不封路。新增围栏或多个障碍时应替换为网格寻路。

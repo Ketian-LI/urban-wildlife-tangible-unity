@@ -34,7 +34,7 @@
 
 | 工具 | 锁定版本 | 本机状态 | 下一项验证 |
 | --- | --- | --- | --- |
-| Unity | 6000.3.4f1 | 已安装 | 用该版本创建 `unity/` 项目并记录所需模块 |
+| Unity | 6000.3.4f1 | P0输入、约束、回合和控制面板已编译并通过批处理烟雾测试 | 接入基础人类行为与研究日志 |
 | Python | 3.12.10 | 已建立仓库内 `.venv` | 保持使用项目环境，不使用默认 Python 3.14 |
 | OpenCV | opencv-contrib-python 4.14.0.94 | 已通过ArUco、校准、路径和轮廓Token合成测试 | 用纸板及真实木件测试轮廓ID、位置和角度 |
 | NumPy | 2.4.6 | 已安装并通过导入测试 | 随 OpenCV 环境保持版本锁定 |
@@ -48,4 +48,5 @@
 - [x] `data/` 只提交 schema、场景和脱敏样例。
 - [x] 独立 GitHub 远端已建立并完成首次推送：<https://github.com/Ketian-LI/urban-wildlife-tangible-unity>。
 - [x] 已从 GitHub 干净克隆到 `C:\Users\23902\Desktop\urban-wildlife-tangible-unity`，并恢复 Python 环境和自动测试。
+- [x] Confirm稳定帧门控与Unity端 `capture.stable` 复核已实现；真实阈值仍需固定俯拍实测。
 - [ ] 摄像头与灯光现场照片已归档到 `hardware/evidence/`。

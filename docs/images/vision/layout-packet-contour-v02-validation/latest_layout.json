@@ -21,6 +21,11 @@
     "token_backend": "contour",
     "token_config_version": "0.2"
   },
+  "capture": {
+    "mode": "image_input",
+    "stable": true,
+    "note": "Deterministic image input; no live stability claim"
+  },
   "tokens": [
     {
       "id": 10,

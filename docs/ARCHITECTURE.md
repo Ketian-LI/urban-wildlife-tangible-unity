@@ -17,14 +17,14 @@
 - P0 主摄像头为 DJI Pocket 3，通过 USB 接入 OBS；iPhone 13 作为备用输入。
 - 地图板放在桌面，落地式俯拍支架独立放在桌后地面，以减少桌面操作带来的画面振动。
 - 四角透视校准采用 ArUco `DICT_4X4_50`，固定使用 ID 0、1、2、3。
-- Woodland 的软布只承担区域与触感表达；视觉系统读取其中央刚性木座上的 ArUco Marker，不尝试从布料轮廓判断 ID 或角度。
+- Woodland 的软布只承担区域与触感表达；视觉系统读取中央刚性木座的缺口轮廓，不尝试从布料轮廓判断ID或角度。
 - Woodland 中央刚性木座固定为直径 50 mm、厚 3–4 mm 的圆形桦木片；外层不规则毛毡最大宽度约 120 mm。
-- Woodland 的 ID 20–21 分别使用 30 × 30 mm ArUco 编码区，安装在中央木座顶部居中的 40 × 40 mm 白色哑光标签上；若实拍识别不稳定，优先增大编码区再调整木座。
+- Woodland 逻辑ID 20–21由50 mm中央木座的方向缺口与C、A+C编码槽区分，木座顶部不贴视觉码。
 - Woodland 四角磁吸底座只负责铺平和定位，不作为额外视觉输入；系统状态仍由中央 Marker 唯一确定。
 - 每个 Woodland 毛毡锚点使用约 15 × 15 mm 薄塑料底座和 10 × 10 mm 方形磁吸片；这些部件隐藏在布面下方，算法不读取其位置。
-- P0 Token 映射固定为 Food Hotspot ID 10–12、Woodland ID 20–21；P1 使用预留 ID 30–43。
-- Food Hotspot Token 的实体主体固定为直径 60 mm 的圆形 3–4 mm 桦木片；视觉识别仍以其顶部 ArUco Marker 为准。
-- Food Hotspot 的 ID 10–12 分别使用 35 × 35 mm ArUco 编码区，安装在顶部居中的 45 × 45 mm 白色哑光标签上；识别参数以实际打印尺寸和实拍测试为准。
+- P0逻辑ID固定为Food Hotspot 10–12、Woodland 20–21；其值由轮廓缺口恢复，P1预留30–43。
+- Food Hotspot Token 的实体主体固定为直径60 mm的圆形3–4 mm桦木片；视觉系统读取木片外缘的方向缺口与编码缺口。
+- Food Hotspot逻辑ID 10–12由60 mm圆木片的方向缺口与A、B、A+B编码槽区分；直径同时作为类型复核。
 - Planned Human Path 的实体输入使用约 15 mm 宽、100 cm 有效长度的高饱和哑光罗纹带；首选亮洋红色，同时测试青色和橙色。先准备 120 cm 材料并保留 20 cm 备用；薄磁吸点只用于固定，不作为视觉输入。
 - 板面左右各使用一盏 5000–5600 K 柔光灯，以约 45°照射；完成校准后尽量固定曝光和白平衡。
 - 四角使用固定且 ID 不同的白底校准 Marker。
@@ -34,7 +34,8 @@
 
 ```text
 Camera Frame
-   ├─ Marker detector → token id, x, y, angle
+   ├─ Corner ArUco detector → calibration quadrilateral
+   ├─ Contour token detector → logical id, x, y, angle
    └─ HSV path detector → path mask / polyline
                  ↓
 Coordinate normalizer
@@ -144,6 +145,7 @@ Observed crossings, feeding, waiting and avoidance
 ## 模块边界
 
 - `vision/` 只负责读取实体状态、校准、稳定和输出标准数据。
+- 现有 `build_layout_packet.py` 的电子夹具仍以 ArUco Token 验证数据契约；轮廓检测通过实物验收后替换 Token 检测后端，JSON字段不变。
 - `unity/` 只消费标准数据，不直接依赖摄像头实现。
 - `data/` 只定义可公开的数据结构和脱敏样例。
 - `unity/` 中的 Constraint Manager 负责规划限制与通行检查；Human 和 Animal 系统仍负责产生实际行为结果。

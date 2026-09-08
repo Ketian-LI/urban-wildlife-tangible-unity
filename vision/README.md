@@ -5,7 +5,7 @@
 第一周建议按以下顺序验证：
 
 1. 摄像头稳定取流。
-2. 单个 ArUco 或 AprilTag 的 ID、位置和角度。
+2. 四角 ArUco 校准，以及单个轮廓编码 Token 的逻辑ID、位置和角度。
 3. 多 Token 与短暂遮挡容错。
 4. 彩色路径 HSV 分割与去噪。
 5. 四角校准与标准化坐标。
@@ -25,6 +25,7 @@
 - `generate_layout_fixture.py`：生成不含真实环境与个人信息的完整流程测试画面。
 - `config/calibration.json`：四角顺序、打印尺寸、板面和视频输入基线。
 - `config/path_detection.json`：亮洋红、青色与橙色路径的初始 HSV 阈值和去噪参数。
+- `config/contour_tokens.json`：无贴纸 Token 的直径、方向缺口、三位轮廓编码与实物验收阈值。
 
 ## 一键配置
 
@@ -91,7 +92,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_vision.ps1
 .\.venv\Scripts\python.exe vision\build_layout_packet.py --camera 1 --session-id pilot-001 --cycle-index 0 --scenario-id S001 --path-preset magenta
 ```
 
-程序会排除四角 ID 0–3，把 Token 转换为 0–1 板面坐标和校正后的角度，并将最大路径区域采样为标准化折线。默认输出：
+程序会排除四角 ID 0–3，把 Token 转换为0–1板面坐标和校正后的角度，并将最大路径区域采样为标准化折线。当前电子夹具使用 ArUco Token 验证数据流；轮廓检测器通过实物验收后替换该后端，输出JSON格式不变。默认输出：
 
 - `data/raw/layout-packets/latest_layout.json`：Unity 只读取这个完整文件。
 - `data/raw/layout-packets/archive/<session>/...json`：每个周期的不可变记录。

@@ -1,0 +1,73 @@
+{
+  "schema_version": "0.1",
+  "status": "provisional_until_physical_validation",
+  "rectified_scale": {
+    "pixels_per_mm": 1.0,
+    "output_size_px": [900, 600]
+  },
+  "segmentation": {
+    "initial_grayscale_threshold": 130,
+    "minimum_contrast_against_board": 55
+  },
+  "geometry": {
+    "food_hotspot_diameter_mm": 60,
+    "woodland_core_diameter_mm": 50,
+    "diameter_tolerance_mm": 4,
+    "orientation_notch": {
+      "reference_angle_clockwise_deg": 0,
+      "width_mm": 10,
+      "depth_mm": 7
+    },
+    "code_notch": {
+      "width_mm": 8,
+      "depth_mm": 5
+    },
+    "code_slots": {
+      "a": {
+        "angle_clockwise_deg": 90,
+        "weight": 1
+      },
+      "b": {
+        "angle_clockwise_deg": 180,
+        "weight": 2
+      },
+      "c": {
+        "angle_clockwise_deg": 270,
+        "weight": 4
+      }
+    }
+  },
+  "codes": {
+    "10": {
+      "type": "food_hotspot",
+      "diameter_mm": 60,
+      "slots": ["a"]
+    },
+    "11": {
+      "type": "food_hotspot",
+      "diameter_mm": 60,
+      "slots": ["b"]
+    },
+    "12": {
+      "type": "food_hotspot",
+      "diameter_mm": 60,
+      "slots": ["a", "b"]
+    },
+    "20": {
+      "type": "woodland",
+      "diameter_mm": 50,
+      "slots": ["c"]
+    },
+    "21": {
+      "type": "woodland",
+      "diameter_mm": 50,
+      "slots": ["a", "c"]
+    }
+  },
+  "acceptance": {
+    "minimum_detection_successes_per_10_frames": 9,
+    "maximum_position_error_mm": 5,
+    "maximum_angle_error_deg": 8,
+    "test_rotations_deg": [0, 45, 90, 135, 180, 225, 270, 315]
+  }
+}

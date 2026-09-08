@@ -38,10 +38,12 @@
 - `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
 - `LayoutDebugView.cs`：把归一化坐标转换为9 × 6 Unity单位的俯视板面、路径与Token调试物件。
-- `P0InputSceneTools.cs`：可重复创建P0输入场景，并在批处理模式验证脱敏夹具和9个调试元素。
+- `P0ScenarioModels.cs`、`P0ConstraintEvaluator.cs` 与 `P0ConstraintManager.cs`：读取S001参数并输出人类连通、动物可达、Food有效性和改动次数。
+- `P0InputSceneTools.cs`：可重复创建P0输入场景，并在批处理模式验证脱敏夹具、9个调试元素、S001初始失败状态及两次移动后的有效修复。
 
 ## 当前边界
 
 - Unity目前把输入实例化为纯调试几何，还没有最终公园美术、碰撞或行为逻辑。
 - `LayoutAccepted` 是下一步供 Environment Manager 与规划约束模块订阅的唯一入口。
+- 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

@@ -8,6 +8,7 @@
 - `numpy==2.4.6`。
 - Git `2.51.0.windows.2`。
 - OBS Studio `32.0.4`，已安装于 `D:\obs-studio`；首次 DJI Pocket 3 采集测试时补录具体场景与视频设置。
+- Unity输入层使用官方 `com.unity.nuget.newtonsoft-json 3.2.2` 解析标准数据包与S001场景配置。
 
 ## 已确定的实体输入基线
 
@@ -157,4 +158,5 @@ Observed crossings, feeding, waiting and avoidance
 - `unity/` 只消费标准数据，不直接依赖摄像头实现；`LayoutPacketReader` 校验版本、新时间戳、完整P0 Token集合、坐标范围与连续路径后才发布 `LayoutAccepted` 事件。
 - `data/` 只定义可公开的数据结构和脱敏样例。
 - `unity/` 中的 Constraint Manager 负责规划限制与通行检查；Human 和 Animal 系统仍负责产生实际行为结果。
+- `P0ConstraintManager` 当前实现入口→广场→出口、人类活动来源、路径安全间距、池塘避让和改动次数；动物可达性以S001只有一个不接触边界的池塘为前提，路径只增加成本而不封路。新增围栏或多个障碍时应替换为网格寻路。
 - 研究日志必须标注版本、会话和时间，不记录不必要的身份信息。

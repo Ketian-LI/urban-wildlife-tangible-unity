@@ -36,6 +36,16 @@
       "corner_size_cm": [8, 8]
     }
   },
+  "constraints": {
+    "food_path_influence_max_cm": 10,
+    "food_path_edge_clearance_cm": 1,
+    "food_token_radius_cm": 3,
+    "path_width_cm": 1.5,
+    "changes_allowed": 3,
+    "token_move_tolerance_cm": 1,
+    "path_change_tolerance_cm": 2,
+    "status": "pretest_baseline"
+  },
   "baseline_layout": {
     "tokens": [
       {

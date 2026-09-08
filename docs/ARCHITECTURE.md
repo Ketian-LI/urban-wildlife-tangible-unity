@@ -48,13 +48,25 @@ Environment, Human NPC and Animal systems
 Trace renderer and Research Logger
 ```
 
-## 建议的数据包
+## P0 布局数据包 V0.1
 
 ```json
 {
   "schema_version": "0.1",
-  "timestamp_ms": 0,
+  "packet_type": "confirmed_layout",
+  "timestamp_ms": 1788883200000,
+  "timestamp_utc": "2026-09-08T16:00:00Z",
+  "session_id": "pilot-001",
+  "cycle_index": 0,
+  "scenario_id": "S001",
   "calibration_id": "local-test",
+  "coordinate_system": {
+    "origin": "top_left",
+    "x_axis": "right",
+    "y_axis": "down",
+    "range": [0.0, 1.0],
+    "unity_plane_mapping": "x_norm -> Unity X; y_norm -> Unity Z"
+  },
   "tokens": [
     {
       "id": 10,
@@ -62,17 +74,28 @@ Trace renderer and Research Logger
       "x_norm": 0.5,
       "y_norm": 0.5,
       "angle_deg": 0,
+      "in_bounds": true,
       "confidence": 1.0
     }
   ],
   "path": {
     "format": "polyline",
-    "points_norm": []
+    "preset": "magenta",
+    "points_norm": [[0.033, 0.5], [0.5, 0.3], [0.967, 0.5]],
+    "point_count": 3,
+    "continuous": true,
+    "component_count": 1,
+    "mask_area_fraction": 0.02
+  },
+  "validation": {
+    "all_tokens_in_bounds": true,
+    "path_detected": true,
+    "path_continuous": true
   }
 }
 ```
 
-这是第一版接口草案。P0 由 Python 在 Confirm 后原子写入 `latest_layout.json`，Unity 只读取完整文件，同时将每次输入按 Session、Cycle 和时间戳归档。采样细节、坐标原点和丢帧策略需要在技术 Spike 后锁定。
+数据契约见 `data/schemas/layout_packet_v0.1.schema.json`。P0 由 Python 在 Confirm 后原子写入 `latest_layout.json`，Unity 只读取完整文件，同时将每次输入按 Session、Cycle 和时间戳归档。坐标固定为左上原点、X向右、Y向下的0–1范围，Unity 平面映射为 X/Z。
 
 ## 规划约束与因果链
 

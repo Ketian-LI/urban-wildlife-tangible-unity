@@ -1,0 +1,126 @@
+{
+  "schema_version": "0.1",
+  "packet_type": "confirmed_layout",
+  "timestamp_ms": 1788883200000,
+  "timestamp_utc": "2026-09-08T16:00:00Z",
+  "session_id": "electronic-fixture",
+  "cycle_index": 0,
+  "scenario_id": "S001",
+  "calibration_id": "fixture-2026-09-08",
+  "coordinate_system": {
+    "origin": "top_left",
+    "x_axis": "right",
+    "y_axis": "down",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "unity_plane_mapping": "x_norm -> Unity X; y_norm -> Unity Z"
+  },
+  "tokens": [
+    {
+      "id": 10,
+      "type": "food_hotspot",
+      "x_norm": 0.289111,
+      "y_norm": 0.225164,
+      "angle_deg": -0.31,
+      "in_bounds": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 11,
+      "type": "food_hotspot",
+      "x_norm": 0.65577,
+      "y_norm": 0.208803,
+      "angle_deg": -0.35,
+      "in_bounds": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 12,
+      "type": "food_hotspot",
+      "x_norm": 0.489031,
+      "y_norm": 0.583684,
+      "angle_deg": 0.51,
+      "in_bounds": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 20,
+      "type": "woodland",
+      "x_norm": 0.255504,
+      "y_norm": 0.783114,
+      "angle_deg": 0.34,
+      "in_bounds": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 21,
+      "type": "woodland",
+      "x_norm": 0.750149,
+      "y_norm": 0.767175,
+      "angle_deg": 0.2,
+      "in_bounds": true,
+      "confidence": 1.0
+    }
+  ],
+  "path": {
+    "format": "polyline",
+    "preset": "magenta",
+    "points_norm": [
+      [
+        0.027809,
+        0.464107
+      ],
+      [
+        0.185762,
+        0.355593
+      ],
+      [
+        0.347052,
+        0.402337
+      ],
+      [
+        0.373749,
+        0.404007
+      ],
+      [
+        0.506674,
+        0.312187
+      ],
+      [
+        0.53337,
+        0.305509
+      ],
+      [
+        0.719689,
+        0.373957
+      ],
+      [
+        0.854283,
+        0.338898
+      ],
+      [
+        0.880979,
+        0.352254
+      ],
+      [
+        0.978865,
+        0.482471
+      ],
+      [
+        0.987764,
+        0.48414
+      ]
+    ],
+    "point_count": 11,
+    "continuous": true,
+    "component_count": 1,
+    "mask_area_fraction": 0.0319463
+  },
+  "validation": {
+    "all_tokens_in_bounds": true,
+    "path_detected": true,
+    "path_continuous": true
+  }
+}

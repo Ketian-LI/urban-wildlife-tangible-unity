@@ -26,3 +26,4 @@ data/
 ## 可提交的场景配置
 
 - `scenarios/s001_weekend_park_baseline.json`：P0 “周末公园重新规划”的固定地图、主持人预设布局、路径中心线和初始约束预期。
+- `schemas/layout_packet_v0.1.schema.json`：Python Confirm 输出与 Unity Input Manager 共同使用的布局数据契约。

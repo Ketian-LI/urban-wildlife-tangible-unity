@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "layout_packet_v0.1.schema.json",
+  "title": "Urban Wildlife Confirmed Layout Packet V0.1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "packet_type",
+    "timestamp_ms",
+    "timestamp_utc",
+    "session_id",
+    "cycle_index",
+    "scenario_id",
+    "calibration_id",
+    "coordinate_system",
+    "tokens",
+    "path",
+    "validation"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "packet_type": { "const": "confirmed_layout" },
+    "timestamp_ms": { "type": "integer", "minimum": 0 },
+    "timestamp_utc": { "type": "string", "format": "date-time" },
+    "session_id": { "type": "string", "minLength": 1 },
+    "cycle_index": { "type": "integer", "minimum": 0 },
+    "scenario_id": { "type": "string", "minLength": 1 },
+    "calibration_id": { "type": "string", "minLength": 1 },
+    "coordinate_system": {
+      "type": "object",
+      "required": ["origin", "x_axis", "y_axis", "range", "unity_plane_mapping"]
+    },
+    "tokens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "x_norm", "y_norm", "angle_deg", "in_bounds", "confidence"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 0 },
+          "type": { "enum": ["food_hotspot", "woodland", "p1_reserved", "unknown"] },
+          "x_norm": { "type": "number" },
+          "y_norm": { "type": "number" },
+          "angle_deg": { "type": "number", "minimum": -180, "maximum": 180 },
+          "in_bounds": { "type": "boolean" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "path": {
+      "type": "object",
+      "required": ["format", "preset", "points_norm", "point_count", "continuous", "component_count", "mask_area_fraction"],
+      "properties": {
+        "format": { "const": "polyline" },
+        "preset": { "enum": ["magenta", "cyan", "orange"] },
+        "points_norm": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "number", "minimum": 0, "maximum": 1 },
+              { "type": "number", "minimum": 0, "maximum": 1 }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "point_count": { "type": "integer", "minimum": 0 },
+        "continuous": { "type": "boolean" },
+        "component_count": { "type": "integer", "minimum": 0 },
+        "mask_area_fraction": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["all_tokens_in_bounds", "path_detected", "path_continuous"]
+    }
+  }
+}

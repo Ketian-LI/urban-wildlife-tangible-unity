@@ -21,6 +21,8 @@
 - `detect_markers.py`：从图片或摄像头读取 ArUco ID、像素中心和角度，并保存标注图与JSON。
 - `calibrate_corners.py`：识别四角 Marker，计算透视矩阵，输出校准标注图、俯视矫正图和 Camera → Game 标准化坐标参数。
 - `detect_path.py`：按 HSV 颜色预设分割彩色路径，进行形态学去噪并输出 Path Mask、检查图和JSON统计。
+- `build_layout_packet.py`：从同一帧提取四角校准、Token 和路径，原子写入 Unity 使用的 `latest_layout.json` 并按 Session/Cycle 归档。
+- `generate_layout_fixture.py`：生成不含真实环境与个人信息的完整流程测试画面。
 - `config/calibration.json`：四角顺序、打印尺寸、板面和视频输入基线。
 - `config/path_detection.json`：亮洋红、青色与橙色路径的初始 HSV 阈值和去噪参数。
 
@@ -80,3 +82,19 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_vision.ps1
 ```
 
 输出包括二值 `path_mask.png`、叠加检查图 `path_overlay.png` 和面积、边界框等统计信息 `path_detection.json`。目前阈值是软件预设；彩带、黑色板面和固定灯光同时到位后，需要分别实测三个候选颜色，再锁定唯一的 P0 颜色与阈值。
+
+## 统一 Unity 数据包
+
+在 Plan 完成、双手离开并点击 Confirm 后，对一张稳定画面运行：
+
+```powershell
+.\.venv\Scripts\python.exe vision\build_layout_packet.py --camera 1 --session-id pilot-001 --cycle-index 0 --scenario-id S001 --path-preset magenta
+```
+
+程序会排除四角 ID 0–3，把 Token 转换为 0–1 板面坐标和校正后的角度，并将最大路径区域采样为标准化折线。默认输出：
+
+- `data/raw/layout-packets/latest_layout.json`：Unity 只读取这个完整文件。
+- `data/raw/layout-packets/archive/<session>/...json`：每个周期的不可变记录。
+- `path_mask.png`、`packet_overlay.png`、`calibration_overlay.png`：本地 Debug 证据，不提交真实参与者画面。
+
+`latest_layout.json` 使用“先完整写临时文件、再原子替换”的方式，避免 Unity 读到半份 JSON。正式数据契约见 `data/schemas/layout_packet_v0.1.schema.json`。当前折线采样针对 P0 单条、从左至右且不自交的路径约束。

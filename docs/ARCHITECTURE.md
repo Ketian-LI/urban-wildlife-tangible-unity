@@ -172,6 +172,7 @@ Observed crossings, feeding, waiting and avoidance
 - `vision/` 只负责读取实体状态、校准、稳定和输出标准数据。
 - `build_layout_packet.py` 默认在四角矫正图上使用V0.2轮廓Token后端；旧ArUco Token后端只用于回归测试。两个后端输出相同Token字段。
 - `unity/` 只消费标准数据，不直接依赖摄像头实现；`LayoutPacketReader` 校验版本、新时间戳、稳定确认标记、完整P0 Token集合、坐标范围与连续路径后才发布 `LayoutAccepted` 事件。
+- `P0ElectronicDemoInput`仅在材料到货前从脱敏样例生成新的标准数据包；它复用正式Reader、约束、模拟和日志链路，但必须标记为`image_input`，不得作为实体识别证据。
 - `data/` 只定义可公开的数据结构和脱敏样例。
 - `unity/` 中的 Constraint Manager 负责规划限制与通行检查；Human 和 Animal 系统仍负责产生实际行为结果。
 - `HumanRoutePlanner` 只从已确认布局和S001参数生成路线，`HumanAgentStateMachine` 负责确定性移动/停留，`P0HumanSimulation` 负责Run阶段的Unity实例与可视化。

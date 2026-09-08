@@ -63,6 +63,7 @@ urban-wildlife-tangible-unity/
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 
 工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md) 和 [`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)。
+材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
 
 ## 第一天交付
 

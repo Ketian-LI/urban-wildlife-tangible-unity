@@ -20,7 +20,7 @@
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
 3. 在仓库根目录用Python生成真实或测试用 `data/raw/layout-packets/latest_layout.json`。
-   如需立刻查看人类行为，可先把 `data/examples/s001_valid_human_demo.json` 复制为上述文件；该脱敏样例已经满足S001全部约束。
+   如需立刻查看完整行为，无需手动复制文件：在Play后的Plan阶段按 `D`，或点击 **LOAD ELECTRONIC DEMO**。系统会从脱敏样例生成当前周期的新数据包，因此连续3轮不会被旧时间戳拦截。
 4. 点击Play，使用左上控制面板的大号 **CONFIRM LAYOUT** 按钮，或按一次空格键。
 5. 识别数据有效时会生成黑色板面、洋红路径、3个Food与2个Woodland调试物件，并在面板显示Constraint Check。所有约束通过后点击 **START RUN** 或再按一次空格；未通过则自动回到Plan。
 6. Run显示60秒倒计时，随后自动进入30秒Observe；三个周期结束后可用 **RESET SESSION** 重新开始。
@@ -44,6 +44,7 @@
 
 - `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
+- `P0ElectronicDemoInput.cs`：在材料到货前，从脱敏夹具原子生成带新时间戳、Session和Cycle的电子演示包；不产生实体识别已经通过的主张。
 - `LayoutDebugView.cs`：把归一化坐标转换为9 × 6 Unity单位的俯视板面、路径与Token调试物件。
 - `P0ScenarioModels.cs`、`P0ConstraintEvaluator.cs` 与 `P0ConstraintManager.cs`：读取S001参数并输出人类连通、动物可达、Food有效性和改动次数。
 - `P0CycleStateMachine.cs` 与 `P0CycleController.cs`：管理Plan、Confirm、60秒Run、30秒Observe和每Session 3个周期；未通过约束不能进入Run。

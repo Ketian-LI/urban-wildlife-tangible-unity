@@ -24,6 +24,7 @@ namespace UrbanWildlife.EditorTools
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             GameObject inputManager = new GameObject("Layout Input Manager");
             inputManager.AddComponent<LayoutPacketReader>();
+            inputManager.AddComponent<P0ElectronicDemoInput>();
             inputManager.AddComponent<LayoutDebugView>();
             inputManager.AddComponent<P0ConstraintManager>();
             inputManager.AddComponent<P0CycleController>();
@@ -154,6 +155,57 @@ namespace UrbanWildlife.EditorTools
             if (!humanDemoResult.all_constraints_satisfied)
             {
                 throw new InvalidOperationException("Human demo packet must satisfy every S001 planning constraint.");
+            }
+
+            string electronicDemoSmokeRoot = Path.Combine(
+                Path.GetTempPath(),
+                "urban-wildlife-electronic-demo-smoke",
+                Guid.NewGuid().ToString("N"));
+            try
+            {
+                string electronicDemoOutput = Path.Combine(electronicDemoSmokeRoot, "latest_layout.json");
+                if (!P0ElectronicDemoInput.TryCreatePacket(
+                        humanDemoPath,
+                        electronicDemoOutput,
+                        "electronic-smoke",
+                        0,
+                        -1,
+                        out LayoutPacket firstElectronicPacket,
+                        out string firstElectronicError))
+                {
+                    throw new InvalidOperationException(
+                        $"Electronic demo packet generation failed: {firstElectronicError}");
+                }
+                if (!P0ElectronicDemoInput.TryCreatePacket(
+                        humanDemoPath,
+                        electronicDemoOutput,
+                        "electronic-smoke",
+                        1,
+                        firstElectronicPacket.timestamp_ms,
+                        out LayoutPacket secondElectronicPacket,
+                        out string secondElectronicError))
+                {
+                    throw new InvalidOperationException(
+                        $"Electronic demo packet refresh failed: {secondElectronicError}");
+                }
+                if (!File.Exists(electronicDemoOutput) ||
+                    secondElectronicPacket.timestamp_ms <= firstElectronicPacket.timestamp_ms ||
+                    secondElectronicPacket.cycle_index != 1 ||
+                    secondElectronicPacket.session_id != "electronic-smoke")
+                {
+                    throw new InvalidOperationException(
+                        "Electronic demo did not create a newer valid packet for the next cycle.");
+                }
+                Debug.Log(
+                    "UNITY_ELECTRONIC_DEMO_SMOKE_OK cycles=2 timestamps_increasing=True " +
+                    "physical_claim=False");
+            }
+            finally
+            {
+                if (Directory.Exists(electronicDemoSmokeRoot))
+                {
+                    Directory.Delete(electronicDemoSmokeRoot, true);
+                }
             }
 
             HumanRoutePlan[] humanPlans = HumanRoutePlanner.CreatePlans(humanDemo, scenario);

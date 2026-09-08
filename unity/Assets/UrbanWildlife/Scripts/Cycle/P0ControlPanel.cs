@@ -14,6 +14,7 @@ namespace UrbanWildlife.Cycle
         private LayoutPacketReader reader;
         private P0HumanSimulation humanSimulation;
         private P0AnimalSimulation animalSimulation;
+        private P0ElectronicDemoInput electronicDemoInput;
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
         private GUIStyle buttonStyle;
@@ -28,10 +29,18 @@ namespace UrbanWildlife.Cycle
             reader = GetComponent<LayoutPacketReader>();
             humanSimulation = GetComponent<P0HumanSimulation>();
             animalSimulation = GetComponent<P0AnimalSimulation>();
+            electronicDemoInput = GetComponent<P0ElectronicDemoInput>();
         }
 
         private void Update()
         {
+            if (UnityEngine.Input.GetKeyDown(KeyCode.D) &&
+                cycle.Phase == P0Phase.Plan && electronicDemoInput != null)
+            {
+                electronicDemoInput.TryPrepareCurrentCycle();
+                return;
+            }
+
             if (!UnityEngine.Input.GetKeyDown(KeyCode.Space))
             {
                 return;
@@ -52,7 +61,7 @@ namespace UrbanWildlife.Cycle
             EnsureStyles();
             float scale = Mathf.Clamp(Screen.height / 900f, 0.75f, 1.35f);
             float width = Mathf.Min(500f * scale, Screen.width - 32f);
-            float height = Mathf.Min(430f * scale, Screen.height - 32f);
+            float height = Mathf.Min(520f * scale, Screen.height - 32f);
             Rect panel = new Rect(16f, 16f, width, height);
             GUI.Box(panel, GUIContent.none, panelStyle);
 
@@ -67,7 +76,11 @@ namespace UrbanWildlife.Cycle
             }
             else
             {
-                GUILayout.Label("SPACE = current action", bodyStyle);
+                GUILayout.Label(
+                    electronicDemoInput == null
+                        ? "SPACE = current action"
+                        : "D = fresh electronic layout   SPACE = current action",
+                    bodyStyle);
             }
 
             if (humanSimulation != null && humanSimulation.AgentCount > 0)
@@ -88,9 +101,28 @@ namespace UrbanWildlife.Cycle
 
             GUILayout.Space(12f);
             DrawConstraintStatus();
+            DrawElectronicDemoControl();
             GUILayout.FlexibleSpace();
             DrawActionButton();
             GUILayout.EndArea();
+        }
+
+        private void DrawElectronicDemoControl()
+        {
+            if (cycle.Phase != P0Phase.Plan || electronicDemoInput == null)
+            {
+                return;
+            }
+
+            GUILayout.Space(8f);
+            if (GUILayout.Button("LOAD ELECTRONIC DEMO", GUILayout.Height(38f)))
+            {
+                electronicDemoInput.TryPrepareCurrentCycle();
+            }
+            if (!string.IsNullOrWhiteSpace(electronicDemoInput.LastMessage))
+            {
+                GUILayout.Label(electronicDemoInput.LastMessage, bodyStyle);
+            }
         }
 
         private void DrawConstraintStatus()

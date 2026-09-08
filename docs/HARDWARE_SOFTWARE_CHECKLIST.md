@@ -1,10 +1,10 @@
 # Hardware and Software Checklist V0.1
 
-更新日期：2026-09-07
+更新日期：2026-09-08
 
 本清单区分“方案已锁定”和“实物已验证”。没有完成现场测试的项目不能作为技术闭环证据。
 
-采购状态：所需商品已于 2026-09-07 找齐，等待下单、到货和实物验证。
+采购状态：所需商品已购买，最晚预计于 2026-09-21 到达；到货前使用纸面替代测试。
 
 ## 实体与采集设备
 
@@ -35,9 +35,9 @@
 | 工具 | 锁定版本 | 本机状态 | 下一项验证 |
 | --- | --- | --- | --- |
 | Unity | 6000.3.4f1 | 已安装 | 用该版本创建 `unity/` 项目并记录所需模块 |
-| Python | 3.12.10 | 已安装 | 在仓库创建 `.venv`，不使用默认 Python 3.14 |
-| OpenCV | opencv-contrib-python 4.14.0.94 | 未安装到项目环境 | 安装后验证 `cv2.aruco.DICT_4X4_50` |
-| NumPy | 2.4.6 | 未安装到项目环境 | 与 OpenCV 一起执行导入测试 |
+| Python | 3.12.10 | 已建立仓库内 `.venv` | 保持使用项目环境，不使用默认 Python 3.14 |
+| OpenCV | opencv-contrib-python 4.14.0.94 | 已安装并通过 Marker 自动测试 | 使用真实摄像头测试识别距离、角度和稳定性 |
+| NumPy | 2.4.6 | 已安装并通过导入测试 | 随 OpenCV 环境保持版本锁定 |
 | OBS Studio | 32.0.4 | 已安装于 `D:\obs-studio` | 记录画布、Pocket 3 视频输入、色彩和帧率设置 |
 | Git | 2.51.0.windows.2 | 已安装并完成首次推送 | 从干净目录验证克隆和恢复流程 |
 
@@ -47,5 +47,5 @@
 - [x] 网页实验 Demo 与最终实体 Unity 项目使用不同仓库。
 - [x] `data/` 只提交 schema、场景和脱敏样例。
 - [x] 独立 GitHub 远端已建立并完成首次推送：<https://github.com/Ketian-LI/urban-wildlife-tangible-unity>。
-- [ ] 从干净目录克隆后能够恢复项目结构。
+- [x] 已从 GitHub 干净克隆到 `C:\Users\23902\Desktop\毕设`，并恢复 Python 环境和自动测试。
 - [ ] 摄像头与灯光现场照片已归档到 `hardware/evidence/`。

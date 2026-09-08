@@ -1,0 +1,28 @@
+{
+  "schema_version": "0.1",
+  "aruco_dictionary": "DICT_4X4_50",
+  "corner_ids": {
+    "top_left": 0,
+    "top_right": 1,
+    "bottom_right": 2,
+    "bottom_left": 3
+  },
+  "board_size_mm": {
+    "width": 900,
+    "height": 600
+  },
+  "calibration_card_size_mm": 70,
+  "calibration_marker_size_mm": 50,
+  "print_dpi": 300,
+  "video": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30
+  },
+  "obs_executable": "D:/obs-studio/bin/64bit/obs64.exe",
+  "token_id_ranges": {
+    "food_hotspot": [10, 12],
+    "woodland": [20, 21],
+    "p1_reserved": [30, 43]
+  }
+}

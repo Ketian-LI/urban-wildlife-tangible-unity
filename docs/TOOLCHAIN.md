@@ -1,6 +1,6 @@
 # Toolchain Baseline V0.1
 
-更新日期：2026-09-07
+更新日期：2026-09-08
 
 ## 已锁定
 
@@ -8,8 +8,8 @@
 | --- | --- | --- | --- |
 | Unity | 6000.3.4f1 | 已安装 | 属于 Unity 6.3 LTS，项目期间不跨大版本升级 |
 | Python | 3.12.10 | 已安装 | 比本机默认 3.14 更成熟，且与选定 OpenCV/NumPy 有 Windows 预编译包 |
-| OpenCV | opencv-contrib-python 4.14.0.94 | 待安装到项目虚拟环境 | 保留 4.x API，包含 ArUco 所需模块，不在 P0 中切换 OpenCV 5 |
-| NumPy | 2.4.6 | 待安装到项目虚拟环境 | 与 Python 3.12 和 OpenCV 4.14 的依赖解析通过，避免使用刚发布的最新补丁作为首个基线 |
+| OpenCV | opencv-contrib-python 4.14.0.94 | 已安装并通过 ArUco 测试 | 保留 4.x API，包含 ArUco 所需模块，不在 P0 中切换 OpenCV 5 |
+| NumPy | 2.4.6 | 已安装并通过导入测试 | 与 Python 3.12 和 OpenCV 4.14 的依赖解析通过，避免使用刚发布的最新补丁作为首个基线 |
 | Git | 2.51.0.windows.2 | 已安装 | 记录当前本机版本 |
 | OBS Studio | 32.0.4 | 已安装于 `D:\obs-studio` | 首次 Pocket 3 采集测试时记录画布、输入设备、色彩与帧率设置 |
 

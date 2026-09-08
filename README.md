@@ -50,13 +50,14 @@ urban-wildlife-simulation/
 第 1 周目标是完成技术闭环并冻结第一阶段 Scope：
 
 - [x] 确认 MVP 与明确不做项
+- [x] 建立 Python/OpenCV/ArUco 可重复运行环境
 - [ ] 固定摄像头、桌面与光照条件
 - [ ] 稳定识别单个 Marker Token
 - [ ] 识别高饱和彩绳并输出 Path Mask
 - [ ] 完成 Camera 到 Game 的坐标映射
 - [ ] 输出统一数据包并完成技术 Spike 演示
 
-今天的工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)。
+工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md) 和 [`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)。
 
 ## 第一天交付
 

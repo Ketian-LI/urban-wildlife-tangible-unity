@@ -9,6 +9,15 @@
     "initial_grayscale_threshold": 130,
     "minimum_contrast_against_board": 55
   },
+  "detection": {
+    "minimum_area_mm2": 1150,
+    "minimum_circularity": 0.62,
+    "angular_samples": 360,
+    "smoothing_window_deg": 5,
+    "slot_window_deg": 14,
+    "orientation_min_depth_mm": 4.2,
+    "code_min_depth_mm": 2.8
+  },
   "geometry": {
     "food_hotspot_diameter_mm": 60,
     "woodland_core_diameter_mm": 50,

@@ -1,0 +1,51 @@
+{
+  "image_definition": "rectified 900 x 600 board; 1 px/mm",
+  "tokens": [
+    {
+      "id": 10,
+      "type": "food_hotspot",
+      "center_px": [
+        125,
+        145
+      ],
+      "angle_deg": 0
+    },
+    {
+      "id": 11,
+      "type": "food_hotspot",
+      "center_px": [
+        335,
+        140
+      ],
+      "angle_deg": 45
+    },
+    {
+      "id": 12,
+      "type": "food_hotspot",
+      "center_px": [
+        555,
+        150
+      ],
+      "angle_deg": 90
+    },
+    {
+      "id": 20,
+      "type": "woodland",
+      "center_px": [
+        260,
+        405
+      ],
+      "angle_deg": -45
+    },
+    {
+      "id": 21,
+      "type": "woodland",
+      "center_px": [
+        675,
+        400
+      ],
+      "angle_deg": 135
+    }
+  ],
+  "distractor": "95 x 65 px bright rectangle; must be rejected"
+}

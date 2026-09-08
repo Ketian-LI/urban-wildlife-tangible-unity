@@ -32,6 +32,7 @@
 - 路径固定：使用可移动的薄磁吸点在入口、广场、出口和主要转弯处压平色带；磁吸点不得大面积遮挡洋红色路径。
 - P1 逻辑ID预留：Bench 30–31、Human Activity 32–33、Bin 40–41、Management Sign 42–43；P0阶段不制作，也不预先决定其轮廓。
 - P0 制作：允许使用打印件、纸板或轻型材料加现成磁铁，不要求最终木制 Token。
+- 无贴纸 Token 规格与制作文件：`CONTOUR_TOKEN_SPEC.md`、`templates/contour-tokens/*.svg` 和 `../output/pdf/contour-token-cut-templates-a4.pdf`。
 
 ## 待确定
 

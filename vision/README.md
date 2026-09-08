@@ -23,6 +23,8 @@
 - `detect_path.py`：按 HSV 颜色预设分割彩色路径，进行形态学去噪并输出 Path Mask、检查图和JSON统计。
 - `build_layout_packet.py`：从同一帧提取四角校准、Token 和路径，原子写入 Unity 使用的 `latest_layout.json` 并按 Session/Cycle 归档。
 - `generate_layout_fixture.py`：生成不含真实环境与个人信息的完整流程测试画面。
+- `detect_contour_tokens.py`：在900 × 600矫正板面中识别无贴纸轮廓 Token 的逻辑ID、中心、标准化坐标和方向。
+- `generate_contour_token_fixture.py`：生成5个轮廓编码和一个干扰亮块的无隐私验证画面。
 - `config/calibration.json`：四角顺序、打印尺寸、板面和视频输入基线。
 - `config/path_detection.json`：亮洋红、青色与橙色路径的初始 HSV 阈值和去噪参数。
 - `config/contour_tokens.json`：无贴纸 Token 的直径、方向缺口、三位轮廓编码与实物验收阈值。
@@ -99,3 +101,13 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_vision.ps1
 - `path_mask.png`、`packet_overlay.png`、`calibration_overlay.png`：本地 Debug 证据，不提交真实参与者画面。
 
 `latest_layout.json` 使用“先完整写临时文件、再原子替换”的方式，避免 Unity 读到半份 JSON。正式数据契约见 `data/schemas/layout_packet_v0.1.schema.json`。当前折线采样针对 P0 单条、从左至右且不自交的路径约束。
+
+## 无贴纸轮廓 Token
+
+轮廓检测必须在四角校正后的900 × 600图像上运行：
+
+```powershell
+.\.venv\Scripts\python.exe vision\detect_contour_tokens.py --image path\to\warped.png --output-dir data\raw\contour-token-tests\physical-01
+```
+
+输出 `candidate_mask.png`、`contour_overlay.png` 和 `contour_detections.json`。电子夹具已经覆盖5个ID和8个旋转角；这只能证明算法与几何编码闭环，木件反光、刀缝、木纹、阴影及真实毛毡背景仍需实测。

@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
+using UrbanWildlife.Cycle;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -18,12 +19,10 @@ namespace UrbanWildlife.EditorTools
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             GameObject inputManager = new GameObject("Layout Input Manager");
-            LayoutPacketReader reader = inputManager.AddComponent<LayoutPacketReader>();
+            inputManager.AddComponent<LayoutPacketReader>();
             inputManager.AddComponent<LayoutDebugView>();
             inputManager.AddComponent<P0ConstraintManager>();
-            SerializedObject readerSettings = new SerializedObject(reader);
-            readerSettings.FindProperty("loadOnStart").boolValue = true;
-            readerSettings.ApplyModifiedPropertiesWithoutUndo();
+            inputManager.AddComponent<P0CycleController>();
 
             GameObject cameraObject = new GameObject("Main Camera");
             Camera camera = cameraObject.AddComponent<Camera>();
@@ -125,6 +124,49 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 $"UNITY_CONSTRAINT_REPAIR_OK all_constraints={repairedResult.all_constraints_satisfied} " +
                 $"changes={repairedResult.changes_used}/{repairedResult.changes_allowed}");
+
+            P0CycleStateMachine cycle = new P0CycleStateMachine(60f, 30f, 3);
+            if (!cycle.TryEnterConfirm())
+            {
+                throw new InvalidOperationException("Cycle could not enter Confirm from Plan.");
+            }
+            cycle.ResolveConfirm(true);
+            if (!cycle.TryStartRun() || cycle.Phase != P0Phase.Run)
+            {
+                throw new InvalidOperationException("Approved plan could not enter Run.");
+            }
+            cycle.Tick(60f);
+            if (cycle.Phase != P0Phase.Observe)
+            {
+                throw new InvalidOperationException("Run did not advance to Observe after 60 seconds.");
+            }
+            cycle.Tick(30f);
+            if (cycle.Phase != P0Phase.Plan || cycle.CycleIndex != 1)
+            {
+                throw new InvalidOperationException("Observe did not return to the next Plan cycle.");
+            }
+            Debug.Log("UNITY_CYCLE_SMOKE_OK Plan>Confirm>Run>Observe>Plan cycle=1");
+
+            P0CycleStateMachine rejected = new P0CycleStateMachine(60f, 30f, 3);
+            rejected.TryEnterConfirm();
+            rejected.ResolveConfirm(false);
+            if (rejected.Phase != P0Phase.Plan || rejected.TryStartRun())
+            {
+                throw new InvalidOperationException("Rejected constraints must return the cycle to Plan.");
+            }
+
+            for (int completedCycles = 1; completedCycles < 3; completedCycles += 1)
+            {
+                cycle.TryEnterConfirm();
+                cycle.ResolveConfirm(true);
+                cycle.TryStartRun();
+                cycle.Tick(90f);
+            }
+            if (cycle.Phase != P0Phase.Complete || cycle.CycleIndex != 3)
+            {
+                throw new InvalidOperationException("Three complete cycles must end the P0 session.");
+            }
+            Debug.Log("UNITY_SESSION_SMOKE_OK cycles=3 phase=Complete");
         }
     }
 }

@@ -46,6 +46,13 @@
     "path_change_tolerance_cm": 2,
     "status": "pretest_baseline"
   },
+  "timing": {
+    "plan_seconds": null,
+    "run_seconds": 60,
+    "observe_seconds": 30,
+    "cycles_per_session": 3,
+    "status": "pretest_baseline"
+  },
   "baseline_layout": {
     "tokens": [
       {

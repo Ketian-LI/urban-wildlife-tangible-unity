@@ -148,6 +148,7 @@ Observed crossings, feeding, waiting and avoidance
 
 - P0 Confirm 使用屏幕大号按钮，并提供空格键快捷键；触发后要求画面连续稳定约 1 秒再输出 JSON。
 - 预测试默认 Plan 不倒计时、Run 60 秒、Observe 约 30 秒，每个 Session 3 个周期；正式研究参数可在预测试后调整并记录版本。
+- `P0CycleController` 已实现无UI的阶段门控：约束失败返回Plan，成功后才可从Confirm进入Run；Run与Observe到时自动推进，第三周期后进入Complete。
 - 最小日志包含 `session_id`、`cycle_index`、时间戳、输入布局、约束结果、改动元素、动物状态变化、关键事件和 Trace 摘要。
 - 默认不记录参与者姓名；如后续保存视频或其他可识别资料，必须另行经过研究伦理和同意流程。
 

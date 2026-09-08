@@ -139,6 +139,8 @@ Observed crossings, feeding, waiting and avoidance
 - Run开始时，Human Route Planner把确认后的单条路径转为三类路线：Walker直接通行，Dweller在中央广场停留，Visitor绕行至Food Hotspot后回到主路。
 - Human Agent State Machine只使用Waiting、Moving、Dwelling、Visiting与Finished等可记录状态；完成路线的代理在同一次Run中重新进入，以持续形成活动和干扰条件。
 - S001 V0.1使用2个Walker、2个Dweller和2个Visitor；数量、速度及停留时间属于可版本化的游戏参数，不作为真实人流预测。
+- Animal Environment Planner把Food 10/11/12分别分配给鸽子、松鼠和狐狸，把Woodland 20/21作为松鼠和狐狸的庇护点；每种动物由独立状态机处理发现、接近、进食、停留、回避和撤退。
+- 鸽子V0.1不因人类接近而回避；松鼠和狐狸按不同干扰半径撤回Woodland，松鼠进食后增加有上限的熟悉度。它们是为了形成可观察差异的设计抽象，不是生态预测模型。
 - P0 首个 Brief 固定为“周末公园重新规划”，并要求读取入口、广场、出口、主路径、Woodland 与 Food Hotspot 的空间关系。
 - 入口 A 和出口 B 是 6 × 8 cm 圆角固定区域，分别贴合左、右边界，中心距上均为 30 cm；路径端点必须落入对应区域。中央广场使用 20 × 14 cm 横向椭圆固定区域，中心坐标为距左 45 cm、距上 18 cm，不通过 Marker 移动。
 - 在以左上为原点、地图宽高归一化为 1 的坐标中，广场中心为 `(0.50, 0.30)`，完整形状作为静态场景数据保存。
@@ -161,6 +163,9 @@ Observed crossings, feeding, waiting and avoidance
 - `P0ControlPanel` 提供大号阶段按钮、空格快捷键、约束反馈和倒计时；它只调用状态机公开动作，不绕过布局或约束校验。
 - 最小日志包含 `session_id`、`cycle_index`、时间戳、输入布局、约束结果、改动元素、动物状态变化、关键事件和 Trace 摘要。
 - 默认不记录参与者姓名；如后续保存视频或其他可识别资料，必须另行经过研究伦理和同意流程。
+- `P0ResearchLogger`订阅`LayoutAccepted`、`ConstraintsEvaluated`与`PhaseChanged`，将布局确认、约束检查和阶段变化追加到会话日志。
+- 每条记录包含UTC时间、会话/周期/阶段、布局时间戳、三项约束、改动预算、人类完成行程、各物种进食次数和动物回避次数；尚未实现的Trace摘要不伪造为空间数据。
+- 输出位于被Git忽略的 `data/raw/research-logs/<session_id>/events.jsonl` 和 `events.csv`。JSONL保留机器可读结构，CSV用于快速检查与分析。
 
 ## 模块边界
 
@@ -170,5 +175,6 @@ Observed crossings, feeding, waiting and avoidance
 - `data/` 只定义可公开的数据结构和脱敏样例。
 - `unity/` 中的 Constraint Manager 负责规划限制与通行检查；Human 和 Animal 系统仍负责产生实际行为结果。
 - `HumanRoutePlanner` 只从已确认布局和S001参数生成路线，`HumanAgentStateMachine` 负责确定性移动/停留，`P0HumanSimulation` 负责Run阶段的Unity实例与可视化。
+- `AnimalEnvironmentPlanner`负责布局到动物资源关系的确定性映射，`AnimalAgentStateMachine`不依赖Unity场景对象，`P0AnimalSimulation`只负责运行期感知、实例和可视化。
 - `P0ConstraintManager` 当前实现入口→广场→出口、人类活动来源、路径安全间距、池塘避让和改动次数；动物可达性以S001只有一个不接触边界的池塘为前提，路径只增加成本而不封路。新增围栏或多个障碍时应替换为网格寻路。
-- 研究日志必须标注版本、会话和时间，不记录不必要的身份信息。
+- `P0ResearchLogger`只消费公开事件和汇总计数；原始研究日志写入Git忽略目录，必须标注会话和时间，不记录不必要的身份信息。

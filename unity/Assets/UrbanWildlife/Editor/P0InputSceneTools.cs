@@ -9,6 +9,8 @@ using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
 using UrbanWildlife.Cycle;
 using UrbanWildlife.Humans;
+using UrbanWildlife.Animals;
+using UrbanWildlife.Logging;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -26,6 +28,8 @@ namespace UrbanWildlife.EditorTools
             inputManager.AddComponent<P0ConstraintManager>();
             inputManager.AddComponent<P0CycleController>();
             inputManager.AddComponent<P0HumanSimulation>();
+            inputManager.AddComponent<P0AnimalSimulation>();
+            inputManager.AddComponent<P0ResearchLogger>();
             inputManager.AddComponent<P0ControlPanel>();
 
             GameObject cameraObject = new GameObject("Main Camera");
@@ -188,6 +192,121 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 $"UNITY_HUMAN_STATE_SMOKE_OK dwelling={sawDwelling} " +
                 $"visiting={sawVisiting} completed={completedHumans}/{humanPlans.Length}");
+
+            AnimalSpawnPlan[] animalPlans = AnimalEnvironmentPlanner.CreatePlans(humanDemo, scenario);
+            if (animalPlans.Length != 3 ||
+                Array.FindAll(animalPlans, plan => plan.Config.Species == AnimalSpecies.Pigeon).Length != 1 ||
+                Array.FindAll(animalPlans, plan => plan.Config.Species == AnimalSpecies.Squirrel).Length != 1 ||
+                Array.FindAll(animalPlans, plan => plan.Config.Species == AnimalSpecies.Fox).Length != 1)
+            {
+                throw new InvalidOperationException("S001 must create one Pigeon, Squirrel and Fox.");
+            }
+
+            int feedingSpecies = 0;
+            foreach (AnimalSpawnPlan plan in animalPlans)
+            {
+                AnimalAgentStateMachine animal = new AnimalAgentStateMachine(plan);
+                AnimalPerception quietEnvironment = new AnimalPerception(
+                    true,
+                    plan.FoodPosition,
+                    true,
+                    plan.ShelterPosition,
+                    float.PositiveInfinity);
+                for (int step = 0; step < 1200 && animal.FeedEvents == 0; step += 1)
+                {
+                    animal.Tick(0.1f, quietEnvironment);
+                }
+                if (animal.FeedEvents > 0)
+                {
+                    feedingSpecies += 1;
+                }
+            }
+            if (feedingSpecies != animalPlans.Length)
+            {
+                throw new InvalidOperationException("Every P0 animal must reach and feed at its assigned hotspot.");
+            }
+
+            AnimalSpawnPlan squirrelPlan = Array.Find(
+                animalPlans,
+                plan => plan.Config.Species == AnimalSpecies.Squirrel);
+            AnimalSpawnPlan foxPlan = Array.Find(
+                animalPlans,
+                plan => plan.Config.Species == AnimalSpecies.Fox);
+            AnimalSpawnPlan pigeonPlan = Array.Find(
+                animalPlans,
+                plan => plan.Config.Species == AnimalSpecies.Pigeon);
+            AnimalPerception crowdedSquirrel = new AnimalPerception(
+                true, squirrelPlan.FoodPosition, true, squirrelPlan.ShelterPosition, 0.01f);
+            AnimalPerception crowdedFox = new AnimalPerception(
+                true, foxPlan.FoodPosition, true, foxPlan.ShelterPosition, 0.01f);
+            AnimalPerception crowdedPigeon = new AnimalPerception(
+                true, pigeonPlan.FoodPosition, true, pigeonPlan.ShelterPosition, 0.01f);
+            AnimalAgentStateMachine cautiousSquirrel = new AnimalAgentStateMachine(squirrelPlan);
+            AnimalAgentStateMachine cautiousFox = new AnimalAgentStateMachine(foxPlan);
+            AnimalAgentStateMachine tolerantPigeon = new AnimalAgentStateMachine(pigeonPlan);
+            cautiousSquirrel.Tick(0.1f, crowdedSquirrel);
+            cautiousFox.Tick(0.1f, crowdedFox);
+            tolerantPigeon.Tick(0.1f, crowdedPigeon);
+            if (cautiousSquirrel.State != AnimalActivityState.AvoidingHumans ||
+                cautiousFox.State != AnimalActivityState.AvoidingHumans ||
+                tolerantPigeon.State == AnimalActivityState.AvoidingHumans)
+            {
+                throw new InvalidOperationException("Species-specific human disturbance responses are incorrect.");
+            }
+            Debug.Log("UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 feeding_species=3");
+            Debug.Log(
+                $"UNITY_ANIMAL_STATE_SMOKE_OK pigeon_avoid={tolerantPigeon.AvoidanceEvents} " +
+                $"squirrel_avoid={cautiousSquirrel.AvoidanceEvents} fox_avoid={cautiousFox.AvoidanceEvents}");
+
+            string loggerSmokeRoot = Path.Combine(
+                Path.GetTempPath(),
+                "urban-wildlife-logger-smoke",
+                Guid.NewGuid().ToString("N"));
+            try
+            {
+                ResearchLogWriter logWriter = new ResearchLogWriter(loggerSmokeRoot, "session:smoke");
+                ResearchLogRecord logRecord = new ResearchLogRecord
+                {
+                    timestamp_utc = "2026-09-08T12:00:00.0000000+00:00",
+                    session_id = "session:smoke",
+                    cycle_index = 0,
+                    event_type = "constraint_evaluated",
+                    phase = "Confirm",
+                    layout_timestamp_ms = humanDemo.timestamp_ms,
+                    human_connected = true,
+                    animal_reachable = true,
+                    food_hotspot_valid = true,
+                    changes_used = 2,
+                    changes_allowed = 2,
+                    human_trips = 6,
+                    pigeon_feed_events = 1,
+                    squirrel_feed_events = 1,
+                    fox_feed_events = 1,
+                    animal_avoidance_events = 2,
+                    note = "comma, quote \"checked\"",
+                };
+                logWriter.Append(logRecord);
+
+                string[] jsonLines = File.ReadAllLines(logWriter.JsonlPath);
+                string[] csvLines = File.ReadAllLines(logWriter.CsvPath);
+                ResearchLogRecord parsedLog = jsonLines.Length == 1
+                    ? JsonConvert.DeserializeObject<ResearchLogRecord>(jsonLines[0])
+                    : null;
+                if (parsedLog == null || parsedLog.event_type != logRecord.event_type ||
+                    csvLines.Length != 2 || !csvLines[1].Contains("\"comma, quote \"\"checked\"\"\"") ||
+                    ResearchLogFormatter.CsvHeader.Contains("participant") || jsonLines[0].Contains("participant"))
+                {
+                    throw new InvalidOperationException("Research logger JSONL/CSV or privacy smoke check failed.");
+                }
+                Debug.Log("UNITY_RESEARCH_LOG_SMOKE_OK jsonl=1 csv_rows=1 participant_fields=0");
+            }
+            finally
+            {
+                if (Directory.Exists(loggerSmokeRoot))
+                {
+                    Directory.Delete(loggerSmokeRoot, true);
+                }
+            }
 
             P0CycleStateMachine cycle = new P0CycleStateMachine(60f, 30f, 3);
             if (!cycle.TryEnterConfirm())

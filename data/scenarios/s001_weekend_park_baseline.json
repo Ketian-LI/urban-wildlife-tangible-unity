@@ -66,6 +66,27 @@
     "unity_units_per_cm": 0.1,
     "status": "p0_prototype"
   },
+  "animal_simulation": {
+    "unity_units_per_cm": 0.1,
+    "pigeon_speed_cm_per_second": 12,
+    "pigeon_food_detection_cm": 120,
+    "pigeon_feed_seconds": 4,
+    "pigeon_stay_seconds": 3,
+    "squirrel_speed_cm_per_second": 9,
+    "squirrel_food_detection_cm": 120,
+    "squirrel_disturbance_cm": 12,
+    "squirrel_feed_seconds": 5,
+    "squirrel_rest_seconds": 2,
+    "squirrel_initial_familiarity": 0.15,
+    "squirrel_familiarity_gain_per_feed": 0.15,
+    "squirrel_maximum_familiarity": 0.8,
+    "fox_speed_cm_per_second": 10,
+    "fox_food_detection_cm": 120,
+    "fox_disturbance_cm": 22,
+    "fox_feed_seconds": 6,
+    "fox_rest_seconds": 3,
+    "status": "p0_prototype_not_ecological_prediction"
+  },
   "baseline_layout": {
     "tokens": [
       {

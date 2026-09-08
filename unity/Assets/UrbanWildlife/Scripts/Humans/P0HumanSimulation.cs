@@ -39,6 +39,28 @@ namespace UrbanWildlife.Humans
         public int VisitorCount => humans.Count(item => item.model.Archetype == HumanArchetype.Visitor);
         public int CompletedTrips => humans.Sum(item => item.completedTrips);
 
+        public bool TryGetNearestActiveHuman(Vector2 localPosition, out float distance)
+        {
+            distance = float.PositiveInfinity;
+            bool found = false;
+            foreach (RuntimeHuman human in humans)
+            {
+                if (human.model.State == HumanActivityState.WaitingToEnter ||
+                    human.model.State == HumanActivityState.Finished)
+                {
+                    continue;
+                }
+
+                float candidate = Vector2.Distance(localPosition, human.model.Position);
+                if (candidate < distance)
+                {
+                    distance = candidate;
+                    found = true;
+                }
+            }
+            return found;
+        }
+
         private void Awake()
         {
             reader = GetComponent<LayoutPacketReader>();

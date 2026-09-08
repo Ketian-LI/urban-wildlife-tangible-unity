@@ -12,6 +12,7 @@ namespace UrbanWildlife.Planning
         public ScenarioFixedRegions fixed_regions;
         public ScenarioConstraints constraints;
         public ScenarioHumanSimulation human_simulation;
+        public ScenarioAnimalSimulation animal_simulation;
         public ScenarioBaselineLayout baseline_layout;
         public ScenarioExpectedConstraintCheck expected_constraint_check_before_player_changes;
     }
@@ -29,6 +30,30 @@ namespace UrbanWildlife.Planning
         public float visit_seconds;
         public float spawn_interval_seconds;
         public float unity_units_per_cm;
+        public string status;
+    }
+
+    [Serializable]
+    public sealed class ScenarioAnimalSimulation
+    {
+        public float unity_units_per_cm;
+        public float pigeon_speed_cm_per_second;
+        public float pigeon_food_detection_cm;
+        public float pigeon_feed_seconds;
+        public float pigeon_stay_seconds;
+        public float squirrel_speed_cm_per_second;
+        public float squirrel_food_detection_cm;
+        public float squirrel_disturbance_cm;
+        public float squirrel_feed_seconds;
+        public float squirrel_rest_seconds;
+        public float squirrel_initial_familiarity;
+        public float squirrel_familiarity_gain_per_feed;
+        public float squirrel_maximum_familiarity;
+        public float fox_speed_cm_per_second;
+        public float fox_food_detection_cm;
+        public float fox_disturbance_cm;
+        public float fox_feed_seconds;
+        public float fox_rest_seconds;
         public string status;
     }
 

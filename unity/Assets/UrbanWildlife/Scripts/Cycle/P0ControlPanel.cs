@@ -2,6 +2,7 @@ using UnityEngine;
 using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
 using UrbanWildlife.Humans;
+using UrbanWildlife.Animals;
 
 namespace UrbanWildlife.Cycle
 {
@@ -12,6 +13,7 @@ namespace UrbanWildlife.Cycle
         private P0ConstraintManager constraints;
         private LayoutPacketReader reader;
         private P0HumanSimulation humanSimulation;
+        private P0AnimalSimulation animalSimulation;
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
         private GUIStyle buttonStyle;
@@ -25,6 +27,7 @@ namespace UrbanWildlife.Cycle
             constraints = GetComponent<P0ConstraintManager>();
             reader = GetComponent<LayoutPacketReader>();
             humanSimulation = GetComponent<P0HumanSimulation>();
+            animalSimulation = GetComponent<P0AnimalSimulation>();
         }
 
         private void Update()
@@ -72,6 +75,14 @@ namespace UrbanWildlife.Cycle
                 GUILayout.Label(
                     $"HUMANS  W {humanSimulation.WalkerCount}  D {humanSimulation.DwellerCount}  " +
                     $"V {humanSimulation.VisitorCount}  TRIPS {humanSimulation.CompletedTrips}",
+                    bodyStyle);
+            }
+            if (animalSimulation != null && animalSimulation.AgentCount > 0)
+            {
+                GUILayout.Label(
+                    $"ANIMALS  P {animalSimulation.PigeonCount}  S {animalSimulation.SquirrelCount}  " +
+                    $"F {animalSimulation.FoxCount}  FEEDS {animalSimulation.FeedEvents}  " +
+                    $"AVOIDS {animalSimulation.AvoidanceEvents}",
                     bodyStyle);
             }
 

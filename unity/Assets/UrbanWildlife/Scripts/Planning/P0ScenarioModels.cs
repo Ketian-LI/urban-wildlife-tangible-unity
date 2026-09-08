@@ -11,8 +11,25 @@ namespace UrbanWildlife.Planning
         public ScenarioBoard board;
         public ScenarioFixedRegions fixed_regions;
         public ScenarioConstraints constraints;
+        public ScenarioHumanSimulation human_simulation;
         public ScenarioBaselineLayout baseline_layout;
         public ScenarioExpectedConstraintCheck expected_constraint_check_before_player_changes;
+    }
+
+    [Serializable]
+    public sealed class ScenarioHumanSimulation
+    {
+        public int walker_count;
+        public int dweller_count;
+        public int visitor_count;
+        public float walker_speed_cm_per_second;
+        public float dweller_speed_cm_per_second;
+        public float visitor_speed_cm_per_second;
+        public float dwell_seconds;
+        public float visit_seconds;
+        public float spawn_interval_seconds;
+        public float unity_units_per_cm;
+        public string status;
     }
 
     [Serializable]

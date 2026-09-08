@@ -1,0 +1,101 @@
+{
+  "schema_version": "0.1",
+  "packet_type": "confirmed_layout",
+  "timestamp_ms": 1788886800000,
+  "timestamp_utc": "2026-09-08T17:00:00Z",
+  "session_id": "s001-valid-human-demo",
+  "cycle_index": 0,
+  "scenario_id": "S001",
+  "calibration_id": "synthetic-planning-demo",
+  "coordinate_system": {
+    "origin": "top_left",
+    "x_axis": "right",
+    "y_axis": "down",
+    "range": [0.0, 1.0],
+    "unity_plane_mapping": "x_norm -> Unity X; y_norm -> Unity Z"
+  },
+  "capture": {
+    "mode": "image_input",
+    "stable": true,
+    "note": "Privacy-safe planning fixture; not a live camera stability claim"
+  },
+  "recognition": {
+    "token_backend": "contour",
+    "token_config_version": "0.2"
+  },
+  "tokens": [
+    {
+      "id": 10,
+      "type": "food_hotspot",
+      "x_norm": 0.5,
+      "y_norm": 0.166667,
+      "angle_deg": 0.0,
+      "in_bounds": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 11,
+      "type": "food_hotspot",
+      "x_norm": 0.744444,
+      "y_norm": 0.233333,
+      "angle_deg": 45.0,
+      "in_bounds": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 12,
+      "type": "food_hotspot",
+      "x_norm": 0.222222,
+      "y_norm": 0.716667,
+      "angle_deg": 90.0,
+      "in_bounds": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 20,
+      "type": "woodland",
+      "x_norm": 0.344444,
+      "y_norm": 0.75,
+      "angle_deg": -45.0,
+      "in_bounds": true,
+      "confidence": 1.0
+    },
+    {
+      "id": 21,
+      "type": "woodland",
+      "x_norm": 0.788889,
+      "y_norm": 0.733333,
+      "angle_deg": 135.0,
+      "in_bounds": true,
+      "confidence": 1.0
+    }
+  ],
+  "path": {
+    "format": "polyline",
+    "preset": "magenta",
+    "points_norm": [
+      [0.033333, 0.5],
+      [0.166667, 0.6],
+      [0.3, 0.45],
+      [0.4, 0.333333],
+      [0.5, 0.3],
+      [0.644444, 0.283333],
+      [0.777778, 0.383333],
+      [0.866667, 0.533333],
+      [0.966667, 0.5]
+    ],
+    "point_count": 9,
+    "continuous": true,
+    "component_count": 1,
+    "mask_area_fraction": 0.02
+  },
+  "validation": {
+    "all_tokens_in_bounds": true,
+    "path_detected": true,
+    "path_continuous": true,
+    "required_token_ids": [10, 11, 12, 20, 21],
+    "missing_token_ids": [],
+    "duplicate_token_ids": [],
+    "all_required_tokens_detected": true
+  }
+}

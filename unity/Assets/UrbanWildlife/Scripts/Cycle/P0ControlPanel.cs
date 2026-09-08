@@ -1,6 +1,7 @@
 using UnityEngine;
 using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
+using UrbanWildlife.Humans;
 
 namespace UrbanWildlife.Cycle
 {
@@ -10,6 +11,7 @@ namespace UrbanWildlife.Cycle
         private P0CycleController cycle;
         private P0ConstraintManager constraints;
         private LayoutPacketReader reader;
+        private P0HumanSimulation humanSimulation;
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
         private GUIStyle buttonStyle;
@@ -22,6 +24,7 @@ namespace UrbanWildlife.Cycle
             cycle = GetComponent<P0CycleController>();
             constraints = GetComponent<P0ConstraintManager>();
             reader = GetComponent<LayoutPacketReader>();
+            humanSimulation = GetComponent<P0HumanSimulation>();
         }
 
         private void Update()
@@ -62,6 +65,14 @@ namespace UrbanWildlife.Cycle
             else
             {
                 GUILayout.Label("SPACE = current action", bodyStyle);
+            }
+
+            if (humanSimulation != null && humanSimulation.AgentCount > 0)
+            {
+                GUILayout.Label(
+                    $"HUMANS  W {humanSimulation.WalkerCount}  D {humanSimulation.DwellerCount}  " +
+                    $"V {humanSimulation.VisitorCount}  TRIPS {humanSimulation.CompletedTrips}",
+                    bodyStyle);
             }
 
             GUILayout.Space(12f);

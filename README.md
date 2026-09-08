@@ -24,7 +24,7 @@
 俯视摄像头
         ↓
 OpenCV 识别与坐标标准化
-        ↓ JSON / UDP / OSC
+        ↓ versioned JSON
 Unity 2D 城市公园模拟
         ↓
 研究日志与交互数据
@@ -57,6 +57,7 @@ urban-wildlife-tangible-unity/
 - [x] 完成 Camera 到 Game 的坐标映射（电子稿软件预验证）
 - [x] 输出统一数据包并完成电子夹具技术 Spike 演示
 - [x] 建立Unity 6工程并完成轮廓版JSON读取烟雾测试
+- [x] 接入Walker、Dweller、Visitor三类基础人类行为
 
 工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md) 和 [`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)。
 

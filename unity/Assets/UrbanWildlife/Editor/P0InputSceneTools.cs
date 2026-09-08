@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
 using UrbanWildlife.Cycle;
+using UrbanWildlife.Humans;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -24,6 +25,7 @@ namespace UrbanWildlife.EditorTools
             inputManager.AddComponent<LayoutDebugView>();
             inputManager.AddComponent<P0ConstraintManager>();
             inputManager.AddComponent<P0CycleController>();
+            inputManager.AddComponent<P0HumanSimulation>();
             inputManager.AddComponent<P0ControlPanel>();
 
             GameObject cameraObject = new GameObject("Main Camera");
@@ -135,6 +137,57 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 $"UNITY_CONSTRAINT_REPAIR_OK all_constraints={repairedResult.all_constraints_satisfied} " +
                 $"changes={repairedResult.changes_used}/{repairedResult.changes_allowed}");
+
+            string humanDemoPath = Path.GetFullPath(Path.Combine(
+                Application.dataPath,
+                "../../data/examples/s001_valid_human_demo.json"));
+            string humanDemoJson = File.ReadAllText(humanDemoPath);
+            if (!LayoutPacketReader.TryParseAndValidate(humanDemoJson, -1, out LayoutPacket humanDemo, out string humanDemoError))
+            {
+                throw new InvalidOperationException($"Human demo packet failed: {humanDemoError}");
+            }
+            P0ConstraintResult humanDemoResult = P0ConstraintEvaluator.Evaluate(humanDemo, scenario);
+            if (!humanDemoResult.all_constraints_satisfied)
+            {
+                throw new InvalidOperationException("Human demo packet must satisfy every S001 planning constraint.");
+            }
+
+            HumanRoutePlan[] humanPlans = HumanRoutePlanner.CreatePlans(humanDemo, scenario);
+            int walkers = Array.FindAll(humanPlans, plan => plan.Archetype == HumanArchetype.Walker).Length;
+            int dwellers = Array.FindAll(humanPlans, plan => plan.Archetype == HumanArchetype.Dweller).Length;
+            int visitors = Array.FindAll(humanPlans, plan => plan.Archetype == HumanArchetype.Visitor).Length;
+            if (humanPlans.Length != 6 || walkers != 2 || dwellers != 2 || visitors != 2)
+            {
+                throw new InvalidOperationException("S001 must create two Walker, Dweller and Visitor agents.");
+            }
+
+            bool sawDwelling = false;
+            bool sawVisiting = false;
+            int completedHumans = 0;
+            foreach (HumanRoutePlan plan in humanPlans)
+            {
+                HumanAgentStateMachine agent = new HumanAgentStateMachine(plan);
+                for (int step = 0; step < 1200 && !agent.IsFinished; step += 1)
+                {
+                    agent.Tick(0.1f);
+                    sawDwelling |= agent.State == HumanActivityState.Dwelling;
+                    sawVisiting |= agent.State == HumanActivityState.Visiting;
+                }
+                if (agent.IsFinished)
+                {
+                    completedHumans += 1;
+                }
+            }
+            if (!sawDwelling || !sawVisiting || completedHumans != humanPlans.Length)
+            {
+                throw new InvalidOperationException("Human roles did not complete their expected activity states and routes.");
+            }
+            Debug.Log(
+                $"UNITY_HUMAN_ROUTE_SMOKE_OK agents={humanPlans.Length} " +
+                $"walkers={walkers} dwellers={dwellers} visitors={visitors}");
+            Debug.Log(
+                $"UNITY_HUMAN_STATE_SMOKE_OK dwelling={sawDwelling} " +
+                $"visiting={sawVisiting} completed={completedHumans}/{humanPlans.Length}");
 
             P0CycleStateMachine cycle = new P0CycleStateMachine(60f, 30f, 3);
             if (!cycle.TryEnterConfirm())

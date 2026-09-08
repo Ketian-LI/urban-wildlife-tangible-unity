@@ -17,10 +17,10 @@
 - 校准 Marker：ArUco `DICT_4X4_50`；左上 ID 0、右上 ID 1、右下 ID 2、左下 ID 3。
 - Marker 尺寸：70 × 70 mm 白色哑光卡片，中央编码区 50 × 50 mm，原尺寸打印。
 - Token 材料：3–4 mm浅色桦木夹板；玩家 Token 不使用顶部贴纸，在切割木件前允许先用等比例纸板轮廓完成视觉识别测试。
-- Food Hotspot 主体：直径 60 mm 的圆形 3–4 mm 桦木片。
-- Food Hotspot 识别：圆片边缘设置一个10 × 7 mm大方向缺口和8 × 5 mm小编码缺口；A、B、A+B分别映射逻辑ID 10、11、12。
+- Food Hotspot 主体：A款最大外径60 mm的柔和六边形3–4 mm桦木片，使用浅刻铺装纹样表达广场或人类活动节点。
+- Food Hotspot 识别：六边形边缘设置一个10 × 7 mm大方向缺口和8 × 5 mm小编码缺口；A、B、A+B分别映射逻辑ID 10、11、12。
 - Food Hotspot 磁吸：底部使用 4 片 10 × 10 mm 背胶磁吸片，按上、下、左、右均匀分布，各片外缘距木片边缘约 5 mm；如果原有背胶在木材上脱落，再使用少量强力胶加固。
-- Woodland 结构：外层采用约2 mm哑光、低饱和灰绿色毛毡，中央固定桦木识别木座；避免蓬松、反光或易变形的布料。
+- Woodland 结构：B款120 × 90 mm叶片外形，外层采用约2 mm哑光、低饱和灰绿色毛毡，中央固定桦木识别木座；避免蓬松、反光或易变形的布料。
 - Woodland 识别：只读取中央刚性木座的轮廓，不读取软布外缘；大方向缺口加C、A+C小缺口分别映射逻辑ID 20、21。
 - Woodland 尺寸：布面最大宽度约120 mm，中央桦木识别木座为直径50 mm、厚3–4 mm的圆形木片。
 - Woodland 木座：顶部保留浅色哑光木面，不贴视觉码；完整尺寸与缺口定义见 `CONTOUR_TOKEN_SPEC.md`。
@@ -32,7 +32,8 @@
 - 路径固定：使用可移动的薄磁吸点在入口、广场、出口和主要转弯处压平色带；磁吸点不得大面积遮挡洋红色路径。
 - P1 逻辑ID预留：Bench 30–31、Human Activity 32–33、Bin 40–41、Management Sign 42–43；P0阶段不制作，也不预先决定其轮廓。
 - P0 制作：允许使用打印件、纸板或轻型材料加现成磁铁，不要求最终木制 Token。
-- 无贴纸 Token 规格与制作文件：`CONTOUR_TOKEN_SPEC.md`、`templates/contour-tokens/*.svg` 和 `../output/pdf/contour-token-cut-templates-a4.pdf`。
+- 无贴纸 Token 基线规格与制作文件：`CONTOUR_TOKEN_SPEC.md`、`templates/contour-tokens/*.svg` 和 `../output/pdf/contour-token-cut-templates-a4.pdf`。
+- 已选A＋B造型规格与毫米SVG：`TOKEN_SHAPE_SPEC_V0.2.md` 和 `templates/contour-tokens-v0.2/*.svg`；实物验证失败时回退至V0.1圆形基线。
 
 ## 待确定
 

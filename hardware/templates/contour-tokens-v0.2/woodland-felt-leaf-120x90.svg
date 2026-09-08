@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="120.0mm" height="90.0mm" viewBox="0 0 120.0 90.0">
+  <title>Woodland B leaf felt template</title>
+  <desc>Green hairline is the felt cut edge. Grey dashed squares are underside magnetic-pad placement guides, not cuts.</desc>
+  <g id="CUT_FELT" fill="none" stroke="#008000" stroke-width="0.2">
+    <path d="M 0,45.0 Q 50.0,-45.0 120.0,45.0 Q 70.0,135.0 0,45.0 Z"/>
+  </g>
+  <g id="UNDERSIDE_GUIDES_DO_NOT_CUT" fill="none" stroke="#777777" stroke-width="0.2" stroke-dasharray="1,1">
+    <rect x="25.000" y="20.000" width="10.000" height="10.000"/>
+    <rect x="85.000" y="20.000" width="10.000" height="10.000"/>
+    <rect x="25.000" y="60.000" width="10.000" height="10.000"/>
+    <rect x="85.000" y="60.000" width="10.000" height="10.000"/>
+  </g>
+</svg>

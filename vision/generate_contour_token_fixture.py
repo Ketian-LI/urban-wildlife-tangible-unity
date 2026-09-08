@@ -9,7 +9,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from contour_token_geometry import render_token
+from contour_token_geometry import render_token, woodland_felt_outline_points
 from io_utils import write_image
 
 
@@ -20,8 +20,6 @@ DEFAULT_CONFIG = ROOT / "vision" / "config" / "contour_tokens.json"
 def create_fixture(config: dict[str, object]) -> tuple[np.ndarray, dict[str, object]]:
     frame = np.full((600, 900, 3), 24, dtype=np.uint8)
     cv2.ellipse(frame, (455, 435), (92, 58), 0, 0, 360, (85, 75, 65), -1)
-    cv2.ellipse(frame, (230, 410), (82, 68), 0, 0, 360, (64, 88, 64), -1)
-    cv2.ellipse(frame, (710, 405), (82, 68), 0, 0, 360, (64, 88, 64), -1)
     cv2.rectangle(frame, (770, 500), (865, 565), (210, 210, 210), -1)
 
     placements = {
@@ -31,6 +29,27 @@ def create_fixture(config: dict[str, object]) -> tuple[np.ndarray, dict[str, obj
         20: {"centre": (260, 405), "angle_deg": -45},
         21: {"centre": (675, 400), "angle_deg": 135},
     }
+    outer_felt = (
+        config.get("geometry", {})
+        .get("type_shapes", {})
+        .get("woodland", {})
+        .get("outer_felt")
+    )
+    if outer_felt and outer_felt.get("shape") == "leaf":
+        for logical_id in (20, 21):
+            centre = placements[logical_id]["centre"]
+            felt = woodland_felt_outline_points(
+                float(outer_felt["width_mm"]),
+                float(outer_felt["height_mm"]),
+                pixels_per_mm=1.0,
+            )
+            felt[:, 0] += centre[0]
+            felt[:, 1] += centre[1]
+            cv2.fillPoly(frame, [np.rint(felt).astype(np.int32)], (64, 88, 64), cv2.LINE_AA)
+    else:
+        cv2.ellipse(frame, (230, 410), (82, 68), 0, 0, 360, (64, 88, 64), -1)
+        cv2.ellipse(frame, (710, 405), (82, 68), 0, 0, 360, (64, 88, 64), -1)
+
     for logical_id, placement in placements.items():
         token, _ = render_token(
             logical_id,

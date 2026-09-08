@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1",
+  "token_config_version": "0.2",
+  "count": 5,
+  "detections": [
+    {
+      "id": 10,
+      "type": "food_hotspot",
+      "center_px": {
+        "x": 125.0,
+        "y": 145.0
+      },
+      "x_norm": 0.139043,
+      "y_norm": 0.24207,
+      "angle_deg": 0.0,
+      "diameter_mm": 61.06,
+      "code_value": 1,
+      "notch_depths_mm": {
+        "orientation": 6.935,
+        "a": 4.722,
+        "b": -0.295,
+        "c": 1.771
+      },
+      "confidence": 0.991
+    },
+    {
+      "id": 11,
+      "type": "food_hotspot",
+      "center_px": {
+        "x": 335.0,
+        "y": 140.0
+      },
+      "x_norm": 0.372636,
+      "y_norm": 0.233723,
+      "angle_deg": 40.0,
+      "diameter_mm": 60.73,
+      "code_value": 2,
+      "notch_depths_mm": {
+        "orientation": 6.311,
+        "a": 1.321,
+        "b": 4.256,
+        "c": 1.321
+      },
+      "confidence": 0.902
+    },
+    {
+      "id": 12,
+      "type": "food_hotspot",
+      "center_px": {
+        "x": 555.0,
+        "y": 150.0
+      },
+      "x_norm": 0.617353,
+      "y_norm": 0.250417,
+      "angle_deg": 85.0,
+      "diameter_mm": 61.06,
+      "code_value": 3,
+      "notch_depths_mm": {
+        "orientation": 6.817,
+        "a": 4.604,
+        "b": 4.604,
+        "c": 1.653
+      },
+      "confidence": 0.974
+    },
+    {
+      "id": 20,
+      "type": "woodland",
+      "center_px": {
+        "x": 260.04,
+        "y": 405.0
+      },
+      "x_norm": 0.289254,
+      "y_norm": 0.676127,
+      "angle_deg": -50.0,
+      "diameter_mm": 51.18,
+      "code_value": 4,
+      "notch_depths_mm": {
+        "orientation": 6.975,
+        "a": 0.297,
+        "b": 0.297,
+        "c": 4.898
+      },
+      "confidence": 0.996
+    },
+    {
+      "id": 21,
+      "type": "woodland",
+      "center_px": {
+        "x": 674.98,
+        "y": 399.98
+      },
+      "x_norm": 0.750811,
+      "y_norm": 0.667744,
+      "angle_deg": 130.0,
+      "diameter_mm": 51.17,
+      "code_value": 5,
+      "notch_depths_mm": {
+        "orientation": 6.974,
+        "a": 4.897,
+        "b": 0.297,
+        "c": 4.897
+      },
+      "confidence": 0.996
+    }
+  ]
+}

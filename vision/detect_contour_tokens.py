@@ -200,7 +200,12 @@ def main() -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     write_image(args.output_dir / "candidate_mask.png", mask)
     write_image(args.output_dir / "contour_overlay.png", overlay)
-    result = {"schema_version": "0.1", "count": len(detections), "detections": detections}
+    result = {
+        "schema_version": "0.1",
+        "token_config_version": str(config.get("schema_version", "unknown")),
+        "count": len(detections),
+        "detections": detections,
+    }
     (args.output_dir / "contour_detections.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
     )

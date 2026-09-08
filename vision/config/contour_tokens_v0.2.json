@@ -1,0 +1,114 @@
+{
+  "schema_version": "0.2",
+  "status": "selected_design_pending_physical_validation",
+  "design_selection": {
+    "selected_on": "2026-09-08",
+    "food_family": "A",
+    "woodland_family": "B",
+    "summary": "Soft-hexagonal urban plaza Food tokens plus leaf-shaped felt Woodland islands with circular recognition cores"
+  },
+  "rectified_scale": {
+    "pixels_per_mm": 1.0,
+    "output_size_px": [900, 600]
+  },
+  "segmentation": {
+    "initial_grayscale_threshold": 130,
+    "minimum_contrast_against_board": 55
+  },
+  "detection": {
+    "minimum_area_mm2": 1150,
+    "minimum_circularity": 0.62,
+    "angular_samples": 360,
+    "smoothing_window_deg": 5,
+    "slot_window_deg": 14,
+    "orientation_min_depth_mm": 4.2,
+    "code_min_depth_mm": 2.8
+  },
+  "geometry": {
+    "food_hotspot_diameter_mm": 60,
+    "woodland_core_diameter_mm": 50,
+    "diameter_tolerance_mm": 4,
+    "type_shapes": {
+      "food_hotspot": {
+        "recognition_outline": "soft_hexagon",
+        "phase_deg": 0,
+        "side_inset_mm": 2.0,
+        "visual_language": "urban_plaza_paving",
+        "optional_engraving": "shallow_hexagonal_paving_lines"
+      },
+      "woodland": {
+        "recognition_outline": "circle",
+        "visual_language": "leaf_felt_island",
+        "outer_felt": {
+          "shape": "leaf",
+          "width_mm": 120,
+          "height_mm": 90,
+          "colour": "muted_olive",
+          "underside_magnetic_pads_mm": 10,
+          "underside_magnetic_pad_centres_mm": [
+            [-30, -20],
+            [30, -20],
+            [-30, 20],
+            [30, 20]
+          ]
+        }
+      }
+    },
+    "orientation_notch": {
+      "reference_angle_clockwise_deg": 0,
+      "width_mm": 10,
+      "depth_mm": 7
+    },
+    "code_notch": {
+      "width_mm": 8,
+      "depth_mm": 5
+    },
+    "code_slots": {
+      "a": {
+        "angle_clockwise_deg": 90,
+        "weight": 1
+      },
+      "b": {
+        "angle_clockwise_deg": 180,
+        "weight": 2
+      },
+      "c": {
+        "angle_clockwise_deg": 270,
+        "weight": 4
+      }
+    }
+  },
+  "codes": {
+    "10": {
+      "type": "food_hotspot",
+      "diameter_mm": 60,
+      "slots": ["a"]
+    },
+    "11": {
+      "type": "food_hotspot",
+      "diameter_mm": 60,
+      "slots": ["b"]
+    },
+    "12": {
+      "type": "food_hotspot",
+      "diameter_mm": 60,
+      "slots": ["a", "b"]
+    },
+    "20": {
+      "type": "woodland",
+      "diameter_mm": 50,
+      "slots": ["c"]
+    },
+    "21": {
+      "type": "woodland",
+      "diameter_mm": 50,
+      "slots": ["a", "c"]
+    }
+  },
+  "acceptance": {
+    "minimum_detection_successes_per_10_frames": 9,
+    "maximum_position_error_mm": 5,
+    "maximum_angle_error_deg": 8,
+    "test_rotations_deg": [0, 45, 90, 135, 180, 225, 270, 315]
+  }
+}

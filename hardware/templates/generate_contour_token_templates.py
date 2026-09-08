@@ -118,6 +118,7 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--svg-dir", type=Path, default=DEFAULT_SVG_DIR)
     parser.add_argument("--pdf", type=Path, default=DEFAULT_PDF)
+    parser.add_argument("--skip-pdf", action="store_true", help="Generate only SVG cut outlines")
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
     svg_paths = []
@@ -125,8 +126,11 @@ def main() -> int:
         path = args.svg_dir / f"contour-token-id-{logical_id}.svg"
         write_svg(path, logical_id, config)
         svg_paths.append(str(path))
-    create_pdf(args.pdf, config)
-    print(json.dumps({"svg": svg_paths, "pdf": str(args.pdf)}, indent=2))
+    pdf_path = None
+    if not args.skip_pdf:
+        create_pdf(args.pdf, config)
+        pdf_path = str(args.pdf)
+    print(json.dumps({"svg": svg_paths, "pdf": pdf_path}, indent=2))
     return 0
 
 

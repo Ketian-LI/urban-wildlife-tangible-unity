@@ -54,7 +54,7 @@ urban-wildlife-simulation/
 - [ ] 固定摄像头、桌面与光照条件
 - [ ] 稳定识别单个 Marker Token
 - [ ] 识别高饱和彩绳并输出 Path Mask
-- [ ] 完成 Camera 到 Game 的坐标映射
+- [x] 完成 Camera 到 Game 的坐标映射（电子稿软件预验证）
 - [ ] 输出统一数据包并完成技术 Spike 演示
 
 工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md) 和 [`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)。

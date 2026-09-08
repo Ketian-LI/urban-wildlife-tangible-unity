@@ -19,6 +19,7 @@
 - `generate_calibration_markers.py`：生成 ID 0–3 的70 mm校准卡和A4打印稿。
 - `camera_probe.py`：列出视频输入，或进行无窗口的短时取流测试。
 - `detect_markers.py`：从图片或摄像头读取 ArUco ID、像素中心和角度，并保存标注图与JSON。
+- `calibrate_corners.py`：识别四角 Marker，计算透视矩阵，输出校准标注图、俯视矫正图和 Camera → Game 标准化坐标参数。
 - `config/calibration.json`：四角顺序、打印尺寸、板面和视频输入基线。
 
 ## 一键配置
@@ -44,3 +45,25 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_vision.ps1
 .\.venv\Scripts\python.exe vision\camera_probe.py --source 0 --seconds 3
 .\.venv\Scripts\python.exe vision\detect_markers.py --camera 0
 ```
+
+## 四角校准
+
+把 ID 0、1、2、3 分别放在活动区域的左上、右上、右下、左下。四张 Marker 的中心共同定义游戏活动区域边界，然后运行：
+
+```powershell
+.\.venv\Scripts\python.exe vision\calibrate_corners.py --camera 1 --output-dir data\raw\calibration-tests\physical-01
+```
+
+也可以先用图片测试：
+
+```powershell
+.\.venv\Scripts\python.exe vision\calibrate_corners.py --image path\to\frame.png --output-dir data\raw\calibration-tests\image-01
+```
+
+输出包括：
+
+- `calibration.json`：Camera → Board 透视矩阵、四角像素位置和坐标约定。
+- `calibration_overlay.png`：四角顺序和有效区域检查图。
+- `warped.png`：校正为 900 × 600 像素的俯视图。
+
+归一化坐标原点在左上，X 向右、Y 向下，范围均为 0–1；接入 Unity 平面时建议映射为 `X = normalized.x`、`Z = normalized.y`。正式板面固定后必须重新运行并保存现场校准结果。

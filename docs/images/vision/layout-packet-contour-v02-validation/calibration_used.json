@@ -1,0 +1,164 @@
+{
+  "schema_version": "0.1",
+  "dictionary": "DICT_4X4_50",
+  "coordinate_definition": {
+    "origin": "top_left_corner_marker_centre",
+    "x_axis": "right",
+    "y_axis": "down",
+    "normalized_range": [
+      0.0,
+      1.0
+    ],
+    "unity_plane_mapping": "normalized x -> Unity X; normalized y -> Unity Z",
+    "note": "The active board rectangle is bounded by the four marker centres."
+  },
+  "output_size_px": {
+    "width": 900,
+    "height": 600
+  },
+  "source_corners_px": {
+    "top_left": {
+      "id": 0,
+      "x": 181.5,
+      "y": 133.25
+    },
+    "top_right": {
+      "id": 1,
+      "x": 1061.5,
+      "y": 172.75
+    },
+    "bottom_right": {
+      "id": 2,
+      "x": 1016.5,
+      "y": 760.25
+    },
+    "bottom_left": {
+      "id": 3,
+      "x": 136.5,
+      "y": 702.0
+    }
+  },
+  "homography_camera_to_board": [
+    [
+      1.059292485485436,
+      0.0838121526977487,
+      -203.42955546258165
+    ],
+    [
+      -0.04753902133369089,
+      1.059097184142987,
+      -132.49636741498813
+    ],
+    [
+      3.7286775824205655e-05,
+      5.831376477979853e-06,
+      1.0
+    ]
+  ],
+  "detections": [
+    {
+      "id": 0,
+      "center_px": {
+        "x": 181.5,
+        "y": 133.25
+      },
+      "angle_deg": 2.77,
+      "corners_px": [
+        [
+          153.0,
+          101.0
+        ],
+        [
+          215.0,
+          104.0
+        ],
+        [
+          210.0,
+          165.0
+        ],
+        [
+          148.0,
+          163.0
+        ]
+      ]
+    },
+    {
+      "id": 1,
+      "center_px": {
+        "x": 1061.5,
+        "y": 172.75
+      },
+      "angle_deg": 1.74,
+      "corners_px": [
+        [
+          1031.0,
+          140.0
+        ],
+        [
+          1097.0,
+          142.0
+        ],
+        [
+          1092.0,
+          206.0
+        ],
+        [
+          1026.0,
+          203.0
+        ]
+      ]
+    },
+    {
+      "id": 2,
+      "center_px": {
+        "x": 1016.5,
+        "y": 760.25
+      },
+      "angle_deg": 3.47,
+      "corners_px": [
+        [
+          986.0,
+          726.0
+        ],
+        [
+          1052.0,
+          730.0
+        ],
+        [
+          1047.0,
+          795.0
+        ],
+        [
+          981.0,
+          790.0
+        ]
+      ]
+    },
+    {
+      "id": 3,
+      "center_px": {
+        "x": 136.5,
+        "y": 702.0
+      },
+      "angle_deg": 3.69,
+      "corners_px": [
+        [
+          108.0,
+          669.0
+        ],
+        [
+          170.0,
+          673.0
+        ],
+        [
+          165.0,
+          735.0
+        ],
+        [
+          103.0,
+          731.0
+        ]
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import math
 import os
@@ -14,6 +15,7 @@ import cv2
 import numpy as np
 
 from calibrate_corners import calibrate_frame, camera_to_normalized, transform_point
+from detect_contour_tokens import detect_contour_tokens
 from detect_markers import detect_frame, load_camera_frame
 from detect_path import detect_path
 from io_utils import read_image, write_image
@@ -22,6 +24,7 @@ from io_utils import read_image, write_image
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CALIBRATION_CONFIG = ROOT / "vision" / "config" / "calibration.json"
 DEFAULT_PATH_CONFIG = ROOT / "vision" / "config" / "path_detection.json"
+DEFAULT_CONTOUR_CONFIG = ROOT / "vision" / "config" / "contour_tokens_v0.2.json"
 
 
 def token_type(marker_id: int, token_ranges: dict[str, list[int]]) -> str:
@@ -29,6 +32,18 @@ def token_type(marker_id: int, token_ranges: dict[str, list[int]]) -> str:
         if int(bounds[0]) <= marker_id <= int(bounds[1]):
             return name
     return "unknown"
+
+
+def token_set_validation(tokens: list[dict[str, object]], expected_ids: list[int]) -> dict[str, object]:
+    counts = Counter(int(token["id"]) for token in tokens)
+    missing = [logical_id for logical_id in expected_ids if counts[logical_id] == 0]
+    duplicates = sorted(logical_id for logical_id, count in counts.items() if count > 1)
+    return {
+        "required_token_ids": expected_ids,
+        "missing_token_ids": missing,
+        "duplicate_token_ids": duplicates,
+        "all_required_tokens_detected": not missing and not duplicates,
+    }
 
 
 def normalized_angle(detection: dict[str, object], homography: np.ndarray) -> float:
@@ -103,6 +118,21 @@ def build_token(
     }
 
 
+def build_contour_token(detection: dict[str, object]) -> dict[str, object]:
+    """Copy one already-rectified contour detection into the layout contract."""
+    x_norm = round(float(detection["x_norm"]), 6)
+    y_norm = round(float(detection["y_norm"]), 6)
+    return {
+        "id": int(detection["id"]),
+        "type": str(detection["type"]),
+        "x_norm": x_norm,
+        "y_norm": y_norm,
+        "angle_deg": round(float(detection["angle_deg"]), 2),
+        "in_bounds": 0.0 <= x_norm <= 1.0 and 0.0 <= y_norm <= 1.0,
+        "confidence": round(float(detection["confidence"]), 3),
+    }
+
+
 def draw_packet_overlay(warped: np.ndarray, path_overlay: np.ndarray, tokens: list[dict[str, object]]) -> np.ndarray:
     overlay = path_overlay.copy()
     height, width = warped.shape[:2]
@@ -134,6 +164,8 @@ def build_layout_packet(
     scenario_id: str,
     calibration_id: str,
     timestamp_ms: int,
+    token_backend: str = "aruco",
+    contour_config: dict[str, object] | None = None,
 ) -> tuple[dict[str, object], dict[str, object], np.ndarray, np.ndarray, np.ndarray]:
     width = int(calibration_config["board_size_mm"]["width"])
     height = int(calibration_config["board_size_mm"]["height"])
@@ -144,14 +176,29 @@ def build_layout_packet(
         width,
         height,
     )
-    homography = np.asarray(calibration["homography_camera_to_board"], dtype=np.float64)
-    detections, _ = detect_frame(frame, calibration_config["aruco_dictionary"])
-    corner_ids = set(int(value) for value in calibration_config["corner_ids"].values())
-    tokens = [
-        build_token(item, homography, width, height, calibration_config["token_id_ranges"])
-        for item in detections
-        if int(item["id"]) not in corner_ids
-    ]
+    if token_backend == "aruco":
+        homography = np.asarray(calibration["homography_camera_to_board"], dtype=np.float64)
+        detections, _ = detect_frame(frame, calibration_config["aruco_dictionary"])
+        corner_ids = set(int(value) for value in calibration_config["corner_ids"].values())
+        tokens = [
+            build_token(item, homography, width, height, calibration_config["token_id_ranges"])
+            for item in detections
+            if int(item["id"]) not in corner_ids
+        ]
+        token_config_version = str(calibration_config.get("schema_version", "unknown"))
+        expected_ids = []
+        for type_name in ("food_hotspot", "woodland"):
+            lower, upper = calibration_config["token_id_ranges"][type_name]
+            expected_ids.extend(range(int(lower), int(upper) + 1))
+    elif token_backend == "contour":
+        if contour_config is None:
+            raise ValueError("Contour token backend requires a contour config")
+        contour_detections, _, _ = detect_contour_tokens(warped, contour_config)
+        tokens = [build_contour_token(item) for item in contour_detections]
+        token_config_version = str(contour_config.get("schema_version", "unknown"))
+        expected_ids = sorted(int(logical_id) for logical_id in contour_config["codes"])
+    else:
+        raise ValueError(f"Unknown token backend: {token_backend}")
     tokens.sort(key=lambda item: int(item["id"]))
 
     path_result, path_mask, path_overlay = detect_path(warped, path_preset, path_config)
@@ -173,6 +220,10 @@ def build_layout_packet(
             "range": [0.0, 1.0],
             "unity_plane_mapping": "x_norm -> Unity X; y_norm -> Unity Z",
         },
+        "recognition": {
+            "token_backend": token_backend,
+            "token_config_version": token_config_version,
+        },
         "tokens": tokens,
         "path": {
             "format": "polyline",
@@ -187,6 +238,7 @@ def build_layout_packet(
             "all_tokens_in_bounds": all(bool(token["in_bounds"]) for token in tokens),
             "path_detected": bool(path_result["path_detected"]),
             "path_continuous": int(path_result["component_count"]) == 1,
+            **token_set_validation(tokens, expected_ids),
         },
     }
     packet_overlay = draw_packet_overlay(warped, path_overlay, tokens)
@@ -215,6 +267,8 @@ def main() -> int:
     source.add_argument("--camera", type=int)
     parser.add_argument("--calibration-config", type=Path, default=DEFAULT_CALIBRATION_CONFIG)
     parser.add_argument("--path-config", type=Path, default=DEFAULT_PATH_CONFIG)
+    parser.add_argument("--token-backend", choices=("contour", "aruco"), default="contour")
+    parser.add_argument("--contour-config", type=Path, default=DEFAULT_CONTOUR_CONFIG)
     parser.add_argument("--path-preset")
     parser.add_argument("--session-id", default="local-test")
     parser.add_argument("--cycle-index", type=int, default=0)
@@ -226,6 +280,11 @@ def main() -> int:
 
     calibration_config = json.loads(args.calibration_config.read_text(encoding="utf-8"))
     path_config = json.loads(args.path_config.read_text(encoding="utf-8"))
+    contour_config = (
+        json.loads(args.contour_config.read_text(encoding="utf-8"))
+        if args.token_backend == "contour"
+        else None
+    )
     path_preset = args.path_preset or path_config["default_preset"]
     if args.image:
         frame = read_image(args.image)
@@ -245,6 +304,8 @@ def main() -> int:
             args.scenario_id,
             args.calibration_id,
             timestamp_ms,
+            token_backend=args.token_backend,
+            contour_config=contour_config,
         )
     except ValueError as error:
         print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False, indent=2))
@@ -252,6 +313,20 @@ def main() -> int:
 
     if not packet["validation"]["path_detected"]:
         print(json.dumps({"ok": False, "error": "No valid path was detected"}, ensure_ascii=False, indent=2))
+        return 2
+    if not packet["validation"]["all_required_tokens_detected"]:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": "Required token set is incomplete or duplicated",
+                    "missing_token_ids": packet["validation"]["missing_token_ids"],
+                    "duplicate_token_ids": packet["validation"]["duplicate_token_ids"],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 2
 
     archive_path = args.output_dir / "archive" / args.session_id / f"cycle-{args.cycle_index:03d}-{timestamp_ms}.json"

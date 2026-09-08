@@ -9,6 +9,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from contour_token_geometry import render_token, woodland_felt_outline_points
 from io_utils import write_image
 
 
@@ -33,7 +34,19 @@ def place_card(frame: np.ndarray, card: np.ndarray, centre: tuple[int, int]) -> 
     frame[y : y + height, x : x + width] = card
 
 
-def build_fixture(config: dict[str, object]) -> tuple[np.ndarray, dict[str, object]]:
+def place_mask(frame: np.ndarray, mask: np.ndarray, centre: tuple[int, int], colour: tuple[int, int, int]) -> None:
+    height, width = mask.shape
+    x = centre[0] - width // 2
+    y = centre[1] - height // 2
+    region = frame[y : y + height, x : x + width]
+    region[mask > 0] = colour
+
+
+def build_fixture(
+    config: dict[str, object],
+    token_backend: str = "aruco",
+    contour_config: dict[str, object] | None = None,
+) -> tuple[np.ndarray, dict[str, object]]:
     canvas = np.full((800, 1100, 3), (205, 195, 180), dtype=np.uint8)
     board_top_left = (100, 100)
     board_bottom_right = (1000, 700)
@@ -67,8 +80,25 @@ def build_fixture(config: dict[str, object]) -> tuple[np.ndarray, dict[str, obje
         20: (330, 570),
         21: (775, 560),
     }
-    for marker_id, centre in token_positions.items():
-        place_card(canvas, marker_card(marker_id, config["aruco_dictionary"], 66, 48), centre)
+    token_angles = {10: 0, 11: 45, 12: 90, 20: -45, 21: 135}
+    if token_backend == "aruco":
+        for marker_id, centre in token_positions.items():
+            place_card(canvas, marker_card(marker_id, config["aruco_dictionary"], 66, 48), centre)
+    elif token_backend == "contour":
+        if contour_config is None:
+            raise ValueError("Contour fixture requires a contour config")
+        felt = contour_config["geometry"]["type_shapes"]["woodland"]["outer_felt"]
+        for marker_id in (20, 21):
+            centre = token_positions[marker_id]
+            points = woodland_felt_outline_points(float(felt["width_mm"]), float(felt["height_mm"]))
+            points[:, 0] += centre[0]
+            points[:, 1] += centre[1]
+            cv2.fillPoly(canvas, [np.rint(points).astype(np.int32)], (64, 88, 64), cv2.LINE_AA)
+        for marker_id, centre in token_positions.items():
+            token, _ = render_token(marker_id, contour_config, 1.0, token_angles[marker_id])
+            place_mask(canvas, token, centre, (215, 215, 215))
+    else:
+        raise ValueError(f"Unknown token backend: {token_backend}")
 
     source = np.float32([[0, 0], [1099, 0], [1099, 799], [0, 799]])
     destination = np.float32([[95, 35], [1170, 80], [1110, 865], [35, 790]])
@@ -76,10 +106,12 @@ def build_fixture(config: dict[str, object]) -> tuple[np.ndarray, dict[str, obje
     frame = cv2.warpPerspective(canvas, perspective, (1240, 900), borderValue=(235, 235, 235))
     truth: dict[str, object] = {
         "corner_ids": config["corner_ids"],
+        "token_backend": token_backend,
         "tokens": [
             {
                 "id": marker_id,
                 "center_norm": [round((centre[0] - 100) / 900, 6), round((centre[1] - 100) / 600, 6)],
+                "angle_deg": token_angles[marker_id] if token_backend == "contour" else 0,
             }
             for marker_id, centre in sorted(token_positions.items())
         ],
@@ -91,10 +123,17 @@ def build_fixture(config: dict[str, object]) -> tuple[np.ndarray, dict[str, obje
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--token-backend", choices=("aruco", "contour"), default="aruco")
+    parser.add_argument("--contour-config", type=Path, default=ROOT / "vision" / "config" / "contour_tokens_v0.2.json")
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
-    frame, truth = build_fixture(config)
+    contour_config = (
+        json.loads(args.contour_config.read_text(encoding="utf-8"))
+        if args.token_backend == "contour"
+        else None
+    )
+    frame, truth = build_fixture(config, args.token_backend, contour_config)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     write_image(args.output_dir / "input.png", frame)
     (args.output_dir / "ground_truth.json").write_text(

@@ -28,6 +28,7 @@
 - `config/calibration.json`：四角顺序、打印尺寸、板面和视频输入基线。
 - `config/path_detection.json`：亮洋红、青色与橙色路径的初始 HSV 阈值和去噪参数。
 - `config/contour_tokens.json`：无贴纸 Token 的直径、方向缺口、三位轮廓编码与实物验收阈值。
+- `config/contour_tokens_v0.2.json`：已选A款Food＋B款Woodland造型、毫米尺寸、轮廓编码与毛毡磁吸点位置。
 
 ## 一键配置
 
@@ -94,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_vision.ps1
 .\.venv\Scripts\python.exe vision\build_layout_packet.py --camera 1 --session-id pilot-001 --cycle-index 0 --scenario-id S001 --path-preset magenta
 ```
 
-程序会排除四角 ID 0–3，把 Token 转换为0–1板面坐标和校正后的角度，并将最大路径区域采样为标准化折线。当前电子夹具使用 ArUco Token 验证数据流；轮廓检测器通过实物验收后替换该后端，输出JSON格式不变。默认输出：
+程序用四角 ID 0–3完成透视矫正，再从矫正图读取无贴纸轮廓Token，把它们转换为0–1板面坐标和角度，并将最大路径区域采样为标准化折线。默认使用 `contour_tokens_v0.2.json`；旧ArUco Token夹具仍可通过 `--token-backend aruco` 回归。缺少或重复任一ID 10、11、12、20、21时不会确认布局。默认输出：
 
 - `data/raw/layout-packets/latest_layout.json`：Unity 只读取这个完整文件。
 - `data/raw/layout-packets/archive/<session>/...json`：每个周期的不可变记录。

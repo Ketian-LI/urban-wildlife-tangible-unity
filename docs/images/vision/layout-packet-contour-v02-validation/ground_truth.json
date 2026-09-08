@@ -1,0 +1,52 @@
+{
+  "corner_ids": {
+    "top_left": 0,
+    "top_right": 1,
+    "bottom_right": 2,
+    "bottom_left": 3
+  },
+  "token_backend": "contour",
+  "tokens": [
+    {
+      "id": 10,
+      "center_norm": [
+        0.288889,
+        0.225
+      ],
+      "angle_deg": 0
+    },
+    {
+      "id": 11,
+      "center_norm": [
+        0.655556,
+        0.208333
+      ],
+      "angle_deg": 45
+    },
+    {
+      "id": 12,
+      "center_norm": [
+        0.488889,
+        0.583333
+      ],
+      "angle_deg": 90
+    },
+    {
+      "id": 20,
+      "center_norm": [
+        0.255556,
+        0.783333
+      ],
+      "angle_deg": -45
+    },
+    {
+      "id": 21,
+      "center_norm": [
+        0.75,
+        0.766667
+      ],
+      "angle_deg": 135
+    }
+  ],
+  "path_preset": "magenta"
+}

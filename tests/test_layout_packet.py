@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "vision"))
 
-from build_layout_packet import atomic_write_json, build_layout_packet, token_type  # noqa: E402
+from build_layout_packet import atomic_write_json, build_layout_packet, token_set_validation, token_type  # noqa: E402
 from generate_layout_fixture import build_fixture  # noqa: E402
 
 
@@ -42,6 +42,7 @@ class LayoutPacketTests(unittest.TestCase):
         self.assertEqual(self.packet["session_id"], "automated-test")
         self.assertEqual(self.packet["cycle_index"], 2)
         self.assertEqual(self.packet["timestamp_utc"], "2026-09-08T16:00:00Z")
+        self.assertEqual(self.packet["recognition"]["token_backend"], "aruco")
 
     def test_packet_contains_every_schema_required_field(self) -> None:
         schema = json.loads(
@@ -63,6 +64,9 @@ class LayoutPacketTests(unittest.TestCase):
             "woodland",
         ])
         self.assertTrue(self.packet["validation"]["all_tokens_in_bounds"])
+        self.assertTrue(self.packet["validation"]["all_required_tokens_detected"])
+        self.assertEqual(self.packet["validation"]["missing_token_ids"], [])
+        self.assertEqual(self.packet["validation"]["duplicate_token_ids"], [])
 
     def test_token_coordinates_match_fixture(self) -> None:
         truth_by_id = {item["id"]: item["center_norm"] for item in self.truth["tokens"]}
@@ -88,6 +92,13 @@ class LayoutPacketTests(unittest.TestCase):
         self.assertEqual(token_type(21, ranges), "woodland")
         self.assertEqual(token_type(35, ranges), "p1_reserved")
         self.assertEqual(token_type(49, ranges), "unknown")
+
+    def test_incomplete_or_duplicate_token_set_is_rejected(self) -> None:
+        tokens = [{"id": 10}, {"id": 10}, {"id": 12}, {"id": 20}]
+        result = token_set_validation(tokens, [10, 11, 12, 20, 21])
+        self.assertFalse(result["all_required_tokens_detected"])
+        self.assertEqual(result["missing_token_ids"], [11, 21])
+        self.assertEqual(result["duplicate_token_ids"], [10])
 
     def test_atomic_json_replaces_complete_document(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

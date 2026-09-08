@@ -47,5 +47,5 @@
 - [x] 网页实验 Demo 与最终实体 Unity 项目使用不同仓库。
 - [x] `data/` 只提交 schema、场景和脱敏样例。
 - [x] 独立 GitHub 远端已建立并完成首次推送：<https://github.com/Ketian-LI/urban-wildlife-tangible-unity>。
-- [x] 已从 GitHub 干净克隆到 `C:\Users\23902\Desktop\毕设`，并恢复 Python 环境和自动测试。
+- [x] 已从 GitHub 干净克隆到 `C:\Users\23902\Desktop\urban-wildlife-tangible-unity`，并恢复 Python 环境和自动测试。
 - [ ] 摄像头与灯光现场照片已归档到 `hardware/evidence/`。

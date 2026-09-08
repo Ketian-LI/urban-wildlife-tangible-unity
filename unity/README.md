@@ -1,14 +1,8 @@
-# Unity
+# Unity P0 Input Project
 
-这里放置 Unity 2D 项目。
+这是可直接由 Unity Hub 打开的Unity 6工程，项目路径为仓库中的 `unity/`，编辑器版本固定为 `6000.3.4f1`。
 
-创建项目后补充：
-
-- Unity 编辑器版本与所需模块。
-- 打开和运行场景的方法。
-- 主场景名称。
-- Input Manager、Environment Manager、NPC、Animal、Trace 与 Logger 的位置。
-- Build 与运行时配置步骤。
+当前主场景为 `Assets/Scenes/P0_InputSpike.unity`。场景只搭建输入闭环，包含 `Layout Input Manager` 和正交摄像机；Environment、NPC、Animal、Trace 与 Logger 会在输入协议稳定后逐层加入。
 
 不要提交 `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 或本机构建输出。
 
@@ -19,3 +13,34 @@
 - 若时间戳不比上次读取的新、JSON 不完整或版本不支持，则保持上一份有效布局并记录错误。
 - `x_norm` 映射 Unity X，`y_norm` 映射 Unity Z；四角 Marker 不会出现在 Token 数组中。
 - 正式字段定义见 `data/schemas/layout_packet_v0.1.schema.json`；隐私安全示例见 `docs/images/vision/layout-packet-validation/latest_layout.json`。
+
+## 打开和验证
+
+1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
+2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
+3. 在仓库根目录用Python生成真实或测试用 `data/raw/layout-packets/latest_layout.json`。
+4. 在Hierarchy选择 `Layout Input Manager`，从 `LayoutPacketReader` 组件菜单执行 **Confirm Latest Layout**。
+5. Console出现 `Accepted layout ... with 5 tokens ...` 表示Unity已接受；版本错误、旧时间戳、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。
+
+轮廓版无隐私输入样例位于 `docs/images/vision/layout-packet-contour-v02-validation/latest_layout.json`。编辑器批处理验证命令为：
+
+```powershell
+& "C:\Program Files\Unity\Hub\Editor\6000.3.4f1\Editor\Unity.exe" `
+  -batchmode -nographics -projectPath ".\unity" `
+  -executeMethod UrbanWildlife.EditorTools.P0InputSceneTools.BatchVerifyFixture `
+  -quit -logFile ".\data\raw\unity-smoke.log"
+```
+
+成功日志包含：`UNITY_INPUT_SMOKE_OK tokens=5 path_points=11 backend=contour`。
+
+## 已实现组件
+
+- `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
+- `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
+- `P0InputSceneTools.cs`：可重复创建P0输入场景，并在批处理模式验证脱敏夹具。
+
+## 当前边界
+
+- Unity目前只证明“读入并拒绝无效布局”的闭环，还没有把Token实例化为场景对象。
+- `LayoutAccepted` 是下一步供 Environment Manager 与规划约束模块订阅的唯一入口。
+- `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

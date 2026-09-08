@@ -33,7 +33,7 @@ Unity 2D 城市公园模拟
 ## 仓库目录
 
 ```text
-urban-wildlife-simulation/
+urban-wildlife-tangible-unity/
 ├─ .github/             GitHub 任务与问题模板
 ├─ docs/                Scope、架构、风险与研究日志
 ├─ hardware/            桌面、摄像头、Token 与校准记录
@@ -56,6 +56,7 @@ urban-wildlife-simulation/
 - [x] 识别高饱和彩绳并输出 Path Mask（电子效果图软件预验证）
 - [x] 完成 Camera 到 Game 的坐标映射（电子稿软件预验证）
 - [x] 输出统一数据包并完成电子夹具技术 Spike 演示
+- [x] 建立Unity 6工程并完成轮廓版JSON读取烟雾测试
 
 工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md) 和 [`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)。
 

@@ -20,7 +20,7 @@
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
 3. 在仓库根目录用Python生成真实或测试用 `data/raw/layout-packets/latest_layout.json`。
 4. 在Hierarchy选择 `Layout Input Manager`，从 `LayoutPacketReader` 组件菜单执行 **Confirm Latest Layout**。
-5. Console出现 `Accepted layout ... with 5 tokens ...` 表示Unity已接受；版本错误、旧时间戳、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。
+5. 点击Play后会自动读取最新布局并生成黑色板面、洋红路径、3个Food与2个Woodland调试物件。Console出现 `Accepted layout ... with 5 tokens ...` 表示Unity已接受；版本错误、旧时间戳、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。
 
 轮廓版无隐私输入样例位于 `docs/images/vision/layout-packet-contour-v02-validation/latest_layout.json`。编辑器批处理验证命令为：
 
@@ -37,10 +37,11 @@
 
 - `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
-- `P0InputSceneTools.cs`：可重复创建P0输入场景，并在批处理模式验证脱敏夹具。
+- `LayoutDebugView.cs`：把归一化坐标转换为9 × 6 Unity单位的俯视板面、路径与Token调试物件。
+- `P0InputSceneTools.cs`：可重复创建P0输入场景，并在批处理模式验证脱敏夹具和9个调试元素。
 
 ## 当前边界
 
-- Unity目前只证明“读入并拒绝无效布局”的闭环，还没有把Token实例化为场景对象。
+- Unity目前把输入实例化为纯调试几何，还没有最终公园美术、碰撞或行为逻辑。
 - `LayoutAccepted` 是下一步供 Environment Manager 与规划约束模块订阅的唯一入口。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

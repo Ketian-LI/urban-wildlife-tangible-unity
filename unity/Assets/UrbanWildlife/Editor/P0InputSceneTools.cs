@@ -17,7 +17,11 @@ namespace UrbanWildlife.EditorTools
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             GameObject inputManager = new GameObject("Layout Input Manager");
-            inputManager.AddComponent<LayoutPacketReader>();
+            LayoutPacketReader reader = inputManager.AddComponent<LayoutPacketReader>();
+            inputManager.AddComponent<LayoutDebugView>();
+            SerializedObject readerSettings = new SerializedObject(reader);
+            readerSettings.FindProperty("loadOnStart").boolValue = true;
+            readerSettings.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject cameraObject = new GameObject("Main Camera");
             Camera camera = cameraObject.AddComponent<Camera>();
@@ -26,7 +30,14 @@ namespace UrbanWildlife.EditorTools
             camera.orthographic = true;
             camera.orthographicSize = 3.5f;
             cameraObject.tag = "MainCamera";
-            cameraObject.transform.position = new Vector3(0f, 0f, -10f);
+            cameraObject.transform.position = new Vector3(0f, 10f, 0f);
+            cameraObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+            GameObject lightObject = new GameObject("Directional Light");
+            Light light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1.1f;
+            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             if (!EditorSceneManager.SaveScene(scene, ScenePath))
@@ -61,9 +72,20 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("Contour layout fixture contains unexpected values.");
             }
 
+            GameObject smokeObject = new GameObject("Layout Debug Smoke");
+            smokeObject.AddComponent<LayoutPacketReader>();
+            LayoutDebugView debugView = smokeObject.AddComponent<LayoutDebugView>();
+            debugView.ApplyPacket(packet);
+            if (debugView.GeneratedElementCount != 9)
+            {
+                throw new InvalidOperationException(
+                    $"Debug view generated {debugView.GeneratedElementCount} elements instead of 9.");
+            }
+            UnityEngine.Object.DestroyImmediate(smokeObject);
+
             Debug.Log(
                 $"UNITY_INPUT_SMOKE_OK tokens={packet.tokens.Length} " +
-                $"path_points={packet.path.point_count} backend={packet.recognition.token_backend}");
+                $"path_points={packet.path.point_count} backend={packet.recognition.token_backend} debug_elements=9");
         }
     }
 }

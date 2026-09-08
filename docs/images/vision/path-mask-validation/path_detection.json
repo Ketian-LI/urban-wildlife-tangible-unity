@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1",
+  "preset": "cyan",
+  "preset_label": "High-saturation cyan ribbon",
+  "hsv_ranges": [
+    {
+      "lower": [
+        80,
+        90,
+        70
+      ],
+      "upper": [
+        105,
+        255,
+        255
+      ]
+    }
+  ],
+  "image_size_px": {
+    "width": 1536,
+    "height": 1024
+  },
+  "path_detected": true,
+  "mask_area_px": 12905,
+  "mask_fraction": 0.008204778035481771,
+  "component_count": 1,
+  "component_areas_px": [
+    12905
+  ],
+  "bounds_px": {
+    "x": 60,
+    "y": 294,
+    "width": 1411,
+    "height": 505
+  },
+  "morphology": {
+    "open_kernel_px": 3,
+    "close_kernel_px": 7,
+    "iterations": 1,
+    "minimum_component_area_px": 250
+  }
+}

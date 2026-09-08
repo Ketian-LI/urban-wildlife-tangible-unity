@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1",
+  "default_preset": "magenta",
+  "presets": {
+    "magenta": {
+      "label": "Bright magenta ribbon",
+      "hsv_ranges": [
+        {
+          "lower": [140, 100, 80],
+          "upper": [179, 255, 255]
+        }
+      ],
+      "overlay_bgr": [255, 0, 255]
+    },
+    "cyan": {
+      "label": "High-saturation cyan ribbon",
+      "hsv_ranges": [
+        {
+          "lower": [80, 90, 70],
+          "upper": [105, 255, 255]
+        }
+      ],
+      "overlay_bgr": [255, 255, 0]
+    },
+    "orange": {
+      "label": "High-saturation orange ribbon",
+      "hsv_ranges": [
+        {
+          "lower": [5, 110, 90],
+          "upper": [25, 255, 255]
+        }
+      ],
+      "overlay_bgr": [0, 165, 255]
+    }
+  },
+  "morphology": {
+    "open_kernel_px": 3,
+    "close_kernel_px": 7,
+    "iterations": 1,
+    "minimum_component_area_px": 250
+  }
+}

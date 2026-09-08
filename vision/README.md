@@ -20,7 +20,9 @@
 - `camera_probe.py`：列出视频输入，或进行无窗口的短时取流测试。
 - `detect_markers.py`：从图片或摄像头读取 ArUco ID、像素中心和角度，并保存标注图与JSON。
 - `calibrate_corners.py`：识别四角 Marker，计算透视矩阵，输出校准标注图、俯视矫正图和 Camera → Game 标准化坐标参数。
+- `detect_path.py`：按 HSV 颜色预设分割彩色路径，进行形态学去噪并输出 Path Mask、检查图和JSON统计。
 - `config/calibration.json`：四角顺序、打印尺寸、板面和视频输入基线。
+- `config/path_detection.json`：亮洋红、青色与橙色路径的初始 HSV 阈值和去噪参数。
 
 ## 一键配置
 
@@ -67,3 +69,14 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_vision.ps1
 - `warped.png`：校正为 900 × 600 像素的俯视图。
 
 归一化坐标原点在左上，X 向右、Y 向下，范围均为 0–1；接入 Unity 平面时建议映射为 `X = normalized.x`、`Z = normalized.y`。正式板面固定后必须重新运行并保存现场校准结果。
+
+## 彩色路径分割
+
+默认检测亮洋红色，也可以使用青色或橙色预设：
+
+```powershell
+.\.venv\Scripts\python.exe vision\detect_path.py --camera 1 --preset magenta --output-dir data\raw\path-tests\physical-01
+.\.venv\Scripts\python.exe vision\detect_path.py --image path\to\frame.png --preset cyan --output-dir data\raw\path-tests\image-01
+```
+
+输出包括二值 `path_mask.png`、叠加检查图 `path_overlay.png` 和面积、边界框等统计信息 `path_detection.json`。目前阈值是软件预设；彩带、黑色板面和固定灯光同时到位后，需要分别实测三个候选颜色，再锁定唯一的 P0 颜色与阈值。

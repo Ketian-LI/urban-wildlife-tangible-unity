@@ -53,7 +53,7 @@ urban-wildlife-simulation/
 - [x] 建立 Python/OpenCV/ArUco 可重复运行环境
 - [ ] 固定摄像头、桌面与光照条件
 - [ ] 稳定识别单个 Marker Token
-- [ ] 识别高饱和彩绳并输出 Path Mask
+- [x] 识别高饱和彩绳并输出 Path Mask（电子效果图软件预验证）
 - [x] 完成 Camera 到 Game 的坐标映射（电子稿软件预验证）
 - [ ] 输出统一数据包并完成技术 Spike 演示
 

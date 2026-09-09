@@ -14,6 +14,10 @@ Shared art direction: single animal seen directly from above, head pointing towa
 
 Generation mode: built-in image generation tool. The active V0.2 squirrel and fox were produced as precise-object edits on uniform green isolation plates, then converted to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`.
 
+## Runtime display scale
+
+The active real-size reference uses approximately 1 Unity unit per 2 metres of representative body length: pigeon 0.18 units (about 0.36 m), squirrel 0.24 units including tail (about 0.48 m), and fox 0.55 units including tail (about 1.10 m). These values control only the rendered Sprite length, not movement speed, disturbance radius, collider size, or ecological behavior.
+
 ## V0.2 silhouette-separation prompts
 
 ### Squirrel V0.2

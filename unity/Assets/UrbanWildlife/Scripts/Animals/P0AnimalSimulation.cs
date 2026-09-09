@@ -12,6 +12,10 @@ namespace UrbanWildlife.Animals
     [RequireComponent(typeof(LayoutPacketReader), typeof(P0CycleController), typeof(P0HumanSimulation))]
     public sealed class P0AnimalSimulation : MonoBehaviour
     {
+        public const float PigeonDisplayLength = 0.18f;
+        public const float SquirrelDisplayLength = 0.24f;
+        public const float FoxDisplayLength = 0.55f;
+
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
         private string scenarioPath = "../../data/scenarios/s001_weekend_park_baseline.json";
@@ -317,11 +321,11 @@ namespace UrbanWildlife.Animals
             switch (species)
             {
                 case AnimalSpecies.Pigeon:
-                    return 0.65f;
+                    return PigeonDisplayLength;
                 case AnimalSpecies.Squirrel:
-                    return 0.85f;
+                    return SquirrelDisplayLength;
                 default:
-                    return 1.05f;
+                    return FoxDisplayLength;
             }
         }
 

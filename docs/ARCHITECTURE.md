@@ -183,6 +183,7 @@ Observed crossings, feeding, waiting and avoidance
 - S001环境显示层从`Resources/UrbanWildlife/Environment`加载3:2手绘底图；入口、出口、广场与池塘的精确边界仍由场景JSON坐标驱动的矢量线叠加，底图像素不参与规则判断。
 - 人类显示层从`Resources/UrbanWildlife/Humans`按Archetype加载透明Sprite。`HumanAgentStateMachine`继续决定位置和状态，`P0HumanSimulation`只添加平滑转向、行走起伏、停留呼吸与访客观察反馈。
 - Walker、Dweller与Visitor统一采用高角度斜俯视正脸Sprite，眼、鼻和嘴在地图尺寸下可读；脸与鞋尖均朝源图下方。P0HumanSimulation先加入固定180°朝向补偿，再按移动方向整体旋转Sprite，不单独改变脸、腿或脚。
+- 角色显示层以约1 Unity单位对应2米的代表性体长作为相对比例基准：Walker 0.89、Dweller 0.84、Visitor 0.85、鸽子0.18、松鼠0.24、狐狸0.55。该值只缩放Sprite，不进入路线速度、干扰半径、碰撞或生态判定。
 - `LayoutDebugView`把每次确认布局组织为7个语义根对象：1个地图、1条路径和5个Token；装饰子对象不再影响输入验收计数。运行期创建的Mesh和Material在重载布局时显式释放。
 - `LayoutDebugView`的V0.3装饰层包括Food活动点与中心铭牌、Woodland冠层/叶脉/木纹，以及入口和出口的双门柱与弧形门槛；其父级坐标继续由已确认布局和S001固定场景参数驱动。
 - `P0ControlPanel`在Plan/Confirm显示完整约束和操作，在Run/Observe自动切换为紧凑信息卡；这是显示密度变化，不改变阶段状态机。

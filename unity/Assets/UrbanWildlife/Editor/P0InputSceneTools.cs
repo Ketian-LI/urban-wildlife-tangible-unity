@@ -349,13 +349,15 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 $"UNITY_ANIMAL_SPRITE_SMOKE_OK sprites=3 transparent_import=True topdown=True " +
-                $"squirrel_aspect={squirrelAspect:F2} fox_aspect={foxAspect:F2}");
+                $"squirrel_aspect={squirrelAspect:F2} fox_aspect={foxAspect:F2} " +
+                $"display_lengths={P0AnimalSimulation.PigeonDisplayLength:F2}/" +
+                $"{P0AnimalSimulation.SquirrelDisplayLength:F2}/{P0AnimalSimulation.FoxDisplayLength:F2}");
 
             string[] humanSpritePaths =
             {
-                "UrbanWildlife/Humans/walker-topdown-v04",
-                "UrbanWildlife/Humans/dweller-topdown-v02",
-                "UrbanWildlife/Humans/visitor-topdown-v04",
+                "UrbanWildlife/Humans/walker-topdown-v05",
+                "UrbanWildlife/Humans/dweller-topdown-v03",
+                "UrbanWildlife/Humans/visitor-topdown-v05",
             };
             foreach (string spritePath in humanSpritePaths)
             {
@@ -369,6 +371,14 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("Front-facing human sprites require a 180-degree heading offset.");
             }
+            if (!(P0AnimalSimulation.PigeonDisplayLength < P0AnimalSimulation.SquirrelDisplayLength &&
+                  P0AnimalSimulation.SquirrelDisplayLength < P0AnimalSimulation.FoxDisplayLength &&
+                  P0AnimalSimulation.FoxDisplayLength < P0HumanSimulation.DwellerDisplayLength &&
+                  P0HumanSimulation.DwellerDisplayLength <= P0HumanSimulation.VisitorDisplayLength &&
+                  P0HumanSimulation.VisitorDisplayLength < P0HumanSimulation.WalkerDisplayLength))
+            {
+                throw new InvalidOperationException("Human and animal display lengths do not follow the real-size ordering.");
+            }
             Sprite parkMap = Resources.Load<Sprite>("UrbanWildlife/Environment/park-board-s001-v02");
             if (parkMap == null || parkMap.texture == null || parkMap.bounds.size.x <= 0f)
             {
@@ -376,7 +386,8 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=3 animal_sprites=3 map_sprites=1 " +
-                "semantic_elements=7 refined_visuals=4 human_heading_offset=180");
+                "semantic_elements=7 refined_visuals=4 human_heading_offset=180 " +
+                "human_lengths=0.89/0.84/0.85 real_size_order=True");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

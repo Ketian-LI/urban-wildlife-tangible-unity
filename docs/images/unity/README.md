@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v05-realistic-scale-preview.png`
+
+Rendered on 2026-09-09 in Unity 6000.3.4f1 from the active realistic-proportion human set and real-size relative Sprite scale. Human body proportions are less stylized, and pigeon, squirrel, and fox are no longer enlarged to near-human length.
+
+The approximate display lengths are Walker 0.89, Dweller 0.84, Visitor 0.85, pigeon 0.18, squirrel 0.24, and fox 0.55 Unity units. These values affect visual size only. Characters are staged at fixed positions for this static review; the image does not prove animation timing or physical-camera input.
+
 ## `visual-layer-v04-front-facing-humans-preview.png`
 
 Rendered on 2026-09-09 in Unity 6000.3.4f1 from the active front-facing human Sprite set. Walker, Dweller, and Visitor now share one high-angle three-quarter map view with readable facial features while retaining their distinct clothing and accessories.

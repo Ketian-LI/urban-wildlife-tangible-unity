@@ -12,6 +12,9 @@ namespace UrbanWildlife.Humans
     public sealed class P0HumanSimulation : MonoBehaviour
     {
         public const float FrontFacingSpriteHeadingOffsetDegrees = 180f;
+        public const float WalkerDisplayLength = 0.89f;
+        public const float DwellerDisplayLength = 0.84f;
+        public const float VisitorDisplayLength = 0.85f;
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -328,17 +331,25 @@ namespace UrbanWildlife.Humans
             switch (archetype)
             {
                 case HumanArchetype.Walker:
-                    return "UrbanWildlife/Humans/walker-topdown-v04";
+                    return "UrbanWildlife/Humans/walker-topdown-v05";
                 case HumanArchetype.Dweller:
-                    return "UrbanWildlife/Humans/dweller-topdown-v02";
+                    return "UrbanWildlife/Humans/dweller-topdown-v03";
                 default:
-                    return "UrbanWildlife/Humans/visitor-topdown-v04";
+                    return "UrbanWildlife/Humans/visitor-topdown-v05";
             }
         }
 
         private static float LengthFor(HumanArchetype archetype)
         {
-            return archetype == HumanArchetype.Dweller ? 0.82f : 0.9f;
+            switch (archetype)
+            {
+                case HumanArchetype.Walker:
+                    return WalkerDisplayLength;
+                case HumanArchetype.Dweller:
+                    return DwellerDisplayLength;
+                default:
+                    return VisitorDisplayLength;
+            }
         }
 
         private static Color SpriteTintFor(HumanActivityState state)

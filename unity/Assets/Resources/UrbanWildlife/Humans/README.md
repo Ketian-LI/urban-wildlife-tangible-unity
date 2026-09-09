@@ -1,20 +1,54 @@
-# P0 Human Sprite Set V0.4
+# P0 Human Sprite Set V0.5
 
 Generated on 2026-09-09 with the built-in image generation tool for the Unity P0 prototype.
 
 Assets:
 
-- `walker-topdown-v04.png` (active; high-angle front-facing view)
-- `dweller-topdown-v02.png` (active; high-angle front-facing view)
-- `visitor-topdown-v04.png` (active; high-angle front-facing view)
+- `walker-topdown-v05.png` (active; realistic adult proportions)
+- `dweller-topdown-v03.png` (active; realistic adult proportions)
+- `visitor-topdown-v05.png` (active; realistic adult proportions)
 
-The earlier Walker, Dweller, and Visitor files are retained as superseded prototypes. V0.4 replaces the near-overhead back-of-head reading with one consistent high-angle three-quarter view. Eyes, nose, and mouth remain visible when the characters are reduced to map scale.
+The earlier Walker, Dweller, and Visitor files are retained as superseded prototypes. V0.4 established a consistent high-angle front-facing view. V0.5 reduces the oversized heads and upper bodies, lengthens the legs, and restores natural adult shoulder, arm, torso, and hip proportions.
 
 All three characters use the same source orientation: their visible faces and shoe toes point toward the bottom of the image. Runtime applies a fixed 180-degree heading offset and then rotates each complete Sprite, so the visible front remains aligned with travel. Their clothing, pose, and one small accessory distinguish each role without relying only on colour. The active files are four-channel PNGs with transparent pixels.
 
 ## Generation mode
 
-Built-in image generation tool in `precise-object-edit` mode. The three V0.4 role images were generated on uniform green isolation plates and converted to real alpha with `tools/chroma_key_sprite.py`; this keeps the delivered Unity assets as RGBA PNGs without a baked checkerboard.
+Built-in image generation tool in `precise-object-edit` mode. The three active V0.5 role images were generated on uniform green isolation plates and converted to real alpha with `tools/chroma_key_sprite.py`; this keeps the delivered Unity assets as RGBA PNGs without a baked checkerboard.
+
+## V0.5 realistic adult proportions
+
+The proportion targets are visual references, not personal biometric claims. Walker uses a 7.5-head adult baseline; Dweller and Visitor use a 7.25-head adult baseline before high-angle foreshortening. Runtime display lengths are 0.89, 0.84, and 0.85 Unity units respectively.
+
+### Walker final prompt
+
+    Use case: precise-object-edit.
+    Asset type: Unity 2D high-angle top-down adult human sprite on a chroma-key isolation plate.
+    Primary request: Correct the Walker's BODY PROPORTIONS to realistic adult anatomy while preserving his recognizable face, identity, clothing, colors, backpack, walking direction, and high-angle front-facing view. His current head and upper body read too large and youthful. Redesign the full silhouette as a normally proportioned adult man approximately 7.5 heads tall before perspective foreshortening: reduce the head relative to the body, use natural adult shoulder width, a proportionate torso, arms reaching around mid-thigh, and longer realistically proportioned legs. Keep only mild high-angle foreshortening so the body does not become chibi or big-headed.
+    Subject invariants: adult man, short brown hair, bright blue hooded jacket, navy backpack, dark navy trousers, muted red trainers; same friendly facial identity and painterly storybook line-art style. His visible face and both shoe toes point toward the BOTTOM of the canvas. Exactly one head, two connected arms, two connected legs, and two connected shoes; no reversed feet, extra limbs, or childlike proportions.
+    Composition: full body centered, complete silhouette, generous padding, no cropping, approximately 82% of canvas height.
+    Background: perfectly uniform solid #00FF00 green edge to edge.
+    Do not add ground, cast shadow, glow, halo, border, text, checkerboard, or other objects.
+
+### Dweller final prompt
+
+    Use case: precise-object-edit.
+    Asset type: Unity 2D high-angle top-down adult human sprite on a chroma-key isolation plate.
+    Primary request: Correct the Dweller's BODY PROPORTIONS to realistic adult anatomy while preserving her recognizable face, identity, clothing, colors, cup, walking direction, and high-angle front-facing view. Her current head and upper body read too large and youthful. Redesign the full silhouette as a normally proportioned adult woman approximately 7.25 heads tall before perspective foreshortening: reduce the head relative to the body, use natural adult shoulder and hip proportions, a proportionate torso, arms reaching around mid-thigh, and longer realistically proportioned legs. Keep only mild high-angle foreshortening so the body does not become chibi or big-headed.
+    Subject invariants: adult woman with brown hair in a bun, mustard-orange overshirt/coat, cream knitted top, earthy brown trousers, dark lace-up shoes, holding exactly one small reusable cup; same friendly facial identity and painterly storybook line-art style. Her visible face and both shoe toes point toward the BOTTOM of the canvas. Exactly one head, two connected arms, two connected legs, and two connected shoes; no reversed feet, extra limbs, extra cup, or childlike proportions.
+    Composition: full body centered, complete silhouette, generous padding, no cropping, approximately 82% of canvas height.
+    Background: perfectly uniform solid #00FF00 green edge to edge.
+    Do not add ground, cast shadow, glow, halo, border, text, checkerboard, or other objects.
+
+### Visitor final prompt
+
+    Use case: precise-object-edit.
+    Asset type: Unity 2D high-angle top-down adult human sprite on a chroma-key isolation plate.
+    Primary request: Correct the Visitor's BODY PROPORTIONS to realistic adult anatomy while preserving her recognizable face, identity, clothing, colors, satchel, walking direction, and high-angle front-facing view. Her current head and upper body read too large and youthful. Redesign the full silhouette as a normally proportioned adult woman approximately 7.25 heads tall before perspective foreshortening: reduce the head relative to the body, use natural adult shoulder and hip proportions, a proportionate torso, arms reaching around mid-thigh, and longer realistically proportioned legs. Keep only mild high-angle foreshortening so the body does not become chibi or big-headed.
+    Subject invariants: adult woman with brown hair in a bun, teal hooded coat, burgundy trousers, tan crossbody satchel, grey trainers; same friendly facial identity and painterly storybook line-art style. Her visible face and both shoe toes point toward the BOTTOM of the canvas. Exactly one head, two connected arms, two connected legs, and two connected shoes; no reversed feet, extra limbs, or childlike proportions. Satchel remains naturally attached by its strap.
+    Composition: full body centered, complete silhouette, generous padding, no cropping, approximately 82% of canvas height.
+    Background: perfectly uniform solid #00FF00 green edge to edge.
+    Do not add ground, cast shadow, glow, halo, border, text, checkerboard, or other objects.
 
 ## V0.4 front-facing view
 

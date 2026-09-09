@@ -178,10 +178,13 @@ Observed crossings, feeding, waiting and avoidance
 - `HumanRoutePlanner` 只从已确认布局和S001参数生成路线，`HumanAgentStateMachine` 负责确定性移动/停留，`P0HumanSimulation` 负责Run阶段的Unity实例与可视化。
 - `AnimalEnvironmentPlanner`负责布局到动物资源关系的确定性映射，`AnimalAgentStateMachine`不依赖Unity场景对象，`P0AnimalSimulation`只负责运行期感知、实例和可视化。
 - 动物显示层与行为状态机保持分离：`P0AnimalSimulation`从`Resources/UrbanWildlife/Animals`加载透明俯视Sprite，并只根据状态机结果处理平滑转向、待机摆动、进食脉动与状态色；替换美术不会改变生态规则或研究日志。
+- V0.2松鼠和狐狸通过透明轮廓顶点的宽高比进行显示层回归检查：松鼠使用宽圆C形侧尾，狐狸使用细长直尾、黑腿和白色尾尖；检查只保护地图尺寸下的物种可辨性，不参与行为判定。
 - V0.1动物动画采用程序运动语言而非逐帧骨骼动画：移动位置仍由状态机决定，视觉层使用平滑朝向插值、约7.2秒待机摆动以及进食/回避/撤退反馈，便于先验证核心闭环再决定是否制作更多帧。
 - S001环境显示层从`Resources/UrbanWildlife/Environment`加载3:2手绘底图；入口、出口、广场与池塘的精确边界仍由场景JSON坐标驱动的矢量线叠加，底图像素不参与规则判断。
 - 人类显示层从`Resources/UrbanWildlife/Humans`按Archetype加载透明Sprite。`HumanAgentStateMachine`继续决定位置和状态，`P0HumanSimulation`只添加平滑转向、行走起伏、停留呼吸与访客观察反馈。
+- Walker与Visitor的源图统一头部朝上，两只鞋位于髋部下方且鞋尖同样朝上；画面下端显示鞋跟。运行时只整体旋转Sprite，不单独改变腿脚方向。
 - `LayoutDebugView`把每次确认布局组织为7个语义根对象：1个地图、1条路径和5个Token；装饰子对象不再影响输入验收计数。运行期创建的Mesh和Material在重载布局时显式释放。
+- `LayoutDebugView`的V0.3装饰层包括Food活动点与中心铭牌、Woodland冠层/叶脉/木纹，以及入口和出口的双门柱与弧形门槛；其父级坐标继续由已确认布局和S001固定场景参数驱动。
 - `P0ControlPanel`在Plan/Confirm显示完整约束和操作，在Run/Observe自动切换为紧凑信息卡；这是显示密度变化，不改变阶段状态机。
 - `P0ConstraintManager` 当前实现入口→广场→出口、人类活动来源、路径安全间距、池塘避让和改动次数；动物可达性以S001只有一个不接触边界的池塘为前提，路径只增加成本而不封路。新增围栏或多个障碍时应替换为网格寻路。
 - `P0ResearchLogger`只消费公开事件和汇总计数；原始研究日志写入Git忽略目录，必须标注会话和时间，不记录不必要的身份信息。

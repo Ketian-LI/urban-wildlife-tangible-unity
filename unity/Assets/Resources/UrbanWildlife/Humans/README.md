@@ -1,20 +1,48 @@
-# P0 Human Sprite Set V0.2.1
+# P0 Human Sprite Set V0.3
 
 Generated on 2026-09-09 with the built-in image generation tool for the Unity P0 prototype.
 
 Assets:
 
-- `walker-topdown-v02.png` (active; corrected walking pose)
+- `walker-topdown-v03.png` (active; corrected walking pose and heel direction)
 - `dweller-topdown-v01.png`
-- `visitor-topdown-v02.png` (active; corrected walking pose)
+- `visitor-topdown-v03.png` (active; corrected walking pose and heel direction)
 
-The original `walker-topdown-v01.png` and `visitor-topdown-v01.png` are retained as superseded prototypes. Their forward shoes appeared above the head in the strict top-down view, which became confusing at runtime token scale.
+The V0.1 and V0.2 Walker/Visitor files are retained as superseded prototypes. V0.1 placed one shoe above the head; V0.2 moved both shoes below the hips but left their toe caps pointing opposite the face. V0.3 keeps the shoes below the body and shows their heels at the bottom of the source image, so the toes and face point in the same direction.
 
 All three characters face toward the top of the source image and are rotated at runtime. Clothing, pose, and one small accessory distinguish each role without relying only on colour. The original V0.1 set contained baked checkerboards in the initial outputs; the committed V0.1 files have alpha transparency. The V0.2 Walker and Visitor extraction workflow is recorded separately below. The active files are four-channel PNGs with transparent pixels.
 
 ## Generation mode
 
-Built-in image generation tool. The active Walker and Visitor use an additional precise-object edit to correct the lower-body pose. A generated uniform green isolation plate was converted to real alpha with `tools/chroma_key_sprite.py`; this keeps the delivered Unity assets as RGBA PNGs without a baked checkerboard.
+Built-in image generation tool. The active Walker and Visitor use precise-object edits to correct the lower-body pose and shoe direction. A generated uniform green isolation plate was converted to real alpha with `tools/chroma_key_sprite.py`; this keeps the delivered Unity assets as RGBA PNGs without a baked checkerboard.
+
+## V0.3 shoe-direction correction
+
+### Walker final prompt
+
+```text
+Use case: precise-object-edit
+Asset type: Unity top-down human character sprite
+Input image: the supplied blue-clothed male Walker is the edit target
+Primary request: Correct ONLY the orientation and visible construction of both red sneakers. The character's face and walking direction point toward the TOP of the canvas, so both shoes must also point toward the TOP.
+Shoe anatomy: keep both shoes below the hips and connected to the legs. The toe boxes point upward toward the knees/head and are partly foreshortened. The lowest visible end of each shoe at the BOTTOM of the canvas must be the BACK HEEL: show a compact heel counter, rear collar seam, and rear outsole edge. Do not show a rounded toe cap or front-facing laces at the bottom. Both shoes face the same forward direction as the head.
+Invariants: preserve the exact person, hair, head, arms, jacket, backpack, trousers, body pose, leg positions, proportions, painterly outlined style, colours, scale, and placement. Exactly two legs and two shoes.
+Scene/backdrop: perfectly flat uniform chroma-key green RGB (0,255,0), hex #00FF00, outside the character.
+Constraints: edit only the shoes; no shoe above the head; no reversed foot; no detached, duplicated, crossed, or malformed limb; no checkerboard, texture, gradient, shadow, glow, halo, text, or border.
+```
+
+### Visitor final prompt
+
+```text
+Use case: precise-object-edit
+Asset type: Unity top-down human character sprite
+Input image: the supplied teal-clothed female Visitor is the edit target
+Primary request: Correct ONLY the orientation and visible construction of both grey sneakers. The character's face and walking direction point toward the TOP of the canvas, so both shoes must also point toward the TOP.
+Shoe anatomy: keep both shoes below the hips and connected to the legs. The toe boxes point upward toward the knees/head and are partly foreshortened. The lowest visible end of each shoe at the BOTTOM of the canvas must be the BACK HEEL: show a compact heel counter, rear collar seam, and rear outsole edge. Do not show a rounded toe cap or front-facing laces at the bottom. Both shoes face the same forward direction as the head.
+Invariants: preserve the exact person, hair bun, arms, teal coat, tan cross-body satchel, burgundy trousers, body pose, leg positions, proportions, painterly outlined style, colours, scale, and placement. Exactly two legs and two shoes.
+Scene/backdrop: perfectly flat uniform chroma-key green RGB (0,255,0), hex #00FF00, outside the character.
+Constraints: edit only the shoes; no shoe above the head; no reversed foot; no detached, duplicated, crossed, or malformed limb; no checkerboard, texture, gradient, shadow, glow, halo, text, or border.
+```
 
 ## V0.2.1 shoe-pose correction
 

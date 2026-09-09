@@ -13,6 +13,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("source")
     parser.add_argument("destination")
+    parser.add_argument(
+        "--remove-all-green-spill",
+        action="store_true",
+        help="Neutralize green spill throughout non-green subjects such as orange animals.",
+    )
     args = parser.parse_args()
 
     rgb = np.asarray(Image.open(args.source).convert("RGB"), dtype=np.float32)
@@ -36,6 +41,8 @@ def main() -> None:
     # interior stays byte-for-byte identical to the generated character.
     foreground = rgb.copy()
     boundary = (alpha > 0) & (alpha < 250)
+    if args.remove_all_green_spill:
+        boundary |= (alpha > 0) & (greenness > 4.0)
     neutral_edge_green = np.maximum(red, blue) + 4.0
     foreground[..., 1][boundary] = np.minimum(green[boundary], neutral_edge_green[boundary])
     foreground[alpha == 0] = 0.0

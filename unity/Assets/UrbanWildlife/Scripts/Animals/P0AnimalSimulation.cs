@@ -306,9 +306,9 @@ namespace UrbanWildlife.Animals
                 case AnimalSpecies.Pigeon:
                     return "UrbanWildlife/Animals/pigeon-topdown-v01";
                 case AnimalSpecies.Squirrel:
-                    return "UrbanWildlife/Animals/squirrel-topdown-v01";
+                    return "UrbanWildlife/Animals/squirrel-topdown-v02";
                 default:
-                    return "UrbanWildlife/Animals/fox-topdown-v01";
+                    return "UrbanWildlife/Animals/fox-topdown-v02";
             }
         }
 

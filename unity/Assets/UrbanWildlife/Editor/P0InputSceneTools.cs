@@ -99,6 +99,20 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException(
                     $"Illustrated layout generated {debugView.GeneratedElementCount} semantic elements instead of 7.");
             }
+            string[] refinedVisualPaths =
+            {
+                "Runtime Illustrated Layout/Board 90x60cm/Entrance A guide/Park gate arch",
+                "Runtime Illustrated Layout/Board 90x60cm/Exit B guide/Park gate arch",
+                "Runtime Illustrated Layout/food_hotspot 10/Activity dot 0",
+                "Runtime Illustrated Layout/woodland 20/Woodland central vein",
+            };
+            foreach (string visualPath in refinedVisualPaths)
+            {
+                if (smokeObject.transform.Find(visualPath) == null)
+                {
+                    throw new InvalidOperationException($"Refined P0 visual is missing: {visualPath}");
+                }
+            }
             UnityEngine.Object.DestroyImmediate(smokeObject);
 
             string scenarioPath = Path.GetFullPath(Path.Combine(
@@ -133,7 +147,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 $"UNITY_INPUT_SMOKE_OK tokens={packet.tokens.Length} " +
                 $"path_points={packet.path.point_count} backend={packet.recognition.token_backend} " +
-                $"stable={packet.capture.stable} visual_elements=7");
+                $"stable={packet.capture.stable} visual_elements=7 refined_visuals={refinedVisualPaths.Length}");
             Debug.Log(
                 $"UNITY_CONSTRAINT_SMOKE_OK human_connected={constraintResult.human_connected} " +
                 $"animal_reachable={constraintResult.animal_reachable} " +
@@ -313,8 +327,8 @@ namespace UrbanWildlife.EditorTools
             string[] animalSpritePaths =
             {
                 "UrbanWildlife/Animals/pigeon-topdown-v01",
-                "UrbanWildlife/Animals/squirrel-topdown-v01",
-                "UrbanWildlife/Animals/fox-topdown-v01",
+                "UrbanWildlife/Animals/squirrel-topdown-v02",
+                "UrbanWildlife/Animals/fox-topdown-v02",
             };
             foreach (string spritePath in animalSpritePaths)
             {
@@ -324,13 +338,24 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 animal sprite is missing or invalid: {spritePath}");
                 }
             }
-            Debug.Log("UNITY_ANIMAL_SPRITE_SMOKE_OK sprites=3 transparent_import=True topdown=True");
+            Sprite squirrelSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/squirrel-topdown-v02");
+            Sprite foxSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/fox-topdown-v02");
+            float squirrelAspect = TightSpriteAspect(squirrelSprite);
+            float foxAspect = TightSpriteAspect(foxSprite);
+            if (squirrelAspect <= foxAspect * 2f)
+            {
+                throw new InvalidOperationException(
+                    $"Squirrel and fox silhouettes are not distinct enough: {squirrelAspect:F2} vs {foxAspect:F2}.");
+            }
+            Debug.Log(
+                $"UNITY_ANIMAL_SPRITE_SMOKE_OK sprites=3 transparent_import=True topdown=True " +
+                $"squirrel_aspect={squirrelAspect:F2} fox_aspect={foxAspect:F2}");
 
             string[] humanSpritePaths =
             {
-                "UrbanWildlife/Humans/walker-topdown-v02",
+                "UrbanWildlife/Humans/walker-topdown-v03",
                 "UrbanWildlife/Humans/dweller-topdown-v01",
-                "UrbanWildlife/Humans/visitor-topdown-v02",
+                "UrbanWildlife/Humans/visitor-topdown-v03",
             };
             foreach (string spritePath in humanSpritePaths)
             {
@@ -345,7 +370,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("P0 illustrated park map is missing or invalid.");
             }
-            Debug.Log("UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=3 map_sprites=1 semantic_elements=7");
+            Debug.Log("UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=3 animal_sprites=3 map_sprites=1 semantic_elements=7 refined_visuals=4");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),
@@ -451,6 +476,28 @@ namespace UrbanWildlife.EditorTools
             }
             UnityEngine.Object.DestroyImmediate(uiObject);
             Debug.Log("UNITY_UI_SMOKE_OK phase=Plan space_actions=Confirm/StartRun");
+        }
+
+        private static float TightSpriteAspect(Sprite sprite)
+        {
+            Vector2[] vertices = sprite.vertices;
+            if (vertices == null || vertices.Length == 0)
+            {
+                throw new InvalidOperationException($"Sprite has no geometry: {sprite.name}");
+            }
+
+            float minX = vertices[0].x;
+            float maxX = vertices[0].x;
+            float minY = vertices[0].y;
+            float maxY = vertices[0].y;
+            foreach (Vector2 vertex in vertices)
+            {
+                minX = Mathf.Min(minX, vertex.x);
+                maxX = Mathf.Max(maxX, vertex.x);
+                minY = Mathf.Min(minY, vertex.y);
+                maxY = Mathf.Max(maxY, vertex.y);
+            }
+            return (maxX - minX) / Mathf.Max(0.001f, maxY - minY);
         }
     }
 }

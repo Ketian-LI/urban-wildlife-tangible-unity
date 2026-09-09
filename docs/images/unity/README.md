@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v03-refinement-preview.png`
+
+Rendered on 2026-09-09 in Unity 6000.3.4f1 from the active V0.3 visual layer. The preview verifies the final heel direction on Walker and Visitor, layered Food Hotspot markers, felt/canopy/wood-ring Woodland markers, two-post park gates, and strongly separated squirrel/fox silhouettes.
+
+The planning geometry and token footprint rules are unchanged. Humans and animals are staged at fixed positions for this static visual review; the image does not prove animation timing or physical-camera input.
+
 ## `visual-layer-v021-shoe-fix-preview.png`
 
 Rendered on 2026-09-09 in Unity 6000.3.4f1 with the corrected Walker and Visitor V0.2 sprites. Both characters now have two shoes connected to their legs below the hips; the extra shoe above each head has been removed. The older V0.2 preview remains below for comparison.

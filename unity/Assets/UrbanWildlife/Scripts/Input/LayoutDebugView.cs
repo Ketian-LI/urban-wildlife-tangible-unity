@@ -119,8 +119,8 @@ namespace UrbanWildlife.Input
                 NormalizedToLocal(0.556f, 0.7f, 0.07f),
                 new Vector2(1.8f, 1.2f),
                 new Color(0.38f, 0.78f, 0.78f, 0.9f));
-            CreateRectangleGuide(boardRoot.transform, "Entrance A guide", 0.033f, 0.5f, 0.6f, 0.8f, "A");
-            CreateRectangleGuide(boardRoot.transform, "Exit B guide", 0.967f, 0.5f, 0.6f, 0.8f, "B");
+            CreateParkGateGuide(boardRoot.transform, "Entrance A guide", 0.033f, 0.5f, 0.6f, 0.8f, "A", "ENTRY");
+            CreateParkGateGuide(boardRoot.transform, "Exit B guide", 0.967f, 0.5f, 0.6f, 0.8f, "B", "EXIT");
         }
 
         private void CreatePath(LayoutPath path)
@@ -194,12 +194,43 @@ namespace UrbanWildlife.Input
 
         private void CreateFoodToken(Transform parent, int id)
         {
-            Vector2[] outer = RegularPolygon(6, 0.37f, 30f);
-            Vector2[] inner = RegularPolygon(6, 0.3f, 30f);
-            CreatePolygon(parent, "Food hotspot shadow", outer, 0f, new Color(0.34f, 0.2f, 0.08f, 0.86f), 18);
-            CreatePolygon(parent, "Food hotspot", inner, 0.018f, new Color(0.96f, 0.69f, 0.28f, 1f), 19);
-            CreateOutline(parent, "Food hotspot outline", outer, 0.034f, 0.025f, new Color(1f, 0.9f, 0.62f, 1f), 20);
-            CreateLabel(parent, id.ToString(), 0.045f, new Color(0.23f, 0.13f, 0.06f, 1f));
+            Vector2[] outer = RegularPolygon(6, 0.4f, 30f);
+            Vector2[] rim = RegularPolygon(6, 0.345f, 30f);
+            Vector2[] inner = RegularPolygon(6, 0.292f, 30f);
+            CreatePolygon(parent, "Food hotspot shadow", outer, 0f, new Color(0.22f, 0.12f, 0.05f, 0.92f), 18);
+            CreatePolygon(parent, "Food hotspot cream rim", rim, 0.012f, new Color(1f, 0.86f, 0.53f, 1f), 19);
+            CreatePolygon(parent, "Food hotspot amber face", inner, 0.024f, new Color(0.95f, 0.55f, 0.13f, 1f), 20);
+            CreateOutline(parent, "Food hotspot outline", outer, 0.038f, 0.024f, new Color(1f, 0.92f, 0.67f, 1f), 21);
+
+            for (int index = 0; index < 6; index += 1)
+            {
+                float angle = (30f + index * 60f) * Mathf.Deg2Rad;
+                Transform dot = CreateAnchor(
+                    parent,
+                    $"Activity dot {index}",
+                    new Vector2(Mathf.Cos(angle) * 0.235f, Mathf.Sin(angle) * 0.235f));
+                Color dotColour = index % 2 == 0
+                    ? new Color(1f, 0.9f, 0.56f, 1f)
+                    : new Color(0.45f, 0.22f, 0.07f, 1f);
+                CreatePolygon(dot, "Activity indicator", RegularPolygon(12, 0.032f, 15f), 0.043f, dotColour, 22);
+            }
+
+            CreatePolygon(
+                parent,
+                "Food hotspot centre badge",
+                RegularPolygon(18, 0.17f, 0f),
+                0.048f,
+                new Color(1f, 0.91f, 0.67f, 1f),
+                23);
+            CreateOutline(
+                parent,
+                "Food hotspot centre ring",
+                RegularPolygon(18, 0.178f, 0f),
+                0.054f,
+                0.014f,
+                new Color(0.43f, 0.22f, 0.07f, 1f),
+                24);
+            CreateMediumLabel(parent, id.ToString(), 0.068f, new Color(0.2f, 0.1f, 0.035f, 1f));
         }
 
         private void CreateWoodlandToken(Transform parent, int id)
@@ -217,27 +248,76 @@ namespace UrbanWildlife.Input
                 new Vector2(-0.52f, 0.15f),
                 new Vector2(-0.28f, 0.39f),
             };
-            CreatePolygon(parent, "Woodland felt", leaf, 0f, new Color(0.2f, 0.38f, 0.22f, 0.97f), 18);
-            CreateOutline(parent, "Woodland felt outline", leaf, 0.02f, 0.028f, new Color(0.54f, 0.7f, 0.36f, 1f), 19);
+            CreatePolygon(parent, "Woodland felt shadow", leaf, 0f, new Color(0.08f, 0.2f, 0.12f, 0.94f), 18);
+            CreatePolygon(parent, "Woodland felt inner", ScalePolygon(leaf, 0.88f), 0.012f, new Color(0.25f, 0.48f, 0.25f, 0.98f), 19);
+            CreateOutline(parent, "Woodland felt outline", leaf, 0.025f, 0.03f, new Color(0.68f, 0.81f, 0.4f, 1f), 20);
 
-            GameObject core = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            core.name = "Woodland wooden core";
-            core.transform.SetParent(parent, false);
-            core.transform.localPosition = new Vector3(0f, 0.035f, 0f);
-            core.transform.localScale = new Vector3(0.5f, 0.018f, 0.5f);
-            RemoveCollider(core);
-            SetColour(core, new Color(0.68f, 0.48f, 0.28f, 1f));
-            CreateLabel(parent, id.ToString(), 0.065f, new Color(0.18f, 0.12f, 0.06f, 1f));
+            Vector2[] canopyOffsets =
+            {
+                new Vector2(-0.27f, 0.08f),
+                new Vector2(0.2f, 0.24f),
+                new Vector2(0.27f, -0.2f),
+            };
+            Color[] canopyColours =
+            {
+                new Color(0.32f, 0.58f, 0.27f, 0.95f),
+                new Color(0.4f, 0.64f, 0.3f, 0.95f),
+                new Color(0.27f, 0.52f, 0.22f, 0.95f),
+            };
+            for (int index = 0; index < canopyOffsets.Length; index += 1)
+            {
+                Transform canopy = CreateAnchor(parent, $"Woodland canopy patch {index + 1}", canopyOffsets[index]);
+                CreatePolygon(
+                    canopy,
+                    "Canopy rosette",
+                    RegularPolygon(12, 0.105f + index * 0.012f, index * 9f),
+                    0.03f,
+                    canopyColours[index],
+                    20);
+            }
+
+            Color veinColour = new Color(0.62f, 0.77f, 0.36f, 0.92f);
+            CreateOpenLine(
+                parent,
+                "Woodland central vein",
+                new[] { new Vector2(0f, -0.35f), new Vector2(0f, 0.34f) },
+                0.035f,
+                0.018f,
+                veinColour,
+                21);
+            CreateOpenLine(
+                parent,
+                "Woodland left veins",
+                new[] { new Vector2(0f, -0.15f), new Vector2(-0.3f, 0.08f), new Vector2(0f, 0.02f), new Vector2(-0.25f, 0.25f) },
+                0.035f,
+                0.014f,
+                veinColour,
+                21);
+            CreateOpenLine(
+                parent,
+                "Woodland right veins",
+                new[] { new Vector2(0f, -0.04f), new Vector2(0.3f, 0.15f), new Vector2(0f, 0.13f), new Vector2(0.2f, 0.31f) },
+                0.035f,
+                0.014f,
+                veinColour,
+                21);
+
+            CreatePolygon(parent, "Woodland wooden core bark", RegularPolygon(24, 0.27f, 7.5f), 0.045f, new Color(0.33f, 0.19f, 0.09f, 1f), 22);
+            CreatePolygon(parent, "Woodland wooden core", RegularPolygon(24, 0.225f, 7.5f), 0.052f, new Color(0.72f, 0.5f, 0.27f, 1f), 23);
+            CreatePolygon(parent, "Woodland wooden heart", RegularPolygon(24, 0.15f, 7.5f), 0.058f, new Color(0.86f, 0.67f, 0.4f, 1f), 24);
+            CreateOutline(parent, "Woodland growth ring", RegularPolygon(24, 0.185f, 7.5f), 0.064f, 0.012f, new Color(0.47f, 0.29f, 0.12f, 0.9f), 25);
+            CreateLabel(parent, id.ToString(), 0.075f, new Color(0.16f, 0.09f, 0.035f, 1f));
         }
 
-        private void CreateRectangleGuide(
+        private void CreateParkGateGuide(
             Transform parent,
             string name,
             float xNorm,
             float yNorm,
             float width,
             float height,
-            string label)
+            string label,
+            string caption)
         {
             Vector2[] points =
             {
@@ -249,8 +329,41 @@ namespace UrbanWildlife.Input
             GameObject guide = new GameObject(name);
             guide.transform.SetParent(parent, false);
             guide.transform.localPosition = NormalizedToLocal(xNorm, yNorm, 0.07f);
-            CreateOutline(guide.transform, "Boundary", points, 0f, 0.035f, new Color(1f, 0.9f, 0.58f, 0.95f), 5);
-            CreateLabel(guide.transform, label, 0.018f, new Color(0.24f, 0.2f, 0.1f, 1f));
+            CreatePolygon(guide.transform, "Gate landing", points, 0f, new Color(0.96f, 0.82f, 0.53f, 0.38f), 4);
+            CreateOutline(guide.transform, "Boundary", points, 0.01f, 0.018f, new Color(1f, 0.91f, 0.65f, 0.92f), 5);
+
+            float inward = xNorm < 0.5f ? 1f : -1f;
+            Vector2[] postOuter =
+            {
+                new Vector2(-0.085f, -0.105f),
+                new Vector2(0.085f, -0.105f),
+                new Vector2(0.085f, 0.105f),
+                new Vector2(-0.085f, 0.105f),
+            };
+            Vector2[] postInner = ScalePolygon(postOuter, 0.68f);
+            for (int index = 0; index < 2; index += 1)
+            {
+                float z = index == 0 ? -height * 0.36f : height * 0.36f;
+                Transform post = CreateAnchor(guide.transform, $"Gate post {index + 1}", new Vector2(-inward * width * 0.12f, z));
+                CreatePolygon(post, "Stone base", postOuter, 0.022f, new Color(0.25f, 0.18f, 0.1f, 1f), 26);
+                CreatePolygon(post, "Warm stone cap", postInner, 0.03f, new Color(0.94f, 0.74f, 0.38f, 1f), 27);
+            }
+
+            const int curvePoints = 11;
+            Vector2[] arch = new Vector2[curvePoints];
+            for (int index = 0; index < curvePoints; index += 1)
+            {
+                float t = index / (curvePoints - 1f);
+                arch[index] = new Vector2(
+                    inward * (0.02f + Mathf.Sin(t * Mathf.PI) * 0.13f),
+                    Mathf.Lerp(-height * 0.31f, height * 0.31f, t));
+            }
+            CreateOpenLine(guide.transform, "Park gate arch", arch, 0.038f, 0.035f, new Color(0.35f, 0.2f, 0.08f, 1f), 28);
+
+            Transform labelAnchor = CreateAnchor(guide.transform, "Gate label anchor", new Vector2(inward * 0.23f, height * 0.05f));
+            CreateMediumLabel(labelAnchor, label, 0.05f, new Color(0.2f, 0.12f, 0.055f, 1f));
+            Transform captionAnchor = CreateAnchor(guide.transform, "Gate caption anchor", new Vector2(inward * 0.2f, -height * 0.28f));
+            CreateSmallLabel(captionAnchor, caption, 0.052f, new Color(0.28f, 0.17f, 0.07f, 1f));
         }
 
         private void CreateEllipseOutline(
@@ -274,6 +387,40 @@ namespace UrbanWildlife.Input
             guide.transform.SetParent(parent, false);
             guide.transform.localPosition = position;
             CreateOutline(guide.transform, "Boundary", outline, 0f, 0.03f, colour, 5);
+        }
+
+        private static Transform CreateAnchor(Transform parent, string name, Vector2 offset)
+        {
+            GameObject anchor = new GameObject(name);
+            anchor.transform.SetParent(parent, false);
+            anchor.transform.localPosition = new Vector3(offset.x, 0f, offset.y);
+            return anchor.transform;
+        }
+
+        private void CreateOpenLine(
+            Transform parent,
+            string name,
+            Vector2[] points,
+            float height,
+            float width,
+            Color colour,
+            int sortingOrder)
+        {
+            GameObject lineObject = new GameObject(name);
+            lineObject.transform.SetParent(parent, false);
+            LineRenderer line = lineObject.AddComponent<LineRenderer>();
+            line.useWorldSpace = false;
+            line.loop = false;
+            line.widthMultiplier = width;
+            line.numCornerVertices = 4;
+            line.numCapVertices = 4;
+            line.positionCount = points.Length;
+            line.material = CreateOverlayMaterial(colour);
+            line.sortingOrder = sortingOrder;
+            for (int index = 0; index < points.Length; index += 1)
+            {
+                line.SetPosition(index, new Vector3(points[index].x, height, points[index].y));
+            }
         }
 
         private void CreatePolygon(
@@ -336,7 +483,49 @@ namespace UrbanWildlife.Input
             MeshRenderer renderer = label.GetComponent<MeshRenderer>();
             if (renderer != null)
             {
-                renderer.sortingOrder = 25;
+                renderer.sortingOrder = 30;
+            }
+        }
+
+        private void CreateSmallLabel(Transform parent, string value, float height, Color colour)
+        {
+            GameObject labelObject = new GameObject($"Label {value}");
+            labelObject.transform.SetParent(parent, false);
+            labelObject.transform.localPosition = new Vector3(0f, height, 0f);
+            labelObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            TextMesh label = labelObject.AddComponent<TextMesh>();
+            label.text = value;
+            label.anchor = TextAnchor.MiddleCenter;
+            label.alignment = TextAlignment.Center;
+            label.fontSize = 48;
+            label.characterSize = 0.018f;
+            label.fontStyle = FontStyle.Bold;
+            label.color = colour;
+            MeshRenderer renderer = label.GetComponent<MeshRenderer>();
+            if (renderer != null)
+            {
+                renderer.sortingOrder = 30;
+            }
+        }
+
+        private void CreateMediumLabel(Transform parent, string value, float height, Color colour)
+        {
+            GameObject labelObject = new GameObject($"Label {value}");
+            labelObject.transform.SetParent(parent, false);
+            labelObject.transform.localPosition = new Vector3(0f, height, 0f);
+            labelObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            TextMesh label = labelObject.AddComponent<TextMesh>();
+            label.text = value;
+            label.anchor = TextAnchor.MiddleCenter;
+            label.alignment = TextAlignment.Center;
+            label.fontSize = 64;
+            label.characterSize = 0.038f;
+            label.fontStyle = FontStyle.Bold;
+            label.color = colour;
+            MeshRenderer renderer = label.GetComponent<MeshRenderer>();
+            if (renderer != null)
+            {
+                renderer.sortingOrder = 30;
             }
         }
 
@@ -380,6 +569,16 @@ namespace UrbanWildlife.Input
                 points[index] = new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
             }
             return points;
+        }
+
+        private static Vector2[] ScalePolygon(Vector2[] source, float scale)
+        {
+            Vector2[] scaled = new Vector2[source.Length];
+            for (int index = 0; index < source.Length; index += 1)
+            {
+                scaled[index] = source[index] * scale;
+            }
+            return scaled;
         }
 
         private void ClearGenerated()

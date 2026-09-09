@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v06-realistic-road-preview.png`
+
+Rendered on 2026-09-09 in Unity 6000.3.4f1 from the active display layer. The confirmed path Polyline is rendered as a warm-grey gravel park path with dark soil shoulders, pale stone edging, and deterministic light/dark gravel details instead of a solid magenta ribbon.
+
+The physical input remains a high-saturation magenta ribbon for reliable HSV segmentation. This preview changes only the Unity presentation; path coordinates, continuity checks, Food distance rules, and human routing still consume the original confirmed Polyline.
+
 ## `visual-layer-v05-realistic-scale-preview.png`
 
 Rendered on 2026-09-09 in Unity 6000.3.4f1 from the active realistic-proportion human set and real-size relative Sprite scale. Human body proportions are less stylized, and pigeon, squirrel, and fox are no longer enlarged to near-human length.

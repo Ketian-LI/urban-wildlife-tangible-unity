@@ -105,6 +105,7 @@ namespace UrbanWildlife.EditorTools
                 "Runtime Illustrated Layout/Board 90x60cm/Exit B guide/Park gate arch",
                 "Runtime Illustrated Layout/food_hotspot 10/Activity dot 0",
                 "Runtime Illustrated Layout/woodland 20/Woodland central vein",
+                "Runtime Illustrated Layout/Planned Human Path/Road gravel surface",
             };
             foreach (string visualPath in refinedVisualPaths)
             {
@@ -386,7 +387,7 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=3 animal_sprites=3 map_sprites=1 " +
-                "semantic_elements=7 refined_visuals=4 human_heading_offset=180 " +
+                "semantic_elements=7 refined_visuals=5 realistic_path=True human_heading_offset=180 " +
                 "human_lengths=0.89/0.84/0.85 real_size_order=True");
 
             string loggerSmokeRoot = Path.Combine(

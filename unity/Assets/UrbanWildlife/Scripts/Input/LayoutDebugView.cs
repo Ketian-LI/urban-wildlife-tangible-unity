@@ -128,31 +128,104 @@ namespace UrbanWildlife.Input
             GameObject pathObject = new GameObject("Planned Human Path");
             pathObject.transform.SetParent(generatedRoot, false);
 
-            GameObject shadowObject = new GameObject("Path outline");
-            shadowObject.transform.SetParent(pathObject.transform, false);
-            LineRenderer shadow = ConfigurePathLine(
-                shadowObject,
+            LineRenderer shoulder = CreatePathLayer(
+                pathObject.transform,
+                "Road earth shoulder",
                 path.points_norm.Length,
-                pathWidthUnits + 0.1f,
-                new Color(0.22f, 0.08f, 0.2f, 0.82f),
+                pathWidthUnits + 0.23f,
+                new Color(0.24f, 0.17f, 0.1f, 0.9f),
                 10);
-            LineRenderer line = ConfigurePathLine(
-                pathObject,
+            LineRenderer edging = CreatePathLayer(
+                pathObject.transform,
+                "Road stone edging",
                 path.points_norm.Length,
-                pathWidthUnits,
-                new Color(0.95f, 0.2f, 0.67f, 1f),
+                pathWidthUnits + 0.17f,
+                new Color(0.88f, 0.8f, 0.65f, 1f),
                 11);
-
+            LineRenderer surface = CreatePathLayer(
+                pathObject.transform,
+                "Road gravel surface",
+                path.points_norm.Length,
+                pathWidthUnits + 0.11f,
+                new Color(0.66f, 0.57f, 0.45f, 1f),
+                12);
+            Vector3[] positions = new Vector3[path.points_norm.Length];
             for (int index = 0; index < path.points_norm.Length; index += 1)
             {
-                Vector3 shadowPosition = NormalizedToLocal(
+                Vector3 position = NormalizedToLocal(
                     path.points_norm[index][0],
                     path.points_norm[index][1],
                     0.095f);
-                Vector3 linePosition = shadowPosition;
-                linePosition.y = 0.11f;
-                shadow.SetPosition(index, shadowPosition);
-                line.SetPosition(index, linePosition);
+                positions[index] = position;
+                shoulder.SetPosition(index, position);
+                position.y = 0.102f;
+                edging.SetPosition(index, position);
+                position.y = 0.109f;
+                surface.SetPosition(index, position);
+            }
+
+            CreateRoadDetails(pathObject.transform, positions);
+        }
+
+        private LineRenderer CreatePathLayer(
+            Transform parent,
+            string name,
+            int pointCount,
+            float width,
+            Color colour,
+            int sortingOrder)
+        {
+            GameObject layer = new GameObject(name);
+            layer.transform.SetParent(parent, false);
+            return ConfigurePathLine(layer, pointCount, width, colour, sortingOrder);
+        }
+
+        private void CreateRoadDetails(Transform parent, Vector3[] positions)
+        {
+            GameObject detailRoot = new GameObject("Road gravel details");
+            detailRoot.transform.SetParent(parent, false);
+            int detailIndex = 0;
+
+            for (int segment = 0; segment < positions.Length - 1; segment += 1)
+            {
+                Vector3 start = positions[segment];
+                Vector3 end = positions[segment + 1];
+                Vector3 delta = end - start;
+                float segmentLength = new Vector2(delta.x, delta.z).magnitude;
+                int sampleCount = Mathf.FloorToInt(segmentLength / 0.34f);
+                if (sampleCount < 1)
+                {
+                    continue;
+                }
+
+                Vector3 perpendicular = new Vector3(-delta.z, 0f, delta.x).normalized;
+                float heading = Mathf.Atan2(delta.x, delta.z) * Mathf.Rad2Deg;
+                for (int sample = 1; sample <= sampleCount; sample += 1)
+                {
+                    float t = sample / (sampleCount + 1f);
+                    Vector3 position = Vector3.Lerp(start, end, t);
+                    float side = detailIndex % 2 == 0 ? 1f : -1f;
+                    position += perpendicular * side * (0.035f + (detailIndex % 3) * 0.012f);
+
+                    Transform pebble = CreateAnchor(
+                        detailRoot.transform,
+                        $"Gravel pebble {detailIndex}",
+                        new Vector2(position.x, position.z));
+                    pebble.localRotation = Quaternion.Euler(0f, heading + (detailIndex % 3 - 1) * 17f, 0f);
+                    float lengthScale = 0.82f + (detailIndex % 4) * 0.12f;
+                    pebble.localScale = new Vector3(lengthScale, 1f, 0.58f);
+                    Color colour = detailIndex % 3 == 0
+                        ? new Color(0.46f, 0.39f, 0.31f, 0.72f)
+                        : new Color(0.91f, 0.84f, 0.71f, 0.62f);
+                    CreatePolygon(
+                        pebble,
+                        "Pebble",
+                        RegularPolygon(8, 0.026f, 22.5f),
+                        0.124f,
+                        colour,
+                        14);
+                    detailIndex += 1;
+                }
             }
         }
 

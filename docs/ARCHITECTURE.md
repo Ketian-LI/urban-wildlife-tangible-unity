@@ -177,5 +177,7 @@ Observed crossings, feeding, waiting and avoidance
 - `unity/` 中的 Constraint Manager 负责规划限制与通行检查；Human 和 Animal 系统仍负责产生实际行为结果。
 - `HumanRoutePlanner` 只从已确认布局和S001参数生成路线，`HumanAgentStateMachine` 负责确定性移动/停留，`P0HumanSimulation` 负责Run阶段的Unity实例与可视化。
 - `AnimalEnvironmentPlanner`负责布局到动物资源关系的确定性映射，`AnimalAgentStateMachine`不依赖Unity场景对象，`P0AnimalSimulation`只负责运行期感知、实例和可视化。
+- 动物显示层与行为状态机保持分离：`P0AnimalSimulation`从`Resources/UrbanWildlife/Animals`加载透明俯视Sprite，并只根据状态机结果处理平滑转向、待机摆动、进食脉动与状态色；替换美术不会改变生态规则或研究日志。
+- V0.1动物动画采用程序运动语言而非逐帧骨骼动画：移动位置仍由状态机决定，视觉层使用平滑朝向插值、约7.2秒待机摆动以及进食/回避/撤退反馈，便于先验证核心闭环再决定是否制作更多帧。
 - `P0ConstraintManager` 当前实现入口→广场→出口、人类活动来源、路径安全间距、池塘避让和改动次数；动物可达性以S001只有一个不接触边界的池塘为前提，路径只增加成本而不封路。新增围栏或多个障碍时应替换为网格寻路。
 - `P0ResearchLogger`只消费公开事件和汇总计数；原始研究日志写入Git忽略目录，必须标注会话和时间，不记录不必要的身份信息。

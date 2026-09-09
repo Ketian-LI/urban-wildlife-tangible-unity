@@ -59,10 +59,11 @@ urban-wildlife-tangible-unity/
 - [x] 建立Unity 6工程并完成轮廓版JSON读取烟雾测试
 - [x] 接入Walker、Dweller、Visitor三类基础人类行为
 - [x] 接入鸽子、松鼠、狐狸三种基础动物状态机
+- [x] 完成三种动物的手绘俯视Sprite与程序动画V0.1
 - [x] 完成Plan、Confirm、Run、Observe单周期与最小研究日志输出
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 
-工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md) 和 [`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)。
+工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md) 和 [`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)。
 材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
 
 ## 第一天交付

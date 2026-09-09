@@ -310,6 +310,22 @@ namespace UrbanWildlife.EditorTools
                 $"UNITY_ANIMAL_STATE_SMOKE_OK pigeon_avoid={tolerantPigeon.AvoidanceEvents} " +
                 $"squirrel_avoid={cautiousSquirrel.AvoidanceEvents} fox_avoid={cautiousFox.AvoidanceEvents}");
 
+            string[] animalSpritePaths =
+            {
+                "UrbanWildlife/Animals/pigeon-topdown-v01",
+                "UrbanWildlife/Animals/squirrel-topdown-v01",
+                "UrbanWildlife/Animals/fox-topdown-v01",
+            };
+            foreach (string spritePath in animalSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.y <= 0f)
+                {
+                    throw new InvalidOperationException($"P0 animal sprite is missing or invalid: {spritePath}");
+                }
+            }
+            Debug.Log("UNITY_ANIMAL_SPRITE_SMOKE_OK sprites=3 transparent_import=True topdown=True");
+
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),
                 "urban-wildlife-logger-smoke",

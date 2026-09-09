@@ -21,7 +21,13 @@ namespace UrbanWildlife.Animals
             public AnimalSpawnPlan plan;
             public AnimalAgentStateMachine model;
             public Transform visual;
+            public Transform artwork;
             public Renderer renderer;
+            public SpriteRenderer spriteRenderer;
+            public Vector3 artworkBaseScale;
+            public float headingDegrees;
+            public float animationOffset;
+            public bool ownsMaterial;
             public AnimalActivityState lastState;
         }
 
@@ -108,16 +114,19 @@ namespace UrbanWildlife.Animals
                 Vector2 previous = animal.model.Position;
                 animal.model.Tick(Time.deltaTime, perception);
                 Vector2 current = animal.model.Position;
-                animal.visual.localPosition = new Vector3(current.x, 0.2f, current.y);
+                animal.visual.localPosition = new Vector3(current.x, 0.28f, current.y);
                 Vector2 movement = current - previous;
                 if (movement.sqrMagnitude > 0.000001f)
                 {
-                    animal.visual.localRotation = Quaternion.LookRotation(new Vector3(movement.x, 0f, movement.y));
+                    float targetHeading = Mathf.Atan2(movement.x, movement.y) * Mathf.Rad2Deg;
+                    float turnBlend = 1f - Mathf.Exp(-8f * Time.deltaTime);
+                    animal.headingDegrees = Mathf.LerpAngle(animal.headingDegrees, targetHeading, turnBlend);
                 }
+                ApplyMotion(animal, movement.sqrMagnitude > 0.000001f);
                 if (animal.lastState != animal.model.State)
                 {
                     animal.lastState = animal.model.State;
-                    animal.renderer.sharedMaterial.color = ColourFor(animal.model.Species, animal.model.State);
+                    ApplyColour(animal);
                 }
             }
         }
@@ -155,28 +164,22 @@ namespace UrbanWildlife.Animals
             for (int index = 0; index < plans.Length; index += 1)
             {
                 AnimalAgentStateMachine model = new AnimalAgentStateMachine(plans[index]);
-                GameObject visual = GameObject.CreatePrimitive(
-                    model.Species == AnimalSpecies.Pigeon ? PrimitiveType.Sphere : PrimitiveType.Capsule);
+                GameObject visual = new GameObject(model.Species.ToString());
                 visual.name = model.Species.ToString();
                 visual.transform.SetParent(generatedRoot, false);
-                visual.transform.localScale = ScaleFor(model.Species);
-                visual.transform.localPosition = new Vector3(model.Position.x, 0.2f, model.Position.y);
-                Collider collider = visual.GetComponent<Collider>();
-                if (collider != null)
-                {
-                    Destroy(collider);
-                }
-
-                Renderer renderer = visual.GetComponent<Renderer>();
-                renderer.sharedMaterial = CreateMaterial(ColourFor(model.Species, model.State));
-                animals.Add(new RuntimeAnimal
+                visual.transform.localPosition = new Vector3(model.Position.x, 0.28f, model.Position.y);
+                RuntimeAnimal runtime = new RuntimeAnimal
                 {
                     plan = plans[index],
                     model = model,
                     visual = visual.transform,
-                    renderer = renderer,
+                    headingDegrees = 0f,
+                    animationOffset = index * 1.37f,
                     lastState = model.State,
-                });
+                };
+                CreateArtwork(runtime);
+                ApplyColour(runtime);
+                animals.Add(runtime);
             }
 
             Debug.Log("Animal run started: pigeon=1, squirrel=1, fox=1.", this);
@@ -186,17 +189,16 @@ namespace UrbanWildlife.Animals
         {
             foreach (RuntimeAnimal animal in animals)
             {
-                if (animal.renderer == null || animal.renderer.sharedMaterial == null)
+                if (animal.ownsMaterial && animal.renderer != null && animal.renderer.sharedMaterial != null)
                 {
-                    continue;
-                }
-                if (Application.isPlaying)
-                {
-                    Destroy(animal.renderer.sharedMaterial);
-                }
-                else
-                {
-                    DestroyImmediate(animal.renderer.sharedMaterial);
+                    if (Application.isPlaying)
+                    {
+                        Destroy(animal.renderer.sharedMaterial);
+                    }
+                    else
+                    {
+                        DestroyImmediate(animal.renderer.sharedMaterial);
+                    }
                 }
             }
             animals.Clear();
@@ -224,7 +226,106 @@ namespace UrbanWildlife.Animals
             generatedRoot = null;
         }
 
-        private static Vector3 ScaleFor(AnimalSpecies species)
+        private static void CreateArtwork(RuntimeAnimal animal)
+        {
+            Sprite sourceSprite = Resources.Load<Sprite>(ResourcePathFor(animal.model.Species));
+            if (sourceSprite != null)
+            {
+                GameObject artwork = new GameObject("Artwork");
+                artwork.transform.SetParent(animal.visual, false);
+                artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                SpriteRenderer spriteRenderer = artwork.AddComponent<SpriteRenderer>();
+                spriteRenderer.sprite = sourceSprite;
+                spriteRenderer.sortingOrder = 30;
+                float targetLength = LengthFor(animal.model.Species);
+                float uniformScale = targetLength / Mathf.Max(0.001f, sourceSprite.bounds.size.y);
+                artwork.transform.localScale = Vector3.one * uniformScale;
+                animal.artwork = artwork.transform;
+                animal.artworkBaseScale = artwork.transform.localScale;
+                animal.renderer = spriteRenderer;
+                animal.spriteRenderer = spriteRenderer;
+                animal.ownsMaterial = false;
+                return;
+            }
+
+            GameObject fallback = GameObject.CreatePrimitive(
+                animal.model.Species == AnimalSpecies.Pigeon ? PrimitiveType.Sphere : PrimitiveType.Capsule);
+            fallback.name = "Fallback Geometry";
+            fallback.transform.SetParent(animal.visual, false);
+            fallback.transform.localScale = FallbackScaleFor(animal.model.Species);
+            Collider collider = fallback.GetComponent<Collider>();
+            if (collider != null)
+            {
+                Destroy(collider);
+            }
+            animal.artwork = fallback.transform;
+            animal.artworkBaseScale = fallback.transform.localScale;
+            animal.renderer = fallback.GetComponent<Renderer>();
+            animal.renderer.sharedMaterial = CreateMaterial(
+                FallbackColourFor(animal.model.Species, animal.model.State));
+            animal.ownsMaterial = true;
+            Debug.LogWarning($"Animal sprite missing for {animal.model.Species}; using fallback geometry.");
+        }
+
+        private static void ApplyMotion(RuntimeAnimal animal, bool moving)
+        {
+            float time = Time.time + animal.animationOffset;
+            float sway = moving ? 0f : Mathf.Sin(time * (2f * Mathf.PI / 7.2f)) * 2.5f;
+            animal.visual.localRotation = Quaternion.Euler(0f, animal.headingDegrees + sway, 0f);
+
+            float pulse = 1f;
+            if (animal.model.State == AnimalActivityState.Feeding)
+            {
+                pulse += Mathf.Sin(time * 9f) * 0.055f;
+            }
+            else if (!moving)
+            {
+                pulse += Mathf.Sin(time * 1.8f) * 0.018f;
+            }
+            animal.artwork.localScale = animal.artworkBaseScale * pulse;
+        }
+
+        private static void ApplyColour(RuntimeAnimal animal)
+        {
+            if (animal.spriteRenderer != null)
+            {
+                animal.spriteRenderer.color = SpriteTintFor(animal.model.State);
+            }
+            else if (animal.renderer != null && animal.renderer.sharedMaterial != null)
+            {
+                animal.renderer.sharedMaterial.color = FallbackColourFor(
+                    animal.model.Species,
+                    animal.model.State);
+            }
+        }
+
+        private static string ResourcePathFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return "UrbanWildlife/Animals/pigeon-topdown-v01";
+                case AnimalSpecies.Squirrel:
+                    return "UrbanWildlife/Animals/squirrel-topdown-v01";
+                default:
+                    return "UrbanWildlife/Animals/fox-topdown-v01";
+            }
+        }
+
+        private static float LengthFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return 0.65f;
+                case AnimalSpecies.Squirrel:
+                    return 0.85f;
+                default:
+                    return 1.05f;
+            }
+        }
+
+        private static Vector3 FallbackScaleFor(AnimalSpecies species)
         {
             switch (species)
             {
@@ -237,19 +338,29 @@ namespace UrbanWildlife.Animals
             }
         }
 
-        private static Color ColourFor(AnimalSpecies species, AnimalActivityState state)
+        private static Color SpriteTintFor(AnimalActivityState state)
         {
             if (state == AnimalActivityState.Feeding)
             {
-                return new Color(1f, 0.85f, 0.12f, 1f);
+                return new Color(1f, 0.9f, 0.58f, 1f);
             }
             if (state == AnimalActivityState.AvoidingHumans)
             {
-                return new Color(1f, 0.2f, 0.58f, 1f);
+                return new Color(1f, 0.58f, 0.78f, 1f);
             }
             if (state == AnimalActivityState.Retreating)
             {
-                return new Color(0.38f, 0.28f, 0.42f, 1f);
+                return new Color(0.68f, 0.62f, 0.78f, 1f);
+            }
+            return Color.white;
+        }
+
+        private static Color FallbackColourFor(AnimalSpecies species, AnimalActivityState state)
+        {
+            Color tint = SpriteTintFor(state);
+            if (tint != Color.white)
+            {
+                return tint;
             }
 
             switch (species)

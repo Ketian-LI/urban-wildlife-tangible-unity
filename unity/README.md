@@ -25,7 +25,7 @@
 5. 识别数据有效时会生成黑色板面、洋红路径、3个Food与2个Woodland调试物件，并在面板显示Constraint Check。所有约束通过后点击 **START RUN** 或再按一次空格；未通过则自动回到Plan。
 6. Run显示60秒倒计时，随后自动进入30秒Observe；三个周期结束后可用 **RESET SESSION** 重新开始。
    Run中会出现2个Walker、2个Dweller和2个Visitor：蓝色Walker沿主路通行，橙色Dweller在广场停留，绿色Visitor绕行至Food Hotspot；活动中会切换为更醒目的颜色。
-7. 同一Run会生成鸽子、松鼠和狐狸各1只。鸽子直接利用Food并短暂停留；松鼠与狐狸在人类进入各自干扰半径时回避并退回Woodland，松鼠进食后会积累有限的熟悉度。
+7. 同一Run会生成鸽子、松鼠和狐狸各1只。三者使用透明背景的手绘俯视Sprite，并具有平滑转向、约7.2秒的轻微待机摆动、进食脉动和状态色反馈。鸽子直接利用Food并短暂停留；松鼠与狐狸在人类进入各自干扰半径时回避并退回Woodland，松鼠进食后会积累有限的熟悉度。
 8. 会话事件写入 `data/raw/research-logs/<session_id>/events.jsonl` 与 `events.csv`。该目录不会提交Git，只记录会话ID、阶段、约束及汇总行为次数，不含参与者姓名。
 9. 版本错误、旧时间戳、未通过稳定门控、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。
 
@@ -55,12 +55,14 @@
 - `AnimalEnvironmentPlanner.cs`：把3个Food与2个Woodland映射为鸽子、松鼠和狐狸的起点、资源点及庇护点。
 - `AnimalAgentStateMachine.cs`：实现觅食、停留、回避人类、退回庇护地及松鼠熟悉度等确定性状态。
 - `P0AnimalSimulation.cs`：在Run阶段生成3只动物、读取最近人类距离、更新状态和调试颜色，并汇总进食与回避次数。
+- `Assets/Resources/UrbanWildlife/Animals/`：鸽子、松鼠和狐狸的透明手绘俯视Sprite、生成提示词与素材来源说明。
+- `P0AnimalSpriteImporter.cs`：统一动物Sprite的透明度、单Sprite、双线性过滤、尺寸上限与压缩导入规则。
 - `P0ResearchLogger.cs` 与 `ResearchLogRecord.cs`：将布局确认、约束和阶段事件追加为隐私安全的JSONL/CSV。
 - `P0InputSceneTools.cs`：可重复创建P0输入场景，并在批处理模式验证脱敏夹具、9个调试元素、S001初始失败状态及两次移动后的有效修复。
 
 ## 当前边界
 
-- Unity目前使用纯调试几何表达地图、人类和动物；基础行为已可运行，但还没有最终公园美术、拥堵寻路、Trace或动画。
+- Unity目前仍使用调试几何表达地图与人类；动物已完成V0.1手绘俯视视觉和程序动画，但还没有最终公园美术、人类Sprite、拥堵寻路、Trace或逐帧动画。
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。

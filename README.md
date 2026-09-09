@@ -66,7 +66,7 @@ urban-wildlife-tangible-unity/
 
 工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md) 和 [`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)。
 材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
-当前Unity显示层组合预览见 [`docs/images/unity/visual-layer-v02-preview.png`](docs/images/unity/visual-layer-v02-preview.png)。
+当前Unity显示层组合预览（已修正蓝衣人物的腿脚姿态）见 [`docs/images/unity/visual-layer-v021-shoe-fix-preview.png`](docs/images/unity/visual-layer-v021-shoe-fix-preview.png)。
 
 ## 第一天交付
 

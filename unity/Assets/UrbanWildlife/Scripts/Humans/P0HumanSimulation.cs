@@ -323,11 +323,11 @@ namespace UrbanWildlife.Humans
             switch (archetype)
             {
                 case HumanArchetype.Walker:
-                    return "UrbanWildlife/Humans/walker-topdown-v01";
+                    return "UrbanWildlife/Humans/walker-topdown-v02";
                 case HumanArchetype.Dweller:
                     return "UrbanWildlife/Humans/dweller-topdown-v01";
                 default:
-                    return "UrbanWildlife/Humans/visitor-topdown-v01";
+                    return "UrbanWildlife/Humans/visitor-topdown-v02";
             }
         }
 

@@ -1,18 +1,82 @@
-# P0 Human Sprite Set V0.2
+# P0 Human Sprite Set V0.2.1
 
 Generated on 2026-09-09 with the built-in image generation tool for the Unity P0 prototype.
 
 Assets:
 
-- `walker-topdown-v01.png`
+- `walker-topdown-v02.png` (active; corrected walking pose)
 - `dweller-topdown-v01.png`
-- `visitor-topdown-v01.png`
+- `visitor-topdown-v02.png` (active; corrected walking pose)
 
-All three characters face toward the top of the source image and are rotated at runtime. Clothing, pose, and one small accessory distinguish each role without relying only on colour. Each initial generation accidentally contained a baked checkerboard; a second background-extraction pass produced the committed files with real alpha transparency. OpenCV inspection confirmed four-channel PNG output and transparent pixels.
+The original `walker-topdown-v01.png` and `visitor-topdown-v01.png` are retained as superseded prototypes. Their forward shoes appeared above the head in the strict top-down view, which became confusing at runtime token scale.
+
+All three characters face toward the top of the source image and are rotated at runtime. Clothing, pose, and one small accessory distinguish each role without relying only on colour. The original V0.1 set contained baked checkerboards in the initial outputs; the committed V0.1 files have alpha transparency. The V0.2 Walker and Visitor extraction workflow is recorded separately below. The active files are four-channel PNGs with transparent pixels.
 
 ## Generation mode
 
-Built-in image generation tool. One generation and one background-extraction edit per role.
+Built-in image generation tool. The active Walker and Visitor use an additional precise-object edit to correct the lower-body pose. A generated uniform green isolation plate was converted to real alpha with `tools/chroma_key_sprite.py`; this keeps the delivered Unity assets as RGBA PNGs without a baked checkerboard.
+
+## V0.2.1 shoe-pose correction
+
+### Walker correction prompt
+
+```text
+Use case: precise object edit for a top-down Unity game sprite.
+
+Edit ONLY the lower-body walking pose and shoes of the supplied blue-clothed male Walker. Preserve his exact identity, brown hair, blue hooded jacket, navy backpack, arms, body proportions, painterly outlined illustration style, lighting, colors, and strict overhead camera angle.
+
+Correct the anatomy and silhouette:
+- The top of the canvas is the character's head direction; the bottom is behind/below the body.
+- Remove the red shoe and leg that currently appear above the man's head.
+- Show exactly two legs and exactly two red sneakers, both anatomically connected from the hips through the legs to the ankles.
+- Both shoes must be entirely below the hips and below the backpack, in the lower half of the character silhouette.
+- Use a restrained natural walking stance: one foot only slightly ahead of the other, modest separation, no extreme foreshortening, no crossed, floating, detached, duplicated, or overlapping limbs.
+- At small game-token size the silhouette must read clearly as a normal person walking, never as a shoe above the head.
+
+Keep the character centered and keep the same overall scale. Output a clean isolated sprite with genuinely transparent alpha everywhere outside the character; no background, no floor, no checkerboard pattern, no glow, no halo, no cast shadow, no text, and no border.
+```
+
+### Visitor correction prompt
+
+```text
+Use case: precise object edit for a top-down Unity game sprite.
+
+Edit ONLY the lower-body walking pose and shoes of the supplied teal-blue-clothed female Visitor. Preserve her exact identity, brown hair bun, teal hooded coat, burgundy trousers, tan cross-body satchel, arms, body proportions, painterly outlined illustration style, lighting, colors, and strict overhead camera angle.
+
+Correct the anatomy and silhouette:
+- The top of the canvas is the character's head direction; the bottom is behind/below the body.
+- Remove the grey shoe and leg that currently appear above the woman's head.
+- Show exactly two legs and exactly two grey sneakers, both anatomically connected from the hips through the legs to the ankles.
+- Both shoes must be entirely below the hips and below the coat hem, in the lower half of the character silhouette.
+- Use a restrained natural walking stance: one foot only slightly ahead of the other, modest separation, no extreme foreshortening, no crossed, floating, detached, duplicated, or overlapping limbs.
+- At small game-token size the silhouette must read clearly as a normal person walking, never as a shoe above the head.
+
+Keep the character centered and keep the same overall scale. Output a clean isolated sprite with genuinely transparent alpha everywhere outside the character; no background, no floor, no checkerboard pattern, no glow, no halo, no cast shadow, no text, and no border.
+```
+
+Both correction outputs were passed through a background-extraction edit. Because that edit returned a baked checkerboard rather than alpha, the same characters were placed on a uniform `#00FF00` isolation plate with the built-in image tool and then converted deterministically to RGBA. No pose or character content was changed during that final format conversion.
+
+### Follow-up background prompt (both characters)
+
+```text
+Use case: exact background removal for a Unity sprite.
+
+Keep the supplied character completely unchanged pixel-for-pixel in design, anatomy, pose, clothing, facial/hair details, bags, outlines, colors, scale, and placement. Do not redraw or restyle the person.
+
+Remove the entire grey-and-white checkerboard background and any paper-like background texture. Convert every pixel outside the character silhouette to genuine transparent alpha (RGBA alpha 0). Preserve clean antialiased edges around the character. Do not leave a checkerboard, grey field, white field, black field, glow, halo, shadow, outline expansion, text, or border. The final file must be a clean isolated character sprite on true transparency.
+```
+
+### Final isolation-plate prompt (both characters)
+
+```text
+Use case: background-extraction intermediate plate.
+Asset type: Unity top-down human sprite.
+Primary request: Keep the character design, pose, anatomy, clothing, bags, outlines, colors, scale, and placement completely unchanged. Replace ONLY every background pixel outside the character silhouette with one perfectly flat, uniform chroma-key green color RGB (0, 255, 0), hex #00FF00.
+Scene/backdrop: featureless solid #00FF00.
+Constraints: the green must stop precisely at the antialiased character edge; no checkerboard, texture, wrinkles, gradients, shadows, glow, halo, text, border, or green inside the character. Do not redraw or restyle the person.
+```
+
+The final PNGs preserve the generated pose and interior artwork. The local conversion removes green background pixels and adjusts boundary colour to reduce a green fringe. Prompt preservation requests above are instructions to the generator, not a guarantee that iterative image generation preserved every original pixel.
 
 ## Exact generation prompts
 

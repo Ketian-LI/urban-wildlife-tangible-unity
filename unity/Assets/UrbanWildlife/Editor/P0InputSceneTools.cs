@@ -328,9 +328,9 @@ namespace UrbanWildlife.EditorTools
 
             string[] humanSpritePaths =
             {
-                "UrbanWildlife/Humans/walker-topdown-v01",
+                "UrbanWildlife/Humans/walker-topdown-v02",
                 "UrbanWildlife/Humans/dweller-topdown-v01",
-                "UrbanWildlife/Humans/visitor-topdown-v01",
+                "UrbanWildlife/Humans/visitor-topdown-v02",
             };
             foreach (string spritePath in humanSpritePaths)
             {

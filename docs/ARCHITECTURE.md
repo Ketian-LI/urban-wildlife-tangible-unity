@@ -182,7 +182,7 @@ Observed crossings, feeding, waiting and avoidance
 - V0.1动物动画采用程序运动语言而非逐帧骨骼动画：移动位置仍由状态机决定，视觉层使用平滑朝向插值、约7.2秒待机摆动以及进食/回避/撤退反馈，便于先验证核心闭环再决定是否制作更多帧。
 - S001环境显示层从`Resources/UrbanWildlife/Environment`加载3:2手绘底图；入口、出口、广场与池塘的精确边界仍由场景JSON坐标驱动的矢量线叠加，底图像素不参与规则判断。
 - 人类显示层从`Resources/UrbanWildlife/Humans`按Archetype加载透明Sprite。`HumanAgentStateMachine`继续决定位置和状态，`P0HumanSimulation`只添加平滑转向、行走起伏、停留呼吸与访客观察反馈。
-- Walker与Visitor的源图统一头部朝上，两只鞋位于髋部下方且鞋尖同样朝上；画面下端显示鞋跟。运行时只整体旋转Sprite，不单独改变腿脚方向。
+- Walker、Dweller与Visitor统一采用高角度斜俯视正脸Sprite，眼、鼻和嘴在地图尺寸下可读；脸与鞋尖均朝源图下方。P0HumanSimulation先加入固定180°朝向补偿，再按移动方向整体旋转Sprite，不单独改变脸、腿或脚。
 - `LayoutDebugView`把每次确认布局组织为7个语义根对象：1个地图、1条路径和5个Token；装饰子对象不再影响输入验收计数。运行期创建的Mesh和Material在重载布局时显式释放。
 - `LayoutDebugView`的V0.3装饰层包括Food活动点与中心铭牌、Woodland冠层/叶脉/木纹，以及入口和出口的双门柱与弧形门槛；其父级坐标继续由已确认布局和S001固定场景参数驱动。
 - `P0ControlPanel`在Plan/Confirm显示完整约束和操作，在Run/Observe自动切换为紧凑信息卡；这是显示密度变化，不改变阶段状态机。

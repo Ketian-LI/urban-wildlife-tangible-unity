@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v04-front-facing-humans-preview.png`
+
+Rendered on 2026-09-09 in Unity 6000.3.4f1 from the active front-facing human Sprite set. Walker, Dweller, and Visitor now share one high-angle three-quarter map view with readable facial features while retaining their distinct clothing and accessories.
+
+The human route, heading convention, state machines, planning geometry, and animal behavior are unchanged. Humans and animals are staged at fixed positions for this static visual review; the image does not prove animation timing or physical-camera input.
+
 ## `visual-layer-v03-refinement-preview.png`
 
 Rendered on 2026-09-09 in Unity 6000.3.4f1 from the active V0.3 visual layer. The preview verifies the final heel direction on Walker and Visitor, layered Food Hotspot markers, felt/canopy/wood-ring Woodland markers, two-post park gates, and strongly separated squirrel/fox silhouettes.

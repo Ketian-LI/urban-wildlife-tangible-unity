@@ -353,9 +353,9 @@ namespace UrbanWildlife.EditorTools
 
             string[] humanSpritePaths =
             {
-                "UrbanWildlife/Humans/walker-topdown-v03",
-                "UrbanWildlife/Humans/dweller-topdown-v01",
-                "UrbanWildlife/Humans/visitor-topdown-v03",
+                "UrbanWildlife/Humans/walker-topdown-v04",
+                "UrbanWildlife/Humans/dweller-topdown-v02",
+                "UrbanWildlife/Humans/visitor-topdown-v04",
             };
             foreach (string spritePath in humanSpritePaths)
             {
@@ -365,12 +365,18 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 human sprite is missing or invalid: {spritePath}");
                 }
             }
+            if (!Mathf.Approximately(P0HumanSimulation.FrontFacingSpriteHeadingOffsetDegrees, 180f))
+            {
+                throw new InvalidOperationException("Front-facing human sprites require a 180-degree heading offset.");
+            }
             Sprite parkMap = Resources.Load<Sprite>("UrbanWildlife/Environment/park-board-s001-v02");
             if (parkMap == null || parkMap.texture == null || parkMap.bounds.size.x <= 0f)
             {
                 throw new InvalidOperationException("P0 illustrated park map is missing or invalid.");
             }
-            Debug.Log("UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=3 animal_sprites=3 map_sprites=1 semantic_elements=7 refined_visuals=4");
+            Debug.Log(
+                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=3 animal_sprites=3 map_sprites=1 " +
+                "semantic_elements=7 refined_visuals=4 human_heading_offset=180");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

@@ -1,20 +1,60 @@
-# P0 Human Sprite Set V0.3
+# P0 Human Sprite Set V0.4
 
 Generated on 2026-09-09 with the built-in image generation tool for the Unity P0 prototype.
 
 Assets:
 
-- `walker-topdown-v03.png` (active; corrected walking pose and heel direction)
-- `dweller-topdown-v01.png`
-- `visitor-topdown-v03.png` (active; corrected walking pose and heel direction)
+- `walker-topdown-v04.png` (active; high-angle front-facing view)
+- `dweller-topdown-v02.png` (active; high-angle front-facing view)
+- `visitor-topdown-v04.png` (active; high-angle front-facing view)
 
-The V0.1 and V0.2 Walker/Visitor files are retained as superseded prototypes. V0.1 placed one shoe above the head; V0.2 moved both shoes below the hips but left their toe caps pointing opposite the face. V0.3 keeps the shoes below the body and shows their heels at the bottom of the source image, so the toes and face point in the same direction.
+The earlier Walker, Dweller, and Visitor files are retained as superseded prototypes. V0.4 replaces the near-overhead back-of-head reading with one consistent high-angle three-quarter view. Eyes, nose, and mouth remain visible when the characters are reduced to map scale.
 
-All three characters face toward the top of the source image and are rotated at runtime. Clothing, pose, and one small accessory distinguish each role without relying only on colour. The original V0.1 set contained baked checkerboards in the initial outputs; the committed V0.1 files have alpha transparency. The V0.2 Walker and Visitor extraction workflow is recorded separately below. The active files are four-channel PNGs with transparent pixels.
+All three characters use the same source orientation: their visible faces and shoe toes point toward the bottom of the image. Runtime applies a fixed 180-degree heading offset and then rotates each complete Sprite, so the visible front remains aligned with travel. Their clothing, pose, and one small accessory distinguish each role without relying only on colour. The active files are four-channel PNGs with transparent pixels.
 
 ## Generation mode
 
-Built-in image generation tool. The active Walker and Visitor use precise-object edits to correct the lower-body pose and shoe direction. A generated uniform green isolation plate was converted to real alpha with `tools/chroma_key_sprite.py`; this keeps the delivered Unity assets as RGBA PNGs without a baked checkerboard.
+Built-in image generation tool in `precise-object-edit` mode. The three V0.4 role images were generated on uniform green isolation plates and converted to real alpha with `tools/chroma_key_sprite.py`; this keeps the delivered Unity assets as RGBA PNGs without a baked checkerboard.
+
+## V0.4 front-facing view
+
+The phrase “front-facing” means that the face is readable from a high-angle map view; it does not change the project to an eye-level or side-view camera. The generated fronts point toward the bottom of the source image, so P0HumanSimulation applies a fixed 180-degree offset before its normal movement heading and sway.
+
+### Walker final prompt
+
+```text
+Use case: precise-object-edit.
+Asset type: Unity 2D top-down human character sprite on a chroma-key isolation plate.
+Edit the referenced Walker while preserving his recognizable identity and palette: adult man, short brown hair, bright blue hooded jacket, navy backpack, dark navy trousers, muted red trainers. Change the pose and camera to a consistent high-angle three-quarter TOP-DOWN view (camera about 65–75 degrees above the ground) in which the character is walking TOWARD THE TOP OF THE CANVAS but lifts/tilts his face enough toward the camera that both eyes, nose, and mouth are clearly readable. The front of his body, chest, and facial expression must be visible; do not show only the crown or back of his head. Keep a compact readable map-game silhouette and the same hand-painted storybook line-art style.
+Anatomy constraints: exactly one head, two connected arms, two connected legs, two shoes; both shoes point in the same direction as his face and body; no backward feet, floating limbs, or duplicated parts. Backpack must sit naturally behind his shoulders.
+Composition: centered, full body, generous padding, no cropping. The entire character occupies about 78% of canvas height.
+Background: perfectly uniform solid #00FF00 green, edge to edge. No transparency preview checkerboard, no texture, no gradient.
+Do not add ground, floor, cast shadow, glow, halo, border, text, labels, icons, or other objects.
+```
+
+### Dweller final prompt
+
+```text
+Use case: precise-object-edit.
+Asset type: Unity 2D top-down human character sprite on a chroma-key isolation plate.
+Edit the referenced Dweller while preserving her recognizable identity and palette: adult woman with brown hair in a bun, mustard-orange overshirt/coat, cream knitted top, earthy brown trousers, dark lace-up shoes, holding one small reusable cup. Change the pose and camera to a consistent high-angle three-quarter TOP-DOWN view (camera about 65–75 degrees above the ground) in which the character is walking TOWARD THE TOP OF THE CANVAS but lifts/tilts her face enough toward the camera that both eyes, nose, and mouth are clearly readable. The front of her body, chest, and facial expression must be visible; do not show only the crown of her head and do not make her stare straight down. Keep a compact readable map-game silhouette and the same hand-painted storybook line-art style.
+Anatomy constraints: exactly one head, two connected arms, two connected legs, two shoes; both shoes point in the same direction as her face and body; no backward feet, floating limbs, duplicated parts, or extra cups. Cup stays in one hand.
+Composition: centered, full body, generous padding, no cropping. The entire character occupies about 78% of canvas height.
+Background: perfectly uniform solid #00FF00 green, edge to edge. No transparency preview checkerboard, no texture, no gradient.
+Do not add ground, floor, cast shadow, glow, halo, border, text, labels, icons, or other objects.
+```
+
+### Visitor final prompt
+
+```text
+Use case: precise-object-edit.
+Asset type: Unity 2D top-down human character sprite on a chroma-key isolation plate.
+Edit the referenced Visitor while preserving her recognizable identity and palette: adult woman, brown hair in a bun, teal hooded coat, burgundy trousers, tan crossbody satchel, grey trainers. Change the pose and camera to a consistent high-angle three-quarter TOP-DOWN view (camera about 65–75 degrees above the ground) in which the character is walking TOWARD THE TOP OF THE CANVAS but lifts/tilts her face enough toward the camera that both eyes, nose, and mouth are clearly readable. The front of her body, chest, satchel strap, and facial expression must be visible; do not show only the crown or back of her head. Keep a compact readable map-game silhouette and the same hand-painted storybook line-art style.
+Anatomy constraints: exactly one head, two connected arms, two connected legs, two shoes; both shoes point in the same direction as her face and body; no backward feet, floating limbs, or duplicated parts. Satchel remains naturally connected by its strap.
+Composition: centered, full body, generous padding, no cropping. The entire character occupies about 78% of canvas height.
+Background: perfectly uniform solid #00FF00 green, edge to edge. No transparency preview checkerboard, no texture, no gradient.
+Do not add ground, floor, cast shadow, glow, halo, border, text, labels, icons, or other objects.
+```
 
 ## V0.3 shoe-direction correction
 

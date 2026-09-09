@@ -11,6 +11,8 @@ namespace UrbanWildlife.Humans
     [RequireComponent(typeof(LayoutPacketReader), typeof(P0CycleController), typeof(LayoutDebugView))]
     public sealed class P0HumanSimulation : MonoBehaviour
     {
+        public const float FrontFacingSpriteHeadingOffsetDegrees = 180f;
+
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
         private string scenarioPath = "../../data/scenarios/s001_weekend_park_baseline.json";
@@ -287,7 +289,10 @@ namespace UrbanWildlife.Humans
             {
                 sway += Mathf.Sin(time * 2.2f) * 2.4f;
             }
-            human.visual.localRotation = Quaternion.Euler(0f, human.headingDegrees + sway, 0f);
+            human.visual.localRotation = Quaternion.Euler(
+                0f,
+                human.headingDegrees + FrontFacingSpriteHeadingOffsetDegrees + sway,
+                0f);
 
             float pulse = 1f;
             if (moving)
@@ -323,11 +328,11 @@ namespace UrbanWildlife.Humans
             switch (archetype)
             {
                 case HumanArchetype.Walker:
-                    return "UrbanWildlife/Humans/walker-topdown-v03";
+                    return "UrbanWildlife/Humans/walker-topdown-v04";
                 case HumanArchetype.Dweller:
-                    return "UrbanWildlife/Humans/dweller-topdown-v01";
+                    return "UrbanWildlife/Humans/dweller-topdown-v02";
                 default:
-                    return "UrbanWildlife/Humans/visitor-topdown-v03";
+                    return "UrbanWildlife/Humans/visitor-topdown-v04";
             }
         }
 

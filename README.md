@@ -66,7 +66,7 @@ urban-wildlife-tangible-unity/
 
 工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md) 和 [`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)。
 材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
-当前Unity显示层组合预览（人物鞋跟、规划标记、公园门与动物轮廓已精修）见 [`docs/images/unity/visual-layer-v03-refinement-preview.png`](docs/images/unity/visual-layer-v03-refinement-preview.png)。
+当前Unity显示层组合预览（三类人物统一正脸，规划标记、公园门与动物轮廓已精修）见 [`docs/images/unity/visual-layer-v04-front-facing-humans-preview.png`](docs/images/unity/visual-layer-v04-front-facing-humans-preview.png)。
 
 ## 第一天交付
 

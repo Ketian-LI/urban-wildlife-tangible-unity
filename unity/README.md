@@ -24,7 +24,7 @@
 4. 点击Play，使用左上控制面板的大号 **CONFIRM LAYOUT** 按钮，或按一次空格键。
 5. 识别数据有效时会生成S001手绘公园地图、带深色描边的洋红路径、3个柔和六边形Food与2个叶片式Woodland规划标记，并在面板显示Constraint Check。地图同时用精确矢量边界标出入口A、出口B、广场和池塘，规则不依赖背景图像近似位置。所有约束通过后点击 **START RUN** 或再按一次空格；未通过则自动回到Plan。
 6. Run显示60秒倒计时，随后自动进入30秒Observe；三个周期结束后可用 **RESET SESSION** 重新开始。
-   Run中会出现2个Walker、2个Dweller和2个Visitor：蓝灰衣着的Walker沿主路通行，芥末黄衣着的Dweller在广场停留，青绿色衣着的Visitor绕行至Food Hotspot。三类人物均使用透明手绘俯视Sprite、平滑转向和轻微程序动画。Run与Observe期间控制面板自动收起为紧凑信息卡，减少对地图的遮挡。
+   Run中会出现2个Walker、2个Dweller和2个Visitor：蓝灰衣着的Walker沿主路通行，芥末黄衣着的Dweller在广场停留，青绿色衣着的Visitor绕行至Food Hotspot。三类人物均使用透明的高角度斜俯视正脸Sprite，脸与鞋尖通过固定朝向补偿保持同向，并带有平滑转向和轻微程序动画。Run与Observe期间控制面板自动收起为紧凑信息卡，减少对地图的遮挡。
 7. 同一Run会生成鸽子、松鼠和狐狸各1只。三者使用透明背景的手绘俯视Sprite，并具有平滑转向、约7.2秒的轻微待机摆动、进食脉动和状态色反馈。鸽子直接利用Food并短暂停留；松鼠与狐狸在人类进入各自干扰半径时回避并退回Woodland，松鼠进食后会积累有限的熟悉度。
 8. 会话事件写入 `data/raw/research-logs/<session_id>/events.jsonl` 与 `events.csv`。该目录不会提交Git，只记录会话ID、阶段、约束及汇总行为次数，不含参与者姓名。
 9. 版本错误、旧时间戳、未通过稳定门控、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。

@@ -4,11 +4,11 @@ namespace UrbanWildlife.EditorTools
 {
     public sealed class P0AnimalSpriteImporter : AssetPostprocessor
     {
-        private const string AnimalAssetPrefix = "Assets/Resources/UrbanWildlife/Animals/";
+        private const string VisualAssetPrefix = "Assets/Resources/UrbanWildlife/";
 
         private void OnPreprocessTexture()
         {
-            if (!assetPath.StartsWith(AnimalAssetPrefix))
+            if (!assetPath.StartsWith(VisualAssetPrefix) || !assetPath.EndsWith(".png"))
             {
                 return;
             }
@@ -20,7 +20,8 @@ namespace UrbanWildlife.EditorTools
             importer.alphaIsTransparency = true;
             importer.mipmapEnabled = false;
             importer.filterMode = UnityEngine.FilterMode.Bilinear;
-            importer.maxTextureSize = 1024;
+            importer.wrapMode = UnityEngine.TextureWrapMode.Clamp;
+            importer.maxTextureSize = assetPath.Contains("/Environment/") ? 2048 : 1024;
             importer.textureCompression = TextureImporterCompression.CompressedHQ;
         }
     }

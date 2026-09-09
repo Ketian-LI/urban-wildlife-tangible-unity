@@ -36,7 +36,7 @@ namespace UrbanWildlife.EditorTools
             GameObject cameraObject = new GameObject("Main Camera");
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.055f, 0.055f, 0.055f, 1f);
+            camera.backgroundColor = new Color(0.075f, 0.12f, 0.085f, 1f);
             camera.orthographic = true;
             camera.orthographicSize = 3.5f;
             cameraObject.tag = "MainCamera";
@@ -94,10 +94,10 @@ namespace UrbanWildlife.EditorTools
             smokeObject.AddComponent<LayoutPacketReader>();
             LayoutDebugView debugView = smokeObject.AddComponent<LayoutDebugView>();
             debugView.ApplyPacket(packet);
-            if (debugView.GeneratedElementCount != 9)
+            if (debugView.GeneratedElementCount != 7)
             {
                 throw new InvalidOperationException(
-                    $"Debug view generated {debugView.GeneratedElementCount} elements instead of 9.");
+                    $"Illustrated layout generated {debugView.GeneratedElementCount} semantic elements instead of 7.");
             }
             UnityEngine.Object.DestroyImmediate(smokeObject);
 
@@ -133,7 +133,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 $"UNITY_INPUT_SMOKE_OK tokens={packet.tokens.Length} " +
                 $"path_points={packet.path.point_count} backend={packet.recognition.token_backend} " +
-                $"stable={packet.capture.stable} debug_elements=9");
+                $"stable={packet.capture.stable} visual_elements=7");
             Debug.Log(
                 $"UNITY_CONSTRAINT_SMOKE_OK human_connected={constraintResult.human_connected} " +
                 $"animal_reachable={constraintResult.animal_reachable} " +
@@ -325,6 +325,27 @@ namespace UrbanWildlife.EditorTools
                 }
             }
             Debug.Log("UNITY_ANIMAL_SPRITE_SMOKE_OK sprites=3 transparent_import=True topdown=True");
+
+            string[] humanSpritePaths =
+            {
+                "UrbanWildlife/Humans/walker-topdown-v01",
+                "UrbanWildlife/Humans/dweller-topdown-v01",
+                "UrbanWildlife/Humans/visitor-topdown-v01",
+            };
+            foreach (string spritePath in humanSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.y <= 0f)
+                {
+                    throw new InvalidOperationException($"P0 human sprite is missing or invalid: {spritePath}");
+                }
+            }
+            Sprite parkMap = Resources.Load<Sprite>("UrbanWildlife/Environment/park-board-s001-v02");
+            if (parkMap == null || parkMap.texture == null || parkMap.bounds.size.x <= 0f)
+            {
+                throw new InvalidOperationException("P0 illustrated park map is missing or invalid.");
+            }
+            Debug.Log("UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=3 map_sprites=1 semantic_elements=7");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

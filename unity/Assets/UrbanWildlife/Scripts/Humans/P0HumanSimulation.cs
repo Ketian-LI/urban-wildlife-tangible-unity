@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,7 +20,13 @@ namespace UrbanWildlife.Humans
             public HumanRoutePlan plan;
             public HumanAgentStateMachine model;
             public Transform visual;
+            public Transform artwork;
             public Renderer renderer;
+            public SpriteRenderer spriteRenderer;
+            public Vector3 artworkBaseScale;
+            public float headingDegrees;
+            public float animationOffset;
+            public bool ownsMaterial;
             public HumanActivityState lastState;
             public int completedTrips;
         }
@@ -115,16 +120,22 @@ namespace UrbanWildlife.Humans
                     current = human.model.Position;
                     repeated = true;
                 }
-                human.visual.localPosition = new Vector3(current.x, 0.3f, current.y);
+
+                human.visual.localPosition = new Vector3(current.x, 0.32f, current.y);
                 Vector2 movement = current - previous;
-                if (!repeated && movement.sqrMagnitude > 0.000001f)
+                bool moving = !repeated && movement.sqrMagnitude > 0.000001f;
+                if (moving)
                 {
-                    human.visual.localRotation = Quaternion.LookRotation(new Vector3(movement.x, 0f, movement.y));
+                    float targetHeading = Mathf.Atan2(movement.x, movement.y) * Mathf.Rad2Deg;
+                    float turnBlend = 1f - Mathf.Exp(-9f * Time.deltaTime);
+                    human.headingDegrees = Mathf.LerpAngle(human.headingDegrees, targetHeading, turnBlend);
                 }
+                ApplyMotion(human, moving);
+
                 if (human.lastState != human.model.State)
                 {
                     human.lastState = human.model.State;
-                    human.renderer.sharedMaterial.color = ColourFor(human.model.Archetype, human.model.State);
+                    ApplyColour(human);
                 }
             }
         }
@@ -162,27 +173,22 @@ namespace UrbanWildlife.Humans
             for (int index = 0; index < plans.Length; index += 1)
             {
                 HumanAgentStateMachine model = new HumanAgentStateMachine(plans[index]);
-                GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                visual.name = $"{model.Archetype} {index + 1}";
+                GameObject visual = new GameObject($"{model.Archetype} {index + 1}");
                 visual.transform.SetParent(generatedRoot, false);
-                visual.transform.localScale = new Vector3(0.18f, 0.24f, 0.18f);
-                visual.transform.localPosition = new Vector3(model.Position.x, 0.3f, model.Position.y);
-                Collider collider = visual.GetComponent<Collider>();
-                if (collider != null)
-                {
-                    Destroy(collider);
-                }
-
-                Renderer renderer = visual.GetComponent<Renderer>();
-                renderer.sharedMaterial = CreateMaterial(ColourFor(model.Archetype, model.State));
-                humans.Add(new RuntimeHuman
+                visual.transform.localPosition = new Vector3(model.Position.x, 0.32f, model.Position.y);
+                RuntimeHuman runtime = new RuntimeHuman
                 {
                     plan = plans[index],
                     model = model,
                     visual = visual.transform,
-                    renderer = renderer,
+                    headingDegrees = 0f,
+                    animationOffset = index * 0.83f,
                     lastState = model.State,
-                });
+                };
+                CreateArtwork(runtime);
+                ApplyColour(runtime);
+                ApplyMotion(runtime, false);
+                humans.Add(runtime);
             }
 
             Debug.Log(
@@ -194,21 +200,20 @@ namespace UrbanWildlife.Humans
         {
             foreach (RuntimeHuman human in humans)
             {
-                if (human.renderer == null || human.renderer.sharedMaterial == null)
+                if (human.ownsMaterial && human.renderer != null && human.renderer.sharedMaterial != null)
                 {
-                    continue;
-                }
-
-                if (Application.isPlaying)
-                {
-                    Destroy(human.renderer.sharedMaterial);
-                }
-                else
-                {
-                    DestroyImmediate(human.renderer.sharedMaterial);
+                    if (Application.isPlaying)
+                    {
+                        Destroy(human.renderer.sharedMaterial);
+                    }
+                    else
+                    {
+                        DestroyImmediate(human.renderer.sharedMaterial);
+                    }
                 }
             }
             humans.Clear();
+
             if (generatedRoot == null)
             {
                 Transform existing = transform.Find("Runtime Humans");
@@ -233,33 +238,131 @@ namespace UrbanWildlife.Humans
             generatedRoot = null;
         }
 
-        private static Color ColourFor(HumanArchetype archetype, HumanActivityState state)
+        private static void CreateArtwork(RuntimeHuman human)
         {
-            if (state == HumanActivityState.WaitingToEnter)
+            Sprite sourceSprite = Resources.Load<Sprite>(ResourcePathFor(human.model.Archetype));
+            if (sourceSprite != null)
             {
-                return new Color(0.45f, 0.48f, 0.52f, 1f);
-            }
-            if (state == HumanActivityState.Dwelling)
-            {
-                return new Color(1f, 0.72f, 0.1f, 1f);
-            }
-            if (state == HumanActivityState.Visiting)
-            {
-                return new Color(0.95f, 0.15f, 0.65f, 1f);
-            }
-            if (state == HumanActivityState.Finished)
-            {
-                return new Color(0.35f, 0.38f, 0.4f, 1f);
+                GameObject artwork = new GameObject("Artwork");
+                artwork.transform.SetParent(human.visual, false);
+                artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                SpriteRenderer spriteRenderer = artwork.AddComponent<SpriteRenderer>();
+                spriteRenderer.sprite = sourceSprite;
+                spriteRenderer.sortingOrder = 40;
+                float targetLength = LengthFor(human.model.Archetype);
+                float uniformScale = targetLength / Mathf.Max(0.001f, sourceSprite.bounds.size.y);
+                artwork.transform.localScale = Vector3.one * uniformScale;
+                human.artwork = artwork.transform;
+                human.artworkBaseScale = artwork.transform.localScale;
+                human.renderer = spriteRenderer;
+                human.spriteRenderer = spriteRenderer;
+                human.ownsMaterial = false;
+                return;
             }
 
+            GameObject fallback = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            fallback.name = "Fallback Geometry";
+            fallback.transform.SetParent(human.visual, false);
+            fallback.transform.localScale = new Vector3(0.18f, 0.24f, 0.18f);
+            Collider collider = fallback.GetComponent<Collider>();
+            if (collider != null)
+            {
+                Destroy(collider);
+            }
+            human.artwork = fallback.transform;
+            human.artworkBaseScale = fallback.transform.localScale;
+            human.renderer = fallback.GetComponent<Renderer>();
+            human.renderer.sharedMaterial = CreateMaterial(FallbackColourFor(human.model.Archetype));
+            human.ownsMaterial = true;
+            Debug.LogWarning($"Human sprite missing for {human.model.Archetype}; using fallback geometry.");
+        }
+
+        private static void ApplyMotion(RuntimeHuman human, bool moving)
+        {
+            float time = Time.time + human.animationOffset;
+            float sway = moving
+                ? Mathf.Sin(time * 7.5f) * 1.1f
+                : Mathf.Sin(time * (2f * Mathf.PI / 5.8f)) * 3.2f;
+            if (human.model.State == HumanActivityState.Visiting)
+            {
+                sway += Mathf.Sin(time * 2.2f) * 2.4f;
+            }
+            human.visual.localRotation = Quaternion.Euler(0f, human.headingDegrees + sway, 0f);
+
+            float pulse = 1f;
+            if (moving)
+            {
+                pulse += Mathf.Sin(time * 9f) * 0.012f;
+            }
+            else if (human.model.State == HumanActivityState.Dwelling ||
+                     human.model.State == HumanActivityState.Visiting)
+            {
+                pulse += Mathf.Sin(time * 2f) * 0.022f;
+            }
+            else
+            {
+                pulse += Mathf.Sin(time * 1.5f) * 0.01f;
+            }
+            human.artwork.localScale = human.artworkBaseScale * pulse;
+        }
+
+        private static void ApplyColour(RuntimeHuman human)
+        {
+            if (human.spriteRenderer != null)
+            {
+                human.spriteRenderer.color = SpriteTintFor(human.model.State);
+            }
+            else if (human.renderer != null && human.renderer.sharedMaterial != null)
+            {
+                human.renderer.sharedMaterial.color = FallbackColourFor(human.model.Archetype);
+            }
+        }
+
+        private static string ResourcePathFor(HumanArchetype archetype)
+        {
             switch (archetype)
             {
                 case HumanArchetype.Walker:
-                    return new Color(0.15f, 0.62f, 1f, 1f);
+                    return "UrbanWildlife/Humans/walker-topdown-v01";
                 case HumanArchetype.Dweller:
-                    return new Color(1f, 0.48f, 0.12f, 1f);
+                    return "UrbanWildlife/Humans/dweller-topdown-v01";
                 default:
-                    return new Color(0.1f, 0.82f, 0.62f, 1f);
+                    return "UrbanWildlife/Humans/visitor-topdown-v01";
+            }
+        }
+
+        private static float LengthFor(HumanArchetype archetype)
+        {
+            return archetype == HumanArchetype.Dweller ? 0.82f : 0.9f;
+        }
+
+        private static Color SpriteTintFor(HumanActivityState state)
+        {
+            switch (state)
+            {
+                case HumanActivityState.WaitingToEnter:
+                    return new Color(0.68f, 0.72f, 0.7f, 0.88f);
+                case HumanActivityState.Dwelling:
+                    return new Color(1f, 0.92f, 0.7f, 1f);
+                case HumanActivityState.Visiting:
+                    return new Color(0.88f, 1f, 0.9f, 1f);
+                case HumanActivityState.Finished:
+                    return new Color(0.62f, 0.65f, 0.64f, 0.82f);
+                default:
+                    return Color.white;
+            }
+        }
+
+        private static Color FallbackColourFor(HumanArchetype archetype)
+        {
+            switch (archetype)
+            {
+                case HumanArchetype.Walker:
+                    return new Color(0.32f, 0.54f, 0.7f, 1f);
+                case HumanArchetype.Dweller:
+                    return new Color(0.94f, 0.62f, 0.18f, 1f);
+                default:
+                    return new Color(0.28f, 0.62f, 0.54f, 1f);
             }
         }
 

@@ -22,9 +22,9 @@
 3. 在仓库根目录用Python生成真实或测试用 `data/raw/layout-packets/latest_layout.json`。
    如需立刻查看完整行为，无需手动复制文件：在Play后的Plan阶段按 `D`，或点击 **LOAD ELECTRONIC DEMO**。系统会从脱敏样例生成当前周期的新数据包，因此连续3轮不会被旧时间戳拦截。
 4. 点击Play，使用左上控制面板的大号 **CONFIRM LAYOUT** 按钮，或按一次空格键。
-5. 识别数据有效时会生成黑色板面、洋红路径、3个Food与2个Woodland调试物件，并在面板显示Constraint Check。所有约束通过后点击 **START RUN** 或再按一次空格；未通过则自动回到Plan。
+5. 识别数据有效时会生成S001手绘公园地图、带深色描边的洋红路径、3个柔和六边形Food与2个叶片式Woodland规划标记，并在面板显示Constraint Check。地图同时用精确矢量边界标出入口A、出口B、广场和池塘，规则不依赖背景图像近似位置。所有约束通过后点击 **START RUN** 或再按一次空格；未通过则自动回到Plan。
 6. Run显示60秒倒计时，随后自动进入30秒Observe；三个周期结束后可用 **RESET SESSION** 重新开始。
-   Run中会出现2个Walker、2个Dweller和2个Visitor：蓝色Walker沿主路通行，橙色Dweller在广场停留，绿色Visitor绕行至Food Hotspot；活动中会切换为更醒目的颜色。
+   Run中会出现2个Walker、2个Dweller和2个Visitor：蓝灰衣着的Walker沿主路通行，芥末黄衣着的Dweller在广场停留，青绿色衣着的Visitor绕行至Food Hotspot。三类人物均使用透明手绘俯视Sprite、平滑转向和轻微程序动画。Run与Observe期间控制面板自动收起为紧凑信息卡，减少对地图的遮挡。
 7. 同一Run会生成鸽子、松鼠和狐狸各1只。三者使用透明背景的手绘俯视Sprite，并具有平滑转向、约7.2秒的轻微待机摆动、进食脉动和状态色反馈。鸽子直接利用Food并短暂停留；松鼠与狐狸在人类进入各自干扰半径时回避并退回Woodland，松鼠进食后会积累有限的熟悉度。
 8. 会话事件写入 `data/raw/research-logs/<session_id>/events.jsonl` 与 `events.csv`。该目录不会提交Git，只记录会话ID、阶段、约束及汇总行为次数，不含参与者姓名。
 9. 版本错误、旧时间戳、未通过稳定门控、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。
@@ -46,23 +46,25 @@
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
 - `P0ElectronicDemoInput.cs`：在材料到货前，从脱敏夹具原子生成带新时间戳、Session和Cycle的电子演示包；不产生实体识别已经通过的主张。
 - `LayoutDebugView.cs`：把归一化坐标转换为9 × 6 Unity单位的俯视板面、路径与Token调试物件。
+- `Assets/Resources/UrbanWildlife/Environment/`：S001的3:2手绘公园底图、完整生成提示词与来源说明；地图规则仍来自JSON并由精确边界叠加显示。
+- `Assets/Resources/UrbanWildlife/Humans/`：Walker、Dweller、Visitor透明俯视Sprite、背景提取记录与完整提示词。
 - `P0ScenarioModels.cs`、`P0ConstraintEvaluator.cs` 与 `P0ConstraintManager.cs`：读取S001参数并输出人类连通、动物可达、Food有效性和改动次数。
 - `P0CycleStateMachine.cs` 与 `P0CycleController.cs`：管理Plan、Confirm、60秒Run、30秒Observe和每Session 3个周期；未通过约束不能进入Run。
 - `P0ControlPanel.cs`：提供大号阶段按钮、空格快捷键、周期/倒计时和四项约束反馈。
 - `HumanRoutePlanner.cs`：把确认路径、中央广场与Food Hotspot组合为Walker、Dweller和Visitor路线。
 - `HumanAgentStateMachine.cs`：以确定性状态管理进入、移动、广场停留、Hotspot访问和路线完成。
-- `P0HumanSimulation.cs`：在Run阶段生成并更新6个人类调试代理，Observe保留最后状态，Plan清除上一轮实例。
+- `P0HumanSimulation.cs`：在Run阶段生成并更新6个人类Sprite代理，提供平滑转向、行走轻微起伏、停留呼吸摆动和访客观察动作；Observe保留最后状态，Plan清除上一轮实例。
 - `AnimalEnvironmentPlanner.cs`：把3个Food与2个Woodland映射为鸽子、松鼠和狐狸的起点、资源点及庇护点。
 - `AnimalAgentStateMachine.cs`：实现觅食、停留、回避人类、退回庇护地及松鼠熟悉度等确定性状态。
 - `P0AnimalSimulation.cs`：在Run阶段生成3只动物、读取最近人类距离、更新状态和调试颜色，并汇总进食与回避次数。
 - `Assets/Resources/UrbanWildlife/Animals/`：鸽子、松鼠和狐狸的透明手绘俯视Sprite、生成提示词与素材来源说明。
-- `P0AnimalSpriteImporter.cs`：统一动物Sprite的透明度、单Sprite、双线性过滤、尺寸上限与压缩导入规则。
+- `P0AnimalSpriteImporter.cs`：统一环境、人物和动物Sprite的透明度、单Sprite、双线性过滤、Clamp、尺寸上限与压缩导入规则。
 - `P0ResearchLogger.cs` 与 `ResearchLogRecord.cs`：将布局确认、约束和阶段事件追加为隐私安全的JSONL/CSV。
 - `P0InputSceneTools.cs`：可重复创建P0输入场景，并在批处理模式验证脱敏夹具、9个调试元素、S001初始失败状态及两次移动后的有效修复。
 
 ## 当前边界
 
-- Unity目前仍使用调试几何表达地图与人类；动物已完成V0.1手绘俯视视觉和程序动画，但还没有最终公园美术、人类Sprite、拥堵寻路、Trace或逐帧动画。
+- Unity已完成地图、三类人物与三种动物的统一手绘俯视显示层V0.2；目前仍属于可测试原型，不是最终提交美术，也还没有拥堵寻路、Trace或逐帧动画。
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。

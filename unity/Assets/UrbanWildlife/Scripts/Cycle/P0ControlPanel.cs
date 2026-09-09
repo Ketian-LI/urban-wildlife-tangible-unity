@@ -16,9 +16,12 @@ namespace UrbanWildlife.Cycle
         private P0AnimalSimulation animalSimulation;
         private P0ElectronicDemoInput electronicDemoInput;
         private GUIStyle titleStyle;
+        private GUIStyle phaseStyle;
         private GUIStyle bodyStyle;
         private GUIStyle buttonStyle;
         private GUIStyle statusStyle;
+        private GUIStyle passedStyle;
+        private GUIStyle fixStyle;
         private GUIStyle panelStyle;
         private Texture2D panelTexture;
 
@@ -60,15 +63,19 @@ namespace UrbanWildlife.Cycle
         {
             EnsureStyles();
             float scale = Mathf.Clamp(Screen.height / 900f, 0.75f, 1.35f);
-            float width = Mathf.Min(500f * scale, Screen.width - 32f);
-            float height = Mathf.Min(520f * scale, Screen.height - 32f);
+            bool compact = cycle.Phase == P0Phase.Run || cycle.Phase == P0Phase.Observe;
+            float width = Mathf.Min((compact ? 360f : 420f) * scale, Screen.width - 32f);
+            float height = Mathf.Min((compact ? 205f : 470f) * scale, Screen.height - 32f);
             Rect panel = new Rect(16f, 16f, width, height);
             GUI.Box(panel, GUIContent.none, panelStyle);
+            Color previousColour = GUI.color;
+            GUI.color = PhaseColour();
+            GUI.DrawTexture(new Rect(panel.x, panel.y, 6f * scale, panel.height), Texture2D.whiteTexture);
+            GUI.color = previousColour;
 
             GUILayout.BeginArea(new Rect(panel.x + 22f, panel.y + 18f, panel.width - 44f, panel.height - 36f));
-            GUILayout.Label("URBAN WILDLIFE — P0", titleStyle);
-            GUILayout.Space(6f);
-            GUILayout.Label(PhaseLine(), titleStyle);
+            GUILayout.Label("URBAN WILDLIFE PLANNER", titleStyle);
+            GUILayout.Label(PhaseLine(), phaseStyle);
 
             if (cycle.Phase == P0Phase.Run || cycle.Phase == P0Phase.Observe)
             {
@@ -83,28 +90,38 @@ namespace UrbanWildlife.Cycle
                     bodyStyle);
             }
 
-            if (humanSimulation != null && humanSimulation.AgentCount > 0)
+            DrawAgentSummary();
+            if (compact)
             {
-                GUILayout.Label(
-                    $"HUMANS  W {humanSimulation.WalkerCount}  D {humanSimulation.DwellerCount}  " +
-                    $"V {humanSimulation.VisitorCount}  TRIPS {humanSimulation.CompletedTrips}",
-                    bodyStyle);
-            }
-            if (animalSimulation != null && animalSimulation.AgentCount > 0)
-            {
-                GUILayout.Label(
-                    $"ANIMALS  P {animalSimulation.PigeonCount}  S {animalSimulation.SquirrelCount}  " +
-                    $"F {animalSimulation.FoxCount}  FEEDS {animalSimulation.FeedEvents}  " +
-                    $"AVOIDS {animalSimulation.AvoidanceEvents}",
-                    bodyStyle);
+                GUILayout.EndArea();
+                return;
             }
 
-            GUILayout.Space(12f);
+            GUILayout.Space(10f);
             DrawConstraintStatus();
             DrawElectronicDemoControl();
             GUILayout.FlexibleSpace();
             DrawActionButton();
             GUILayout.EndArea();
+        }
+
+        private void DrawAgentSummary()
+        {
+            if (humanSimulation != null && humanSimulation.AgentCount > 0)
+            {
+                GUILayout.Label(
+                    $"PEOPLE  Walker {humanSimulation.WalkerCount} · Dweller {humanSimulation.DwellerCount} · " +
+                    $"Visitor {humanSimulation.VisitorCount} · Trips {humanSimulation.CompletedTrips}",
+                    bodyStyle);
+            }
+            if (animalSimulation != null && animalSimulation.AgentCount > 0)
+            {
+                GUILayout.Label(
+                    $"WILDLIFE  Pigeon {animalSimulation.PigeonCount} · Squirrel {animalSimulation.SquirrelCount} · " +
+                    $"Fox {animalSimulation.FoxCount} · Feeds {animalSimulation.FeedEvents} · " +
+                    $"Avoids {animalSimulation.AvoidanceEvents}",
+                    bodyStyle);
+            }
         }
 
         private void DrawElectronicDemoControl()
@@ -138,12 +155,15 @@ namespace UrbanWildlife.Cycle
                 return;
             }
 
-            GUILayout.Label(StatusLine("Human route connected", result.human_connected), statusStyle);
-            GUILayout.Label(StatusLine("Animal route reachable", result.animal_reachable), statusStyle);
-            GUILayout.Label(StatusLine("Food hotspots valid", result.food_hotspot_valid), statusStyle);
-            GUILayout.Label(
-                StatusLine($"Changes {result.changes_used}/{result.changes_allowed}", result.within_change_budget),
-                statusStyle);
+            DrawStatusLine("Human route connected", result.human_connected);
+            DrawStatusLine("Animal route reachable", result.animal_reachable);
+            DrawStatusLine("Food hotspots valid", result.food_hotspot_valid);
+            DrawStatusLine($"Changes {result.changes_used}/{result.changes_allowed}", result.within_change_budget);
+        }
+
+        private void DrawStatusLine(string label, bool passed)
+        {
+            GUILayout.Label(StatusLine(label, passed), passed ? passedStyle : fixStyle);
         }
 
         private void DrawActionButton()
@@ -151,14 +171,14 @@ namespace UrbanWildlife.Cycle
             switch (cycle.Phase)
             {
                 case P0Phase.Plan:
-                    if (GUILayout.Button("CONFIRM LAYOUT", buttonStyle, GUILayout.Height(78f)))
+                    if (GUILayout.Button("CONFIRM LAYOUT", buttonStyle, GUILayout.Height(62f)))
                     {
                         cycle.ConfirmCurrentPlan();
                     }
                     break;
                 case P0Phase.Confirm:
                     GUI.enabled = cycle.CanStartRun;
-                    if (GUILayout.Button(cycle.CanStartRun ? "START RUN" : "CHECKING…", buttonStyle, GUILayout.Height(78f)))
+                    if (GUILayout.Button(cycle.CanStartRun ? "START RUN" : "CHECKING…", buttonStyle, GUILayout.Height(62f)))
                     {
                         cycle.StartRun();
                     }
@@ -171,7 +191,7 @@ namespace UrbanWildlife.Cycle
                     GUILayout.Label("Observe the outcome", titleStyle);
                     break;
                 case P0Phase.Complete:
-                    if (GUILayout.Button("RESET SESSION", buttonStyle, GUILayout.Height(78f)))
+                    if (GUILayout.Button("RESET SESSION", buttonStyle, GUILayout.Height(62f)))
                     {
                         cycle.ResetSession();
                     }
@@ -192,6 +212,23 @@ namespace UrbanWildlife.Cycle
             return $"{(passed ? "PASS" : "FIX")}  {label}";
         }
 
+        private Color PhaseColour()
+        {
+            switch (cycle.Phase)
+            {
+                case P0Phase.Plan:
+                    return new Color(0.96f, 0.68f, 0.22f, 1f);
+                case P0Phase.Confirm:
+                    return new Color(0.35f, 0.75f, 0.82f, 1f);
+                case P0Phase.Run:
+                    return new Color(0.95f, 0.27f, 0.62f, 1f);
+                case P0Phase.Observe:
+                    return new Color(0.48f, 0.72f, 0.4f, 1f);
+                default:
+                    return new Color(0.74f, 0.64f, 0.86f, 1f);
+            }
+        }
+
         private void EnsureStyles()
         {
             if (titleStyle != null)
@@ -207,25 +244,39 @@ namespace UrbanWildlife.Cycle
 
             titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 28,
+                fontSize = 20,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = new Color(0.94f, 0.95f, 0.9f) },
+            };
+            phaseStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 26,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = Color.white },
             };
             bodyStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 17,
+                fontSize = 15,
                 wordWrap = true,
                 normal = { textColor = new Color(0.78f, 0.82f, 0.85f) },
             };
             statusStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 20,
+                fontSize = 17,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(0.85f, 0.9f, 0.92f) },
             };
+            passedStyle = new GUIStyle(statusStyle)
+            {
+                normal = { textColor = new Color(0.5f, 0.88f, 0.58f) },
+            };
+            fixStyle = new GUIStyle(statusStyle)
+            {
+                normal = { textColor = new Color(1f, 0.58f, 0.42f) },
+            };
             buttonStyle = new GUIStyle(GUI.skin.button)
             {
-                fontSize = 28,
+                fontSize = 22,
                 fontStyle = FontStyle.Bold,
             };
         }

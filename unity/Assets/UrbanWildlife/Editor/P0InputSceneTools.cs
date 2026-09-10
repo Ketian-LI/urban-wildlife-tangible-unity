@@ -339,6 +339,24 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 animal sprite is missing or invalid: {spritePath}");
                 }
             }
+            string[] animalWalkSpritePaths =
+            {
+                "UrbanWildlife/Animals/pigeon-walk-b-v01",
+                "UrbanWildlife/Animals/squirrel-walk-b-v01",
+                "UrbanWildlife/Animals/fox-walk-b-v01",
+            };
+            foreach (string spritePath in animalWalkSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.y <= 0f)
+                {
+                    throw new InvalidOperationException($"P0 animal walk sprite is missing or invalid: {spritePath}");
+                }
+            }
+            if (P0AnimalSimulation.WalkFrameCount != 2)
+            {
+                throw new InvalidOperationException("P0 animal walking must use a two-frame gait cycle.");
+            }
             Sprite squirrelSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/squirrel-topdown-v02");
             Sprite foxSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/fox-topdown-v02");
             float squirrelAspect = TightSpriteAspect(squirrelSprite);
@@ -353,6 +371,7 @@ namespace UrbanWildlife.EditorTools
                 $"squirrel_aspect={squirrelAspect:F2} fox_aspect={foxAspect:F2} " +
                 $"display_lengths={P0AnimalSimulation.PigeonDisplayLength:F2}/" +
                 $"{P0AnimalSimulation.SquirrelDisplayLength:F2}/{P0AnimalSimulation.FoxDisplayLength:F2}");
+            Debug.Log("UNITY_ANIMAL_WALK_ANIMATION_SMOKE_OK frames=2 species=3 moving_only=True");
 
             string[] humanSpritePaths =
             {
@@ -368,6 +387,25 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 human sprite is missing or invalid: {spritePath}");
                 }
             }
+            string[] humanWalkSpritePaths =
+            {
+                "UrbanWildlife/Humans/walker-walk-b-v01",
+                "UrbanWildlife/Humans/dweller-walk-b-v01",
+                "UrbanWildlife/Humans/visitor-walk-b-v01",
+            };
+            foreach (string spritePath in humanWalkSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.y <= 0f)
+                {
+                    throw new InvalidOperationException($"P0 human walk sprite is missing or invalid: {spritePath}");
+                }
+            }
+            if (P0HumanSimulation.WalkFrameCount != 2 || P0HumanSimulation.WalkFramesPerSecond <= 0f)
+            {
+                throw new InvalidOperationException("P0 human walking must use a timed two-frame gait cycle.");
+            }
+            Debug.Log("UNITY_HUMAN_WALK_ANIMATION_SMOKE_OK frames=2 roles=3 moving_only=True");
             if (!Mathf.Approximately(P0HumanSimulation.FrontFacingSpriteHeadingOffsetDegrees, 180f))
             {
                 throw new InvalidOperationException("Front-facing human sprites require a 180-degree heading offset.");
@@ -386,9 +424,9 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("P0 illustrated park map is missing or invalid.");
             }
             Debug.Log(
-                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=3 animal_sprites=3 map_sprites=1 " +
+                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=6 animal_sprites=6 map_sprites=1 " +
                 "semantic_elements=7 refined_visuals=5 realistic_path=True human_heading_offset=180 " +
-                "human_lengths=0.89/0.84/0.85 real_size_order=True");
+                "human_lengths=0.89/0.84/0.85 real_size_order=True walk_cycles=6");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

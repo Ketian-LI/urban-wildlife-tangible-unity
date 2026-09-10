@@ -15,6 +15,8 @@ namespace UrbanWildlife.Humans
         public const float WalkerDisplayLength = 0.89f;
         public const float DwellerDisplayLength = 0.84f;
         public const float VisitorDisplayLength = 0.85f;
+        public const int WalkFrameCount = 2;
+        public const float WalkFramesPerSecond = 4.6f;
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -28,7 +30,10 @@ namespace UrbanWildlife.Humans
             public Transform artwork;
             public Renderer renderer;
             public SpriteRenderer spriteRenderer;
+            public Sprite standingSprite;
+            public Sprite alternateWalkSprite;
             public Vector3 artworkBaseScale;
+            public Vector3 artworkBasePosition;
             public float headingDegrees;
             public float animationOffset;
             public bool ownsMaterial;
@@ -160,6 +165,13 @@ namespace UrbanWildlife.Humans
             {
                 ClearHumans();
             }
+            else
+            {
+                foreach (RuntimeHuman human in humans)
+                {
+                    ApplyMotion(human, false);
+                }
+            }
         }
 
         private void BeginRun()
@@ -248,6 +260,7 @@ namespace UrbanWildlife.Humans
             Sprite sourceSprite = Resources.Load<Sprite>(ResourcePathFor(human.model.Archetype));
             if (sourceSprite != null)
             {
+                Sprite alternateWalkSprite = Resources.Load<Sprite>(WalkAlternateResourcePathFor(human.model.Archetype));
                 GameObject artwork = new GameObject("Artwork");
                 artwork.transform.SetParent(human.visual, false);
                 artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -259,9 +272,16 @@ namespace UrbanWildlife.Humans
                 artwork.transform.localScale = Vector3.one * uniformScale;
                 human.artwork = artwork.transform;
                 human.artworkBaseScale = artwork.transform.localScale;
+                human.artworkBasePosition = artwork.transform.localPosition;
                 human.renderer = spriteRenderer;
                 human.spriteRenderer = spriteRenderer;
+                human.standingSprite = sourceSprite;
+                human.alternateWalkSprite = alternateWalkSprite;
                 human.ownsMaterial = false;
+                if (alternateWalkSprite == null)
+                {
+                    Debug.LogWarning($"Alternate walk sprite missing for {human.model.Archetype}; using the standing frame.");
+                }
                 return;
             }
 
@@ -276,6 +296,7 @@ namespace UrbanWildlife.Humans
             }
             human.artwork = fallback.transform;
             human.artworkBaseScale = fallback.transform.localScale;
+            human.artworkBasePosition = fallback.transform.localPosition;
             human.renderer = fallback.GetComponent<Renderer>();
             human.renderer.sharedMaterial = CreateMaterial(FallbackColourFor(human.model.Archetype));
             human.ownsMaterial = true;
@@ -285,8 +306,19 @@ namespace UrbanWildlife.Humans
         private static void ApplyMotion(RuntimeHuman human, bool moving)
         {
             float time = Time.time + human.animationOffset;
+            float stepPhase = time * WalkFramesPerSecond;
+            if (human.spriteRenderer != null)
+            {
+                bool useAlternateFrame = moving &&
+                    human.alternateWalkSprite != null &&
+                    (Mathf.FloorToInt(stepPhase) & 1) == 1;
+                human.spriteRenderer.sprite = useAlternateFrame
+                    ? human.alternateWalkSprite
+                    : human.standingSprite;
+            }
+
             float sway = moving
-                ? Mathf.Sin(time * 7.5f) * 1.1f
+                ? Mathf.Sin(stepPhase * Mathf.PI) * 1.1f
                 : Mathf.Sin(time * (2f * Mathf.PI / 5.8f)) * 3.2f;
             if (human.model.State == HumanActivityState.Visiting)
             {
@@ -300,7 +332,7 @@ namespace UrbanWildlife.Humans
             float pulse = 1f;
             if (moving)
             {
-                pulse += Mathf.Sin(time * 9f) * 0.012f;
+                pulse += Mathf.Sin(stepPhase * Mathf.PI) * 0.012f;
             }
             else if (human.model.State == HumanActivityState.Dwelling ||
                      human.model.State == HumanActivityState.Visiting)
@@ -312,6 +344,10 @@ namespace UrbanWildlife.Humans
                 pulse += Mathf.Sin(time * 1.5f) * 0.01f;
             }
             human.artwork.localScale = human.artworkBaseScale * pulse;
+            float stepLift = moving
+                ? Mathf.Abs(Mathf.Sin(stepPhase * Mathf.PI)) * 0.012f
+                : 0f;
+            human.artwork.localPosition = human.artworkBasePosition + Vector3.up * stepLift;
         }
 
         private static void ApplyColour(RuntimeHuman human)
@@ -336,6 +372,19 @@ namespace UrbanWildlife.Humans
                     return "UrbanWildlife/Humans/dweller-topdown-v03";
                 default:
                     return "UrbanWildlife/Humans/visitor-topdown-v05";
+            }
+        }
+
+        private static string WalkAlternateResourcePathFor(HumanArchetype archetype)
+        {
+            switch (archetype)
+            {
+                case HumanArchetype.Walker:
+                    return "UrbanWildlife/Humans/walker-walk-b-v01";
+                case HumanArchetype.Dweller:
+                    return "UrbanWildlife/Humans/dweller-walk-b-v01";
+                default:
+                    return "UrbanWildlife/Humans/visitor-walk-b-v01";
             }
         }
 

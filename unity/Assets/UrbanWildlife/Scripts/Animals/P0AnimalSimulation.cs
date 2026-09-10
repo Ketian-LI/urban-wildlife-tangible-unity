@@ -15,6 +15,7 @@ namespace UrbanWildlife.Animals
         public const float PigeonDisplayLength = 0.18f;
         public const float SquirrelDisplayLength = 0.24f;
         public const float FoxDisplayLength = 0.55f;
+        public const int WalkFrameCount = 2;
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -28,7 +29,10 @@ namespace UrbanWildlife.Animals
             public Transform artwork;
             public Renderer renderer;
             public SpriteRenderer spriteRenderer;
+            public Sprite standingSprite;
+            public Sprite alternateWalkSprite;
             public Vector3 artworkBaseScale;
+            public Vector3 artworkBasePosition;
             public float headingDegrees;
             public float animationOffset;
             public bool ownsMaterial;
@@ -150,6 +154,13 @@ namespace UrbanWildlife.Animals
             {
                 ClearAnimals();
             }
+            else
+            {
+                foreach (RuntimeAnimal animal in animals)
+                {
+                    ApplyMotion(animal, false);
+                }
+            }
         }
 
         private void BeginRun()
@@ -235,6 +246,7 @@ namespace UrbanWildlife.Animals
             Sprite sourceSprite = Resources.Load<Sprite>(ResourcePathFor(animal.model.Species));
             if (sourceSprite != null)
             {
+                Sprite alternateWalkSprite = Resources.Load<Sprite>(WalkAlternateResourcePathFor(animal.model.Species));
                 GameObject artwork = new GameObject("Artwork");
                 artwork.transform.SetParent(animal.visual, false);
                 artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -246,9 +258,16 @@ namespace UrbanWildlife.Animals
                 artwork.transform.localScale = Vector3.one * uniformScale;
                 animal.artwork = artwork.transform;
                 animal.artworkBaseScale = artwork.transform.localScale;
+                animal.artworkBasePosition = artwork.transform.localPosition;
                 animal.renderer = spriteRenderer;
                 animal.spriteRenderer = spriteRenderer;
+                animal.standingSprite = sourceSprite;
+                animal.alternateWalkSprite = alternateWalkSprite;
                 animal.ownsMaterial = false;
+                if (alternateWalkSprite == null)
+                {
+                    Debug.LogWarning($"Alternate walk sprite missing for {animal.model.Species}; using the standing frame.");
+                }
                 return;
             }
 
@@ -264,6 +283,7 @@ namespace UrbanWildlife.Animals
             }
             animal.artwork = fallback.transform;
             animal.artworkBaseScale = fallback.transform.localScale;
+            animal.artworkBasePosition = fallback.transform.localPosition;
             animal.renderer = fallback.GetComponent<Renderer>();
             animal.renderer.sharedMaterial = CreateMaterial(
                 FallbackColourFor(animal.model.Species, animal.model.State));
@@ -274,6 +294,18 @@ namespace UrbanWildlife.Animals
         private static void ApplyMotion(RuntimeAnimal animal, bool moving)
         {
             float time = Time.time + animal.animationOffset;
+            float walkFramesPerSecond = WalkFramesPerSecondFor(animal.model.Species);
+            float stepPhase = time * walkFramesPerSecond;
+            if (animal.spriteRenderer != null)
+            {
+                bool useAlternateFrame = moving &&
+                    animal.alternateWalkSprite != null &&
+                    (Mathf.FloorToInt(stepPhase) & 1) == 1;
+                animal.spriteRenderer.sprite = useAlternateFrame
+                    ? animal.alternateWalkSprite
+                    : animal.standingSprite;
+            }
+
             float sway = moving ? 0f : Mathf.Sin(time * (2f * Mathf.PI / 7.2f)) * 2.5f;
             animal.visual.localRotation = Quaternion.Euler(0f, animal.headingDegrees + sway, 0f);
 
@@ -287,6 +319,10 @@ namespace UrbanWildlife.Animals
                 pulse += Mathf.Sin(time * 1.8f) * 0.018f;
             }
             animal.artwork.localScale = animal.artworkBaseScale * pulse;
+            float gaitLift = moving
+                ? Mathf.Abs(Mathf.Sin(stepPhase * Mathf.PI)) * StepLiftFor(animal.model.Species)
+                : 0f;
+            animal.artwork.localPosition = animal.artworkBasePosition + Vector3.up * gaitLift;
         }
 
         private static void ApplyColour(RuntimeAnimal animal)
@@ -313,6 +349,45 @@ namespace UrbanWildlife.Animals
                     return "UrbanWildlife/Animals/squirrel-topdown-v02";
                 default:
                     return "UrbanWildlife/Animals/fox-topdown-v02";
+            }
+        }
+
+        private static string WalkAlternateResourcePathFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return "UrbanWildlife/Animals/pigeon-walk-b-v01";
+                case AnimalSpecies.Squirrel:
+                    return "UrbanWildlife/Animals/squirrel-walk-b-v01";
+                default:
+                    return "UrbanWildlife/Animals/fox-walk-b-v01";
+            }
+        }
+
+        private static float WalkFramesPerSecondFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return 5.2f;
+                case AnimalSpecies.Squirrel:
+                    return 5.8f;
+                default:
+                    return 4.8f;
+            }
+        }
+
+        private static float StepLiftFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return 0.006f;
+                case AnimalSpecies.Squirrel:
+                    return 0.016f;
+                default:
+                    return 0.008f;
             }
         }
 

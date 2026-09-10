@@ -92,3 +92,25 @@ Constraints: genuinely transparent background and preserved alpha; no ground, no
 ```
 
 These generated images are prototype assets. Before final submission, record the selected licence/provenance statement required by the course and replace any asset that does not meet the final authorship or assessment policy.
+
+## Two-frame walking cycle V0.1
+
+Generation mode: `precise-object-edit`. The original active sprites remain frame A. The following generated assets are frame B and are shown only while the agent is moving. Uniform green plates were converted to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`.
+
+### Pigeon frame B
+
+```text
+Precise object edit for frame B of a two-frame game walk cycle. Preserve this exact pigeon and the existing semi-realistic painted sprite style: strict orthographic top-down view, head pointing to the top edge, compact grey body, folded wings, iridescent neck, coral feet, exact identity, colors, canvas size, scale and centering. Create ONLY an alternate walking step: move the opposite coral foot forward and the other foot backward, with a very subtle forward/down head-bob pose while keeping the body axis and travel direction unchanged. Exactly two legs and two feet; wings remain fully folded; no flying pose. Keep the entire bird visible with the same margin. Replace the background with perfectly flat solid chroma green #00FF00, no texture, no shadow, no ground, no text, no border.
+```
+
+### Squirrel frame B
+
+```text
+Precise object edit for frame B of a two-frame game walk cycle. Preserve this exact red squirrel and the existing semi-realistic painted sprite style: strict orthographic top-down view, head pointing to the top edge, russet body, large fluffy C-shaped tail curving on the left side, exact identity, colors, canvas size, scale and centering. Create ONLY an alternate bounding/walking step: swap the forward/back positions of the forepaws and hind paws and slightly compress the torso for the second phase of a small squirrel hop; keep the head direction and distinctive left-side C tail unchanged. Exactly four legs/paws, no extra limbs. Keep the whole animal visible with the same margin. Replace the background with perfectly flat solid chroma green #00FF00, no texture, no shadow, no ground, no text, no border.
+```
+
+### Fox frame B
+
+```text
+Precise object edit for frame B of a two-frame game trot cycle. Preserve this exact red fox and the existing semi-realistic painted sprite style: strict orthographic top-down view, head pointing to the top edge, long narrow russet body and tail, black lower legs, white tail tip, exact identity, colors, canvas size, scale and centering. Create ONLY an alternate natural trot step: swap the forward/back diagonal leg pair so all four legs visibly change phase, while keeping the slim body, pointed fox face, long tail, black legs, white tail tip and travel direction unchanged. Exactly four legs/paws, no extra limbs. Keep the whole animal visible with the same margin. Replace the background with perfectly flat solid chroma green #00FF00, no texture, no shadow, no ground, no text, no border.
+```

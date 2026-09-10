@@ -238,3 +238,25 @@ Constraints: actual alpha transparency outside the body; tight clean character e
 ```
 
 These generated images are prototype assets. Before final submission, record the selected provenance statement and confirm the course policy for AI-assisted visual material.
+
+## Two-frame walking cycle V0.1
+
+Generation mode: `precise-object-edit`. The original active sprites remain frame A. The following generated assets are frame B and are shown only while the agent is moving. Uniform green plates were converted to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`.
+
+### Walker frame B
+
+```text
+Precise object edit for a two-frame game walk cycle. Keep this exact adult male park visitor: same high-angle front-facing orthographic view, same face, short brown hair, blue hoodie, navy backpack, navy trousers, red shoes, realistic natural proportions, painterly semi-realistic game-sprite rendering, exact canvas size, scale, centering, lighting and color palette. Create ONLY the alternate walking pose (frame B): swap which leg is forward and which leg is back, with the opposite arm swing; keep the face, chest, both shoe toes, and travel direction facing toward the bottom edge of the image. Exactly two arms, two legs and two shoes. Do not change clothing or identity. Full body visible with generous margin, about 82% of canvas height. Replace the background with perfectly flat solid chroma green #00FF00, no texture, no shadow, no ground, no text, no border.
+```
+
+### Dweller frame B
+
+```text
+Precise object edit for a two-frame game walk cycle. Keep this exact adult female park dweller: same high-angle front-facing orthographic view, same face, brown hair bun, mustard-yellow jacket, cream top, brown trousers, dark shoes, and the same single reusable cup, with realistic natural proportions and the same painterly semi-realistic game-sprite rendering, exact canvas size, scale, centering, lighting and palette. Create ONLY the alternate walking pose (frame B): swap which leg is forward and which leg is back, with the free arm swinging oppositely while the cup remains secure in the same hand; keep the face, chest, both shoe toes, and travel direction facing toward the bottom edge. Exactly two arms, two legs, two shoes and one cup. Do not change clothing or identity. Full body visible with generous margin, about 82% of canvas height. Replace the background with perfectly flat solid chroma green #00FF00, no texture, no shadow, no ground, no text, no border.
+```
+
+### Visitor frame B
+
+```text
+Precise object edit for a two-frame game walk cycle. Keep this exact adult female park visitor: same high-angle front-facing orthographic view, same face, brown hair bun, teal coat, burgundy trousers, tan crossbody satchel, grey shoes, realistic natural proportions, painterly semi-realistic game-sprite rendering, exact canvas size, scale, centering, lighting and palette. Create ONLY the alternate walking pose (frame B): swap which leg is forward and which leg is back, with the opposite arm swing; keep the crossbody satchel and strap unchanged and attached, and keep the face, chest, both shoe toes, and travel direction facing toward the bottom edge. Exactly two arms, two legs and two shoes. Do not change clothing or identity. Full body visible with generous margin, about 82% of canvas height. Replace the background with perfectly flat solid chroma green #00FF00, no texture, no shadow, no ground, no text, no border.
+```

@@ -20,8 +20,10 @@ namespace UrbanWildlife.Humans
         public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
         public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
         public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
+        public const int WalkerWalkArtworkFrameCount = 6;
         public const int VisitorFeedArtworkFrameCount = 6;
         public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
+        public const int DwellerSitArtworkFrameCount = 4;
         public const int RiseFrameCount = SteppedCharacterAnimation.RiseFrameCount;
         public const float WalkFramesPerSecond = SteppedCharacterAnimation.FramesPerSecond;
         public const float IdleSwaySeconds = 6.8f;
@@ -43,7 +45,9 @@ namespace UrbanWildlife.Humans
             public SpriteRenderer spriteRenderer;
             public Sprite standingSprite;
             public Sprite alternateWalkSprite;
+            public Sprite[] walkingSprites;
             public Sprite[] feedingSprites;
+            public Sprite[] sittingSprites;
             public Vector3 artworkBaseScale;
             public Vector3 artworkBasePosition;
             public float animationOffset;
@@ -302,9 +306,15 @@ namespace UrbanWildlife.Humans
                 human.spriteRenderer = spriteRenderer;
                 human.standingSprite = sourceSprite;
                 human.alternateWalkSprite = alternateWalkSprite;
+                human.walkingSprites = LoadActionSprites(
+                    WalkingResourcePrefixFor(human.model.Archetype),
+                    WalkerWalkArtworkFrameCount);
                 human.feedingSprites = LoadActionSprites(
                     FeedingResourcePrefixFor(human.model.Archetype),
                     VisitorFeedArtworkFrameCount);
+                human.sittingSprites = LoadActionSprites(
+                    SittingResourcePrefixFor(human.model.Archetype),
+                    DwellerSitArtworkFrameCount);
                 Material paletteMaterial = SpritePaletteMaterial.Create(
                     PresentationSaturation,
                     PresentationBrightness,
@@ -354,9 +364,18 @@ namespace UrbanWildlife.Humans
             }
 
             float elapsed = Mathf.Max(0f, Time.time - human.actionStartedAt);
-            bool hasActionArtwork = action == CharacterAnimationAction.Feeding &&
+            bool hasWalkingArtwork = action == CharacterAnimationAction.Walking &&
+                human.walkingSprites != null &&
+                human.walkingSprites.Length == WalkFrameCount;
+            bool hasFeedingArtwork = action == CharacterAnimationAction.Feeding &&
                 human.feedingSprites != null &&
                 human.feedingSprites.Length == FeedFrameCount;
+            bool hasSittingArtwork =
+                (action == CharacterAnimationAction.Sitting ||
+                 action == CharacterAnimationAction.Rising) &&
+                human.sittingSprites != null &&
+                human.sittingSprites.Length == SitFrameCount;
+            bool hasActionArtwork = hasWalkingArtwork || hasFeedingArtwork || hasSittingArtwork;
             float offset = IsLooping(action) && !hasActionArtwork
                 ? human.animationOffset
                 : 0f;
@@ -367,7 +386,18 @@ namespace UrbanWildlife.Humans
             {
                 if (usesActionArtwork)
                 {
-                    selectedSprite = human.feedingSprites[pose.FrameIndex];
+                    if (hasWalkingArtwork)
+                    {
+                        selectedSprite = human.walkingSprites[pose.FrameIndex];
+                    }
+                    else if (hasFeedingArtwork)
+                    {
+                        selectedSprite = human.feedingSprites[pose.FrameIndex];
+                    }
+                    else
+                    {
+                        selectedSprite = human.sittingSprites[pose.FrameIndex];
+                    }
                 }
                 else
                 {
@@ -512,6 +542,20 @@ namespace UrbanWildlife.Humans
         {
             return archetype == HumanArchetype.Visitor
                 ? "UrbanWildlife/Humans/visitor-feed"
+                : string.Empty;
+        }
+
+        private static string WalkingResourcePrefixFor(HumanArchetype archetype)
+        {
+            return archetype == HumanArchetype.Walker
+                ? "UrbanWildlife/Humans/walker-walk"
+                : string.Empty;
+        }
+
+        private static string SittingResourcePrefixFor(HumanArchetype archetype)
+        {
+            return archetype == HumanArchetype.Dweller
+                ? "UrbanWildlife/Humans/dweller-sit"
                 : string.Empty;
         }
 

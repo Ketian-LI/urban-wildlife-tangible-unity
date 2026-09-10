@@ -1,4 +1,25 @@
-# S001 Illustrated Environment V0.2
+# S001 Illustrated Environment
+
+## V0.3 urban-neighbourhood park
+
+Generated on 2026-09-10 with the built-in image generation tool and integrated as `park-board-s001-v03.png`. This version establishes an unmistakable London neighbourhood setting through red-brick housing, perimeter pavement and kerbs, black municipal railings and lamps, maintained planting, a civic stone plaza and a managed wildlife pond. It intentionally excludes people, animals, benches and the planned route because Unity supplies those as live layers.
+
+```text
+Use case: precise-object-edit
+Asset type: final environment-only background for a 2D Unity top-down urban-wildlife planning game.
+Input images: Image 1 is the approved urban-neighbourhood park visual target. Image 2 is the existing EMPTY gameplay background and demonstrates which dynamic objects must be absent.
+Primary request: Convert Image 1 into a clean environment-only park background suitable beneath Unity's live path, token, person and animal layers.
+Keep from Image 1: strict orthographic bird's-eye view, wide 3:2 composition, red-brick British urban neighbourhood along the upper exterior, grey perimeter pavements and kerbs, continuous black Victorian railings, classic black municipal lamp posts, regularly spaced mature London plane trees, clipped and lightly worn lawns, maintained flower/shrub beds, the central circular pale-stone plaza, and the managed lower-right wildlife/rain-garden pond with shaped brick/stone edge, reeds and lilies. Preserve the realistic-stylized natural-history lithograph language: believable materials and botanical structure, variable ink contours, stippling, engraved hatching, slightly imperfect colour registration and weathered paper grain.
+Remove completely: every person, pigeon, squirrel, fox, all benches, all movable furniture, and the entire black zigzag asphalt route including its pale edging and shadows. Heal those removed areas as uninterrupted mown grass or matching plaza paving. Leave clear, open grass corridors between the left and right entrances, plaza and pond so Unity can draw any confirmed route on top.
+Entrance requirement: retain the perimeter railings but leave one clean open gateway gap centred on the left edge and one centred on the right edge, each connecting to the exterior pavement. Do not draw gate leaves inside the gaps because Unity will overlay its own gate sprites.
+Detail hierarchy: rich urban/botanical detail at the outer boundary and pond; medium detail in planting beds; calm low-contrast open lawn through the middle and lower-left so transparent game sprites remain readable.
+Palette/lighting: charcoal and slate, warm London red brick, parchment stone, moss/olive/sage lawn, restrained rust/plum/coral accents, soft overcast daylight. Keep all colours harmonized and slightly weathered.
+Constraints: exactly zero people and zero animals; no path or road across the lawn; no benches; no bins, signs, labels, numbers, UI, token circles, glowing rings, selection halos, cars, playground, sports field, text or watermark. Do not crop the complete rectangular park board. No photorealism, 3D render, cute sticker style, tropical jungle or giant wilderness rocks.
+```
+
+The image remains a presentation layer only. Landmark coordinates, path rules and simulation logic still come from the scenario JSON and the confirmed layout packet.
+
+## V0.2 natural-park background
 
 Generated on 2026-09-09 with the built-in image generation tool and integrated as a Unity Sprite.
 

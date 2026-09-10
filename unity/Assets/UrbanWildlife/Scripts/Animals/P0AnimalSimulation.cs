@@ -20,7 +20,10 @@ namespace UrbanWildlife.Animals
         public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
         public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
         public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
-        public const int PigeonFeedArtworkFrameCount = 6;
+        public const int FeedArtworkFrameCount = 6;
+        public const int PigeonFeedArtworkFrameCount = FeedArtworkFrameCount;
+        public const int SquirrelFeedArtworkFrameCount = FeedArtworkFrameCount;
+        public const int FoxFeedArtworkFrameCount = FeedArtworkFrameCount;
         public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
         public const int RiseFrameCount = SteppedCharacterAnimation.RiseFrameCount;
         public const float ScreenFacingSpriteRotationDegrees = 0f;
@@ -295,7 +298,7 @@ namespace UrbanWildlife.Animals
                 animal.alternateWalkSprite = alternateWalkSprite;
                 animal.feedingSprites = LoadActionSprites(
                     FeedingResourcePrefixFor(animal.model.Species),
-                    PigeonFeedArtworkFrameCount);
+                    FeedArtworkFrameCount);
                 Material paletteMaterial = SpritePaletteMaterial.Create(
                     PaletteSaturationFor(animal.model.Species),
                     PresentationBrightness,
@@ -502,9 +505,15 @@ namespace UrbanWildlife.Animals
 
         private static string FeedingResourcePrefixFor(AnimalSpecies species)
         {
-            return species == AnimalSpecies.Pigeon
-                ? "UrbanWildlife/Animals/pigeon-side-feed"
-                : string.Empty;
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return "UrbanWildlife/Animals/pigeon-side-feed";
+                case AnimalSpecies.Squirrel:
+                    return "UrbanWildlife/Animals/squirrel-feed";
+                default:
+                    return "UrbanWildlife/Animals/fox-feed";
+            }
         }
 
         private static Sprite[] LoadActionSprites(string prefix, int frameCount)

@@ -6,7 +6,7 @@ namespace UrbanWildlife.Input
     [RequireComponent(typeof(LayoutPacketReader))]
     public sealed class LayoutDebugView : MonoBehaviour
     {
-        private const string ParkMapResourcePath = "UrbanWildlife/Environment/park-board-s001-v02";
+        private const string ParkMapResourcePath = "UrbanWildlife/Environment/park-board-s001-v03";
         private const string WoodlandGroveResourcePath = "UrbanWildlife/Environment/woodland-forest-grove-v01";
         private const string PlazaResourcePath = "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string BenchResourcePath = "UrbanWildlife/Environment/human-activity-bench-v01";

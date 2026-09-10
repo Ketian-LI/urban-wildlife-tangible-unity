@@ -370,11 +370,32 @@ namespace UrbanWildlife.EditorTools
                         $"P0 pigeon feeding sprite is missing or invalid: {spritePath}");
                 }
             }
+            string[] squirrelFeedSpritePaths = Enumerable.Range(
+                    1,
+                    P0AnimalSimulation.SquirrelFeedArtworkFrameCount)
+                .Select(index => $"UrbanWildlife/Animals/squirrel-feed-{index:00}-v01")
+                .ToArray();
+            string[] foxFeedSpritePaths = Enumerable.Range(
+                    1,
+                    P0AnimalSimulation.FoxFeedArtworkFrameCount)
+                .Select(index => $"UrbanWildlife/Animals/fox-feed-{index:00}-v01")
+                .ToArray();
+            foreach (string spritePath in squirrelFeedSpritePaths.Concat(foxFeedSpritePaths))
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.x <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"P0 animal feeding sprite is missing or invalid: {spritePath}");
+                }
+            }
             if (P0AnimalSimulation.IdleFrameCount != 3 ||
                 P0AnimalSimulation.TurnFrameCount != 3 ||
                 P0AnimalSimulation.WalkFrameCount != 6 ||
                 P0AnimalSimulation.FeedFrameCount != 6 ||
                 P0AnimalSimulation.PigeonFeedArtworkFrameCount != 6 ||
+                P0AnimalSimulation.SquirrelFeedArtworkFrameCount != 6 ||
+                P0AnimalSimulation.FoxFeedArtworkFrameCount != 6 ||
                 P0AnimalSimulation.SitFrameCount != 4 ||
                 P0AnimalSimulation.RiseFrameCount != 4)
             {
@@ -409,6 +430,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_PIGEON_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
                 "sequence=stand/lower/peck/peck/rise/stand procedural_fallback=True");
+            Debug.Log(
+                "UNITY_ANIMAL_FEED_ARTWORK_SMOKE_OK species=3 frames_per_species=6 " +
+                "pigeon=peck squirrel=nibble fox=ground_bite transparent_import=True");
 
             string[] humanSpritePaths =
             {
@@ -452,12 +476,33 @@ namespace UrbanWildlife.EditorTools
                         $"P0 visitor feeding sprite is missing or invalid: {spritePath}");
                 }
             }
+            string[] walkerWalkSpritePaths = Enumerable.Range(
+                    1,
+                    P0HumanSimulation.WalkerWalkArtworkFrameCount)
+                .Select(index => $"UrbanWildlife/Humans/walker-walk-{index:00}-v01")
+                .ToArray();
+            string[] dwellerSitSpritePaths = Enumerable.Range(
+                    1,
+                    P0HumanSimulation.DwellerSitArtworkFrameCount)
+                .Select(index => $"UrbanWildlife/Humans/dweller-sit-{index:00}-v01")
+                .ToArray();
+            foreach (string spritePath in walkerWalkSpritePaths.Concat(dwellerSitSpritePaths))
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.y <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"P0 human action sprite is missing or invalid: {spritePath}");
+                }
+            }
             if (P0HumanSimulation.IdleFrameCount != 3 ||
                 P0HumanSimulation.TurnFrameCount != 3 ||
                 P0HumanSimulation.WalkFrameCount != 6 ||
                 P0HumanSimulation.FeedFrameCount != 6 ||
+                P0HumanSimulation.WalkerWalkArtworkFrameCount != 6 ||
                 P0HumanSimulation.VisitorFeedArtworkFrameCount != 6 ||
                 P0HumanSimulation.SitFrameCount != 4 ||
+                P0HumanSimulation.DwellerSitArtworkFrameCount != 4 ||
                 P0HumanSimulation.RiseFrameCount != 4 ||
                 P0HumanSimulation.WalkFramesPerSecond != SteppedCharacterAnimation.FramesPerSecond)
             {
@@ -489,6 +534,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_VISITOR_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
                 "sequence=stand/reach/extend/release/withdraw/stand procedural_fallback=True");
+            Debug.Log(
+                "UNITY_HUMAN_ACTION_ARTWORK_SMOKE_OK walker_walk=6 dweller_sit=4 " +
+                "dweller_rise=reversed_sit visitor_feed=6 transparent_import=True");
             if (!Mathf.Approximately(P0HumanSimulation.ScreenFacingSpriteRotationDegrees, 0f) ||
                 P0HumanSimulation.IdleSwaySeconds < 6f)
             {
@@ -526,7 +574,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("Human and animal display lengths do not follow the real-size ordering.");
             }
-            Sprite parkMap = Resources.Load<Sprite>("UrbanWildlife/Environment/park-board-s001-v02");
+            Sprite parkMap = Resources.Load<Sprite>("UrbanWildlife/Environment/park-board-s001-v03");
             if (parkMap == null || parkMap.texture == null || parkMap.bounds.size.x <= 0f)
             {
                 throw new InvalidOperationException("P0 illustrated park map is missing or invalid.");
@@ -549,11 +597,11 @@ namespace UrbanWildlife.EditorTools
             Debug.Log("UNITY_PLANNING_AREA_SMOKE_OK woodland=forest food_hotspots=bench/plaza ids_preserved=True");
             Debug.Log("UNITY_PARK_GATE_SMOKE_OK entrance=open_fence_gate exit=mirrored_open_fence_gate ids=A/B");
             Debug.Log(
-                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=12 animal_sprites=12 map_sprites=1 " +
+                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=22 animal_sprites=24 map_sprites=1 " +
                 "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True web_style_motion=True " +
                 "animal_side_profile=True palette_harmonized=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
                 "real_size_order=True stepped_animation=True actions=idle/turn/walk/feed/sit/rise " +
-                "true_feed_artwork=pigeon/visitor");
+                "true_action_artwork=pigeon_feed/squirrel_feed/fox_feed/walker_walk/dweller_sit_rise/visitor_feed");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

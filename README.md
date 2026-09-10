@@ -62,13 +62,14 @@ urban-wildlife-tangible-unity/
 - [x] 完成三种动物的手绘俯视Sprite与程序动画V0.1
 - [x] 完成手绘公园地图、三类人物Sprite与整体显示层V0.2
 - [x] 完成人类与动物六类动作的8 FPS逐帧节奏样板
-- [x] 接入鸽子进食与Visitor喂食的首批独立六帧动画素材
+- [x] 接入三种动物进食、Walker行走、Dweller坐下/起身与Visitor喂食的独立逐帧动画素材
+- [x] 将Unity底图更新为有红砖街区、围栏、路灯、城市铺装与管理型池塘的城市公园V0.3
 - [x] 完成Plan、Confirm、Run、Observe单周期与最小研究日志输出
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 
 工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md) 和 [`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md)。
 材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
-当前Unity显示层组合预览（三类人物与动物采用接近真实的相对大小，规划路径显示为写实砂砾公园步道）见 [`docs/images/unity/visual-layer-v06-realistic-road-preview.png`](docs/images/unity/visual-layer-v06-realistic-road-preview.png)。
+已确认的城市公园方向见 [`docs/images/concepts/art-direction-drafts-2026-09-10/option-h-urban-neighbourhood-park-v01.png`](docs/images/concepts/art-direction-drafts-2026-09-10/option-h-urban-neighbourhood-park-v01.png)；当前Unity使用不含固定人物、动物和路线的V0.3底图，动态内容仍由运行时生成。
 
 ## 第一天交付
 

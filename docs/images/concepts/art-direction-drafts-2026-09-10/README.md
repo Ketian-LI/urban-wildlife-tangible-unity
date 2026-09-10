@@ -68,8 +68,30 @@ Lighting/mood: soft overcast British daylight, calm, tactile and slightly myster
 Constraints: no text, labels, numbers, UI, token circles, glowing rings, selection halos, icons or watermark. No extra people or animals. No fantasy jungle, no tropical oversized leaves, no photographic collage, no 3D render, no flat children's-book cartoon. Preserve the full rectangular board without cropping and keep all functional elements readable.
 ```
 
+### H — Urban neighbourhood park V0.1
+
+![Option H](option-h-urban-neighbourhood-park-v01.png)
+
+Prompt direction: correct G's nature-reserve feeling by making the site unmistakably a maintained British city park. Continuous municipal railings, side pavements, lamp posts and restrained red-brick housing establish the urban boundary; clipped lawns, orderly plane trees and managed planting replace most wilderness boulders and undergrowth. The wildlife pond remains ecological but visibly designed and maintained.
+
+Exact final prompt:
+
+```text
+Use case: style-transfer
+Asset type: landscape 3:2 concept art for a top-down Unity urban-wildlife planning game.
+Input images: Image 1 is the EDIT TARGET. Image 2 is the authoritative gameplay layout reference. Images 3, 4, and 5 are STYLE REFERENCES ONLY for botanical print linework, stippling, colour separation and tactile paper texture.
+Primary request: Revise Image 1 so it unmistakably reads as a maintained British CITY PARK inside a dense urban neighbourhood, while retaining its realistic-stylized natural-history print identity. The previous version reads too much like a wild nature reserve or botanical garden.
+Preserve exactly: strict orthographic bird's-eye camera, wide 3:2 board, black zigzag asphalt route crossing left to right, central circular pale-stone plaza, managed wildlife pond in the lower-right-central area, left and right entrance positions, benches, three people, exactly one pigeon, one red squirrel and one red fox, open playable grass and overall gameplay readability.
+Urban context changes: install continuous black Victorian municipal railings around the park perimeter with clear open gates at left and right; show broad grey pavement and kerb immediately outside both gates; reveal restrained portions of London-style red-brick terraced houses and low apartment façades beyond the upper perimeter, partly screened by trees, with recognizable windows, chimneys and slate roofs but no readable signs. Add a few classic black municipal lamp posts near the entrances and path, orderly benches and formal stone or brick edging. Use regularly spaced mature London plane trees, clipped lawn, worn grass desire-lines, modest municipal flower beds and visibly maintained shrubs. Replace most wilderness boulders, fallen logs and jungle-like undergrowth with urban planting beds, tree bases and tidy groundcover. Keep some leaf litter and ecological roughness so it is not sterile.
+Pond: retain reeds, lilies and habitat value, but make it read as a deliberately managed city-park wildlife/rain garden pond with a shaped shoreline, subtle low edging and a nearby bench; not an untouched wilderness pool.
+Style/medium: believable materials, botanical structure and animal anatomy, interpreted through a sophisticated vintage lithograph / natural-history field print. Confident variable ink contours, fine stippling, engraved hatching, slightly imperfect colour registration and weathered paper grain. Mature editorial game art, not photorealism and not a cute sticker illustration.
+Detail hierarchy: highest texture around trees, railings and pond; medium detail in planting beds; quieter mown lawns and very clear asphalt/plaza surfaces. The route and all people/animals must remain easy to read at game scale.
+Colour palette: urban charcoal, slate grey, warm red brick, parchment stone, varied moss/olive/sage greens, muted rust and selective plum/coral flowers. Harmonized, slightly weathered print colours under soft overcast London daylight.
+Constraints: no text, labels, numbers, UI, token circles, glowing rings, selection halos, cars, crowds, playground, sports field, fantasy jungle, tropical plants, giant rocks, photographic collage or 3D render. No extra people or animals. Characters and wildlife must share the same ink, grain and saturation treatment as the environment. Preserve the complete rectangular scene without cropping.
+```
+
 ## Suggested decision
 
-Option G is the strongest direction when the priority is “more realistic but still authored and stylized.” Option F remains the bolder graphic alternative, and option E the safer, quieter one. G should still use two texture levels: dense botanical detail around the perimeter and pond, with simpler, higher-contrast surfaces in camera-critical path and token-recognition areas.
+Option H is now the strongest direction: it keeps G's realistic-stylized botanical language while clearly locating the ecology inside a city neighbourhood. Option F remains the bolder graphic alternative, and option E the safer, quieter one. H should still use two texture levels: dense detail at the urban boundary and pond, with simpler, higher-contrast surfaces in camera-critical path and token-recognition areas.
 
-Generated with the built-in image generation model using `visual-layer-v11-unified-character-palette-preview.png` as the composition reference.
+Generated with the built-in image generation model. Options A–F use `visual-layer-v11-unified-character-palette-preview.png` as the composition reference; G and H additionally use their preceding concept and the supplied botanical-print references, as recorded in the exact prompts above.

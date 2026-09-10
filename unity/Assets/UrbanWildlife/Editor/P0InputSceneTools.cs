@@ -106,7 +106,7 @@ namespace UrbanWildlife.EditorTools
                 "Runtime Illustrated Layout/food_hotspot 10/Bench rest area artwork",
                 "Runtime Illustrated Layout/food_hotspot 11/Plaza activity area artwork",
                 "Runtime Illustrated Layout/woodland 20/Woodland forest grove artwork",
-                "Runtime Illustrated Layout/Planned Human Path/Road gravel surface",
+                "Runtime Illustrated Layout/Planned Human Path/Asphalt surface",
             };
             foreach (string visualPath in refinedVisualPaths)
             {
@@ -443,7 +443,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log("UNITY_PARK_GATE_SMOKE_OK entrance=open_fence_gate exit=mirrored_open_fence_gate ids=A/B");
             Debug.Log(
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=6 animal_sprites=6 map_sprites=1 " +
-                "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 realistic_path=True human_heading_offset=180 " +
+                "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True human_heading_offset=180 " +
                 "human_lengths=0.89/0.84/0.85 real_size_order=True walk_cycles=6");
 
             string loggerSmokeRoot = Path.Combine(

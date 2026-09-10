@@ -134,24 +134,24 @@ namespace UrbanWildlife.Input
 
             LineRenderer shoulder = CreatePathLayer(
                 pathObject.transform,
-                "Road earth shoulder",
+                "Asphalt dark shoulder",
                 path.points_norm.Length,
                 pathWidthUnits + 0.23f,
-                new Color(0.24f, 0.17f, 0.1f, 0.9f),
+                new Color(0.11f, 0.12f, 0.12f, 0.96f),
                 10);
             LineRenderer edging = CreatePathLayer(
                 pathObject.transform,
-                "Road stone edging",
+                "Concrete kerb",
                 path.points_norm.Length,
                 pathWidthUnits + 0.17f,
-                new Color(0.88f, 0.8f, 0.65f, 1f),
+                new Color(0.7f, 0.72f, 0.7f, 1f),
                 11);
             LineRenderer surface = CreatePathLayer(
                 pathObject.transform,
-                "Road gravel surface",
+                "Asphalt surface",
                 path.points_norm.Length,
                 pathWidthUnits + 0.11f,
-                new Color(0.66f, 0.57f, 0.45f, 1f),
+                new Color(0.23f, 0.245f, 0.245f, 1f),
                 12);
             Vector3[] positions = new Vector3[path.points_norm.Length];
             for (int index = 0; index < path.points_norm.Length; index += 1)
@@ -168,7 +168,7 @@ namespace UrbanWildlife.Input
                 surface.SetPosition(index, position);
             }
 
-            CreateRoadDetails(pathObject.transform, positions);
+            CreateAsphaltDetails(pathObject.transform, positions);
         }
 
         private LineRenderer CreatePathLayer(
@@ -184,9 +184,9 @@ namespace UrbanWildlife.Input
             return ConfigurePathLine(layer, pointCount, width, colour, sortingOrder);
         }
 
-        private void CreateRoadDetails(Transform parent, Vector3[] positions)
+        private void CreateAsphaltDetails(Transform parent, Vector3[] positions)
         {
-            GameObject detailRoot = new GameObject("Road gravel details");
+            GameObject detailRoot = new GameObject("Asphalt aggregate details");
             detailRoot.transform.SetParent(parent, false);
             int detailIndex = 0;
 
@@ -196,7 +196,7 @@ namespace UrbanWildlife.Input
                 Vector3 end = positions[segment + 1];
                 Vector3 delta = end - start;
                 float segmentLength = new Vector2(delta.x, delta.z).magnitude;
-                int sampleCount = Mathf.FloorToInt(segmentLength / 0.34f);
+                int sampleCount = Mathf.FloorToInt(segmentLength / 0.24f);
                 if (sampleCount < 1)
                 {
                     continue;
@@ -209,22 +209,22 @@ namespace UrbanWildlife.Input
                     float t = sample / (sampleCount + 1f);
                     Vector3 position = Vector3.Lerp(start, end, t);
                     float side = detailIndex % 2 == 0 ? 1f : -1f;
-                    position += perpendicular * side * (0.035f + (detailIndex % 3) * 0.012f);
+                    position += perpendicular * side * (0.025f + (detailIndex % 3) * 0.011f);
 
                     Transform pebble = CreateAnchor(
                         detailRoot.transform,
-                        $"Gravel pebble {detailIndex}",
+                        $"Asphalt fleck {detailIndex}",
                         new Vector2(position.x, position.z));
                     pebble.localRotation = Quaternion.Euler(0f, heading + (detailIndex % 3 - 1) * 17f, 0f);
-                    float lengthScale = 0.82f + (detailIndex % 4) * 0.12f;
-                    pebble.localScale = new Vector3(lengthScale, 1f, 0.58f);
+                    float lengthScale = 0.72f + (detailIndex % 4) * 0.09f;
+                    pebble.localScale = new Vector3(lengthScale, 1f, 0.52f);
                     Color colour = detailIndex % 3 == 0
-                        ? new Color(0.46f, 0.39f, 0.31f, 0.72f)
-                        : new Color(0.91f, 0.84f, 0.71f, 0.62f);
+                        ? new Color(0.38f, 0.4f, 0.39f, 0.58f)
+                        : new Color(0.14f, 0.15f, 0.15f, 0.5f);
                     CreatePolygon(
                         pebble,
-                        "Pebble",
-                        RegularPolygon(8, 0.026f, 22.5f),
+                        "Fine aggregate",
+                        RegularPolygon(7, 0.013f, 22.5f),
                         0.124f,
                         colour,
                         14);

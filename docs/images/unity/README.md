@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v09-asphalt-road-preview.png`
+
+Rendered on 2026-09-10 in Unity 6000.3.4f1. The confirmed route is now presented as a charcoal-grey asphalt park road with pale concrete kerbs and subtle deterministic fine-aggregate flecks. It intentionally has no centre line because it represents a pedestrian park access route rather than a city vehicle road.
+
+The physical input remains a high-saturation magenta ribbon for reliable HSV segmentation. This is a presentation-only change: route coordinates, width, continuity checks, human routing, and gameplay constraints are unchanged.
+
 ## `visual-layer-v08-fence-gates-preview.png`
 
 Rendered on 2026-09-10 in Unity 6000.3.4f1. Entrance A and Exit B now use a strict top-down wrought-iron fence-gate sprite with short boundary fence sections, stone posts, two open gate leaves, and a gravel threshold. Exit B mirrors the source artwork so both gates open toward the park interior. Small A/B badges preserve the research landmarks.

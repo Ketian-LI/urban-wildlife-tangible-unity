@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v11-unified-character-palette-preview.png`
+
+Rendered on 2026-09-10 in Unity 6000.3.4f1 using the new deterministic park-palette Sprite shader. Humans use 0.72 source saturation; pigeon, squirrel, and fox use 0.78, 0.68, and 0.66 respectively. All characters receive a small brightness reduction and a restrained yellow-green ambient tint so that they sit inside the painted park palette rather than reading as a separate high-saturation layer.
+
+Feeding, avoidance, dwelling, visiting, and retreat state tints were softened at the same time. The grading is presentation-only and does not alter source PNG files, transparent edges, recognition data, agent scale, routes, state-machine decisions, or research logs.
+
 ## `visual-layer-v10-web-motion-side-animals-preview.png`
 
 Rendered on 2026-09-10 in Unity 6000.3.4f1 after comparing the prototype with the earlier web simulation. Humans now stay screen-facing and change direction through horizontal mirroring instead of rotating around every path bend. Their walk cycle is slower, with much smaller sway, scale pulse, and step lift. A completed trip now hides at the exit during its entry delay instead of visibly teleporting across the park.

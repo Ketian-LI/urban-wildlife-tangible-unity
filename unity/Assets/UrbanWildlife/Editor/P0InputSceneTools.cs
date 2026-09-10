@@ -11,6 +11,7 @@ using UrbanWildlife.Cycle;
 using UrbanWildlife.Humans;
 using UrbanWildlife.Animals;
 using UrbanWildlife.Logging;
+using UrbanWildlife.Presentation;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -421,6 +422,30 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("Human sprites must stay screen-facing with a slow web-style idle sway.");
             }
+            Shader paletteShader = Resources.Load<Shader>(SpritePaletteMaterial.ResourcePath);
+            if (paletteShader == null || paletteShader.name != SpritePaletteMaterial.ShaderName)
+            {
+                throw new InvalidOperationException("Park palette harmonization shader is missing or invalid.");
+            }
+            if (P0HumanSimulation.PresentationSaturation >= 0.9f ||
+                P0AnimalSimulation.PigeonPresentationSaturation >= 0.9f ||
+                P0AnimalSimulation.SquirrelPresentationSaturation >= 0.9f ||
+                P0AnimalSimulation.FoxPresentationSaturation >= 0.9f ||
+                P0AnimalSimulation.FoxPresentationSaturation >= P0AnimalSimulation.PigeonPresentationSaturation)
+            {
+                throw new InvalidOperationException("Character palette values must visibly reduce source saturation.");
+            }
+            Material paletteSmokeMaterial = SpritePaletteMaterial.Create(0.72f, 0.91f, 0.16f);
+            if (paletteSmokeMaterial == null ||
+                !Mathf.Approximately(paletteSmokeMaterial.GetFloat("_Saturation"), 0.72f) ||
+                !Mathf.Approximately(paletteSmokeMaterial.GetFloat("_Brightness"), 0.91f))
+            {
+                throw new InvalidOperationException("Park palette material values were not applied.");
+            }
+            UnityEngine.Object.DestroyImmediate(paletteSmokeMaterial);
+            Debug.Log(
+                "UNITY_CHARACTER_PALETTE_SMOKE_OK shader=True human_sat=0.72 " +
+                "animal_sat=0.78/0.68/0.66 ambient_tint=True softened_state_tints=True");
             if (!(P0AnimalSimulation.PigeonDisplayLength < P0AnimalSimulation.SquirrelDisplayLength &&
                   P0AnimalSimulation.SquirrelDisplayLength < P0AnimalSimulation.FoxDisplayLength &&
                   P0AnimalSimulation.FoxDisplayLength < P0HumanSimulation.DwellerDisplayLength &&
@@ -454,7 +479,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=6 animal_sprites=6 map_sprites=1 " +
                 "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True web_style_motion=True " +
-                "animal_side_profile=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
+                "animal_side_profile=True palette_harmonized=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
                 "real_size_order=True walk_cycles=6");
 
             string loggerSmokeRoot = Path.Combine(

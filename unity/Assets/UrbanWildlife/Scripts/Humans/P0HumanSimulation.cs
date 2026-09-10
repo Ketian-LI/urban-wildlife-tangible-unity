@@ -5,6 +5,7 @@ using UnityEngine;
 using UrbanWildlife.Cycle;
 using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
+using UrbanWildlife.Presentation;
 
 namespace UrbanWildlife.Humans
 {
@@ -18,6 +19,9 @@ namespace UrbanWildlife.Humans
         public const int WalkFrameCount = 2;
         public const float WalkFramesPerSecond = 3.4f;
         public const float IdleSwaySeconds = 6.8f;
+        public const float PresentationSaturation = 0.72f;
+        public const float PresentationBrightness = 0.91f;
+        public const float PresentationAmbientBlend = 0.16f;
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -276,7 +280,20 @@ namespace UrbanWildlife.Humans
                 human.spriteRenderer = spriteRenderer;
                 human.standingSprite = sourceSprite;
                 human.alternateWalkSprite = alternateWalkSprite;
-                human.ownsMaterial = false;
+                Material paletteMaterial = SpritePaletteMaterial.Create(
+                    PresentationSaturation,
+                    PresentationBrightness,
+                    PresentationAmbientBlend);
+                if (paletteMaterial != null)
+                {
+                    spriteRenderer.sharedMaterial = paletteMaterial;
+                    human.ownsMaterial = true;
+                }
+                else
+                {
+                    human.ownsMaterial = false;
+                    Debug.LogWarning("Park palette shader is unavailable; using the default human Sprite material.");
+                }
                 if (alternateWalkSprite == null)
                 {
                     Debug.LogWarning($"Alternate walk sprite missing for {human.model.Archetype}; using the standing frame.");
@@ -412,9 +429,9 @@ namespace UrbanWildlife.Humans
                 case HumanActivityState.WaitingToEnter:
                     return new Color(0.68f, 0.72f, 0.7f, 0.88f);
                 case HumanActivityState.Dwelling:
-                    return new Color(1f, 0.92f, 0.7f, 1f);
+                    return new Color(1f, 0.97f, 0.88f, 1f);
                 case HumanActivityState.Visiting:
-                    return new Color(0.88f, 1f, 0.9f, 1f);
+                    return new Color(0.94f, 1f, 0.95f, 1f);
                 case HumanActivityState.Finished:
                     return new Color(0.62f, 0.65f, 0.64f, 0.82f);
                 default:

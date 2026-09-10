@@ -6,6 +6,7 @@ using UrbanWildlife.Cycle;
 using UrbanWildlife.Humans;
 using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
+using UrbanWildlife.Presentation;
 
 namespace UrbanWildlife.Animals
 {
@@ -18,6 +19,11 @@ namespace UrbanWildlife.Animals
         public const int WalkFrameCount = 2;
         public const float ScreenFacingSpriteRotationDegrees = 0f;
         public const float IdleSwaySeconds = 7.2f;
+        public const float PigeonPresentationSaturation = 0.78f;
+        public const float SquirrelPresentationSaturation = 0.68f;
+        public const float FoxPresentationSaturation = 0.66f;
+        public const float PresentationBrightness = 0.92f;
+        public const float PresentationAmbientBlend = 0.18f;
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -263,7 +269,20 @@ namespace UrbanWildlife.Animals
                 animal.spriteRenderer = spriteRenderer;
                 animal.standingSprite = sourceSprite;
                 animal.alternateWalkSprite = alternateWalkSprite;
-                animal.ownsMaterial = false;
+                Material paletteMaterial = SpritePaletteMaterial.Create(
+                    PaletteSaturationFor(animal.model.Species),
+                    PresentationBrightness,
+                    PresentationAmbientBlend);
+                if (paletteMaterial != null)
+                {
+                    spriteRenderer.sharedMaterial = paletteMaterial;
+                    animal.ownsMaterial = true;
+                }
+                else
+                {
+                    animal.ownsMaterial = false;
+                    Debug.LogWarning("Park palette shader is unavailable; using the default animal Sprite material.");
+                }
                 if (alternateWalkSprite == null)
                 {
                     Debug.LogWarning($"Alternate walk sprite missing for {animal.model.Species}; using the standing frame.");
@@ -397,6 +416,19 @@ namespace UrbanWildlife.Animals
             }
         }
 
+        private static float PaletteSaturationFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return PigeonPresentationSaturation;
+                case AnimalSpecies.Squirrel:
+                    return SquirrelPresentationSaturation;
+                default:
+                    return FoxPresentationSaturation;
+            }
+        }
+
         private static float LengthFor(AnimalSpecies species)
         {
             switch (species)
@@ -427,15 +459,15 @@ namespace UrbanWildlife.Animals
         {
             if (state == AnimalActivityState.Feeding)
             {
-                return new Color(1f, 0.9f, 0.58f, 1f);
+                return new Color(1f, 0.96f, 0.82f, 1f);
             }
             if (state == AnimalActivityState.AvoidingHumans)
             {
-                return new Color(1f, 0.58f, 0.78f, 1f);
+                return new Color(1f, 0.82f, 0.87f, 1f);
             }
             if (state == AnimalActivityState.Retreating)
             {
-                return new Color(0.68f, 0.62f, 0.78f, 1f);
+                return new Color(0.82f, 0.78f, 0.86f, 1f);
             }
             return Color.white;
         }

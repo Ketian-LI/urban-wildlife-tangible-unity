@@ -28,7 +28,8 @@ namespace UrbanWildlife.Humans
         public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
         public const int DwellerSitArtworkFrameCount = 4;
         public const int RiseFrameCount = SteppedCharacterAnimation.RiseFrameCount;
-        public const float WalkFramesPerSecond = SteppedCharacterAnimation.FramesPerSecond;
+        public const float WalkFramesPerSecond = 6f;
+        public const float WalkSwayMultiplier = 2f;
         public const float IdleSwaySeconds = 6.8f;
         public const float PresentationSaturation = 0.72f;
         public const float PresentationBrightness = 0.91f;
@@ -159,8 +160,9 @@ namespace UrbanWildlife.Humans
 
                 human.visual.localPosition = new Vector3(current.x, 0.32f, current.y);
                 Vector2 movement = current - previous;
-                bool moving = !repeated && movement.sqrMagnitude > 0.000001f;
-                if (moving)
+                bool hasMovement = !repeated && movement.sqrMagnitude > 0.000001f;
+                bool moving = !repeated && human.model.State == HumanActivityState.Moving;
+                if (hasMovement)
                 {
                     UpdateHeading(human, movement);
                 }
@@ -383,7 +385,10 @@ namespace UrbanWildlife.Humans
             float offset = IsLooping(action) && !hasActionArtwork
                 ? human.animationOffset
                 : 0f;
-            CharacterPose pose = SteppedCharacterAnimation.Sample(action, elapsed, offset);
+            float sampledElapsed = hasWalkingArtwork
+                ? elapsed * (WalkFramesPerSecond / SteppedCharacterAnimation.FramesPerSecond)
+                : elapsed;
+            CharacterPose pose = SteppedCharacterAnimation.Sample(action, sampledElapsed, offset);
             Sprite selectedSprite = human.standingSprite;
             bool usesActionArtwork = hasActionArtwork;
             if (human.spriteRenderer != null)
@@ -421,9 +426,12 @@ namespace UrbanWildlife.Humans
                 human.spriteRenderer.flipX = !renderedFacingRight;
             }
 
+            float swayDegrees = hasWalkingArtwork
+                ? pose.SwayDegrees * WalkSwayMultiplier
+                : pose.SwayDegrees;
             human.visual.localRotation = Quaternion.Euler(
                 0f,
-                ScreenFacingSpriteRotationDegrees + pose.SwayDegrees,
+                ScreenFacingSpriteRotationDegrees + swayDegrees,
                 0f);
 
             Vector3 frameBaseScale = human.artworkBaseScale;

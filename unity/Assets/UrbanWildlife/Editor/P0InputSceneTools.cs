@@ -554,7 +554,8 @@ namespace UrbanWildlife.EditorTools
                 P0HumanSimulation.SitFrameCount != 4 ||
                 P0HumanSimulation.DwellerSitArtworkFrameCount != 4 ||
                 P0HumanSimulation.RiseFrameCount != 4 ||
-                P0HumanSimulation.WalkFramesPerSecond != SteppedCharacterAnimation.FramesPerSecond)
+                !Mathf.Approximately(P0HumanSimulation.WalkFramesPerSecond, 6f) ||
+                !Mathf.Approximately(P0HumanSimulation.WalkSwayMultiplier, 2f))
             {
                 throw new InvalidOperationException("P0 human stepped-animation timing is incorrect.");
             }
@@ -583,7 +584,8 @@ namespace UrbanWildlife.EditorTools
                 "roles=3 fps=8");
             Debug.Log(
                 "UNITY_HUMAN_WALK_ARTWORK_SMOKE_OK roles=3 frames_per_role=6 " +
-                "normalized_height=True fixed_baseline=True procedural_deformation=False");
+                "normalized_height=True fixed_baseline=True procedural_deformation=False " +
+                "continuous_road_state=True fps=6 sway_multiplier=2");
             Debug.Log(
                 "UNITY_VISITOR_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
                 "sequence=stand/reach/extend/release/withdraw/stand procedural_fallback=True");

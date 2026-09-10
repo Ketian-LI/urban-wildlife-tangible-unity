@@ -35,8 +35,14 @@ Prompt direction: sophisticated ecological planning map and editorial strategy-g
 
 Prompt direction: handcrafted museum-quality miniature park diorama viewed directly overhead; matte painted wood, sculpted foliage, flocked grass and restrained natural shadows; plaza inset in stone and pond recessed in translucent resin.
 
+### E — Recommended hybrid
+
+![Option E](option-e-recommended-hybrid.png)
+
+Prompt direction: use the tactile board structure of B as the foundation, add restrained coloured-pencil paper grain and layered botanical illustration, reduce perimeter decoration by roughly one third, and reserve coral and mustard for small functional accents. People, animals and landscape use the same matte wooden-paper token language; plaza and pond boundaries are built into their materials instead of drawn as coloured rings.
+
 ## Suggested decision
 
-Option B is the strongest conceptual match for the physical magnetic-board prototype. Option C is the cleanest basis for a readable Unity MVP. A useful hybrid would use C for the digital game and borrow B's felt/wood material cues so the physical and digital layers still feel related.
+Option E is the recommended combined direction. It keeps the tangible quality of B and the readability needed for the Unity MVP, while adding a more personal coloured-pencil and botanical illustration identity.
 
 Generated with the built-in image generation model using `visual-layer-v11-unified-character-palette-preview.png` as the composition reference.

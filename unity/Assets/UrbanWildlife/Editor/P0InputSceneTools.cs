@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -355,10 +356,25 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 animal walk sprite is missing or invalid: {spritePath}");
                 }
             }
+            string[] pigeonFeedSpritePaths = Enumerable.Range(
+                    1,
+                    P0AnimalSimulation.PigeonFeedArtworkFrameCount)
+                .Select(index => $"UrbanWildlife/Animals/pigeon-side-feed-{index:00}-v01")
+                .ToArray();
+            foreach (string spritePath in pigeonFeedSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.x <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"P0 pigeon feeding sprite is missing or invalid: {spritePath}");
+                }
+            }
             if (P0AnimalSimulation.IdleFrameCount != 3 ||
                 P0AnimalSimulation.TurnFrameCount != 3 ||
                 P0AnimalSimulation.WalkFrameCount != 6 ||
                 P0AnimalSimulation.FeedFrameCount != 6 ||
+                P0AnimalSimulation.PigeonFeedArtworkFrameCount != 6 ||
                 P0AnimalSimulation.SitFrameCount != 4 ||
                 P0AnimalSimulation.RiseFrameCount != 4)
             {
@@ -390,6 +406,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_ANIMAL_FLIPBOOK_SMOKE_OK idle=3 turn=3 walk=6 feed=6 sit=4 rise=4 " +
                 "species=3 screen_facing=True flip_x=True");
+            Debug.Log(
+                "UNITY_PIGEON_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
+                "sequence=stand/lower/peck/peck/rise/stand procedural_fallback=True");
 
             string[] humanSpritePaths =
             {
@@ -419,10 +438,25 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 human walk sprite is missing or invalid: {spritePath}");
                 }
             }
+            string[] visitorFeedSpritePaths = Enumerable.Range(
+                    1,
+                    P0HumanSimulation.VisitorFeedArtworkFrameCount)
+                .Select(index => $"UrbanWildlife/Humans/visitor-feed-{index:00}-v01")
+                .ToArray();
+            foreach (string spritePath in visitorFeedSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.y <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"P0 visitor feeding sprite is missing or invalid: {spritePath}");
+                }
+            }
             if (P0HumanSimulation.IdleFrameCount != 3 ||
                 P0HumanSimulation.TurnFrameCount != 3 ||
                 P0HumanSimulation.WalkFrameCount != 6 ||
                 P0HumanSimulation.FeedFrameCount != 6 ||
+                P0HumanSimulation.VisitorFeedArtworkFrameCount != 6 ||
                 P0HumanSimulation.SitFrameCount != 4 ||
                 P0HumanSimulation.RiseFrameCount != 4 ||
                 P0HumanSimulation.WalkFramesPerSecond != SteppedCharacterAnimation.FramesPerSecond)
@@ -452,6 +486,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_HUMAN_FLIPBOOK_SMOKE_OK idle=3 turn=3 walk=6 feed=6 sit=4 rise=4 " +
                 "roles=3 fps=8");
+            Debug.Log(
+                "UNITY_VISITOR_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
+                "sequence=stand/reach/extend/release/withdraw/stand procedural_fallback=True");
             if (!Mathf.Approximately(P0HumanSimulation.ScreenFacingSpriteRotationDegrees, 0f) ||
                 P0HumanSimulation.IdleSwaySeconds < 6f)
             {
@@ -512,10 +549,11 @@ namespace UrbanWildlife.EditorTools
             Debug.Log("UNITY_PLANNING_AREA_SMOKE_OK woodland=forest food_hotspots=bench/plaza ids_preserved=True");
             Debug.Log("UNITY_PARK_GATE_SMOKE_OK entrance=open_fence_gate exit=mirrored_open_fence_gate ids=A/B");
             Debug.Log(
-                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=6 animal_sprites=6 map_sprites=1 " +
+                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=12 animal_sprites=12 map_sprites=1 " +
                 "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True web_style_motion=True " +
                 "animal_side_profile=True palette_harmonized=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
-                "real_size_order=True stepped_animation=True actions=idle/turn/walk/feed/sit/rise");
+                "real_size_order=True stepped_animation=True actions=idle/turn/walk/feed/sit/rise " +
+                "true_feed_artwork=pigeon/visitor");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

@@ -20,6 +20,7 @@ namespace UrbanWildlife.Humans
         public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
         public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
         public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
+        public const int VisitorFeedArtworkFrameCount = 6;
         public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
         public const int RiseFrameCount = SteppedCharacterAnimation.RiseFrameCount;
         public const float WalkFramesPerSecond = SteppedCharacterAnimation.FramesPerSecond;
@@ -42,6 +43,7 @@ namespace UrbanWildlife.Humans
             public SpriteRenderer spriteRenderer;
             public Sprite standingSprite;
             public Sprite alternateWalkSprite;
+            public Sprite[] feedingSprites;
             public Vector3 artworkBaseScale;
             public Vector3 artworkBasePosition;
             public float animationOffset;
@@ -300,6 +302,9 @@ namespace UrbanWildlife.Humans
                 human.spriteRenderer = spriteRenderer;
                 human.standingSprite = sourceSprite;
                 human.alternateWalkSprite = alternateWalkSprite;
+                human.feedingSprites = LoadActionSprites(
+                    FeedingResourcePrefixFor(human.model.Archetype),
+                    VisitorFeedArtworkFrameCount);
                 Material paletteMaterial = SpritePaletteMaterial.Create(
                     PresentationSaturation,
                     PresentationBrightness,
@@ -349,16 +354,31 @@ namespace UrbanWildlife.Humans
             }
 
             float elapsed = Mathf.Max(0f, Time.time - human.actionStartedAt);
-            float offset = IsLooping(action) ? human.animationOffset : 0f;
+            bool hasActionArtwork = action == CharacterAnimationAction.Feeding &&
+                human.feedingSprites != null &&
+                human.feedingSprites.Length == FeedFrameCount;
+            float offset = IsLooping(action) && !hasActionArtwork
+                ? human.animationOffset
+                : 0f;
             CharacterPose pose = SteppedCharacterAnimation.Sample(action, elapsed, offset);
+            Sprite selectedSprite = human.standingSprite;
+            bool usesActionArtwork = hasActionArtwork;
             if (human.spriteRenderer != null)
             {
-                bool useAlternateFrame =
-                    human.alternateWalkSprite != null &&
-                    SteppedCharacterAnimation.UseAlternateArtwork(action, pose.FrameIndex);
-                human.spriteRenderer.sprite = useAlternateFrame
-                    ? human.alternateWalkSprite
-                    : human.standingSprite;
+                if (usesActionArtwork)
+                {
+                    selectedSprite = human.feedingSprites[pose.FrameIndex];
+                }
+                else
+                {
+                    bool useAlternateFrame =
+                        human.alternateWalkSprite != null &&
+                        SteppedCharacterAnimation.UseAlternateArtwork(action, pose.FrameIndex);
+                    selectedSprite = useAlternateFrame
+                        ? human.alternateWalkSprite
+                        : human.standingSprite;
+                }
+                human.spriteRenderer.sprite = selectedSprite;
                 bool renderedFacingRight = action == CharacterAnimationAction.Turning &&
                     !SteppedCharacterAnimation.HasTurnPassedMidpoint(
                         Mathf.Max(0f, Time.time - human.turnStartedAt))
@@ -372,10 +392,20 @@ namespace UrbanWildlife.Humans
                 ScreenFacingSpriteRotationDegrees + pose.SwayDegrees,
                 0f);
 
-            human.artwork.localScale = Vector3.Scale(
-                human.artworkBaseScale,
-                new Vector3(pose.WidthScale, pose.HeightScale, 1f));
-            human.artwork.localPosition = human.artworkBasePosition + Vector3.up * pose.Lift;
+            Vector3 frameBaseScale = human.artworkBaseScale;
+            if (usesActionArtwork && selectedSprite != null)
+            {
+                float uniformScale = LengthFor(human.model.Archetype) /
+                    Mathf.Max(0.001f, selectedSprite.bounds.size.y);
+                frameBaseScale = Vector3.one * uniformScale;
+            }
+            human.artwork.localScale = usesActionArtwork
+                ? frameBaseScale
+                : Vector3.Scale(
+                    frameBaseScale,
+                    new Vector3(pose.WidthScale, pose.HeightScale, 1f));
+            human.artwork.localPosition = human.artworkBasePosition +
+                Vector3.up * (usesActionArtwork ? 0f : pose.Lift);
         }
 
         private static CharacterAnimationAction ResolveAction(RuntimeHuman human, bool moving)
@@ -476,6 +506,36 @@ namespace UrbanWildlife.Humans
                 default:
                     return "UrbanWildlife/Humans/visitor-walk-b-v01";
             }
+        }
+
+        private static string FeedingResourcePrefixFor(HumanArchetype archetype)
+        {
+            return archetype == HumanArchetype.Visitor
+                ? "UrbanWildlife/Humans/visitor-feed"
+                : string.Empty;
+        }
+
+        private static Sprite[] LoadActionSprites(string prefix, int frameCount)
+        {
+            if (string.IsNullOrEmpty(prefix))
+            {
+                return new Sprite[0];
+            }
+
+            Sprite[] frames = new Sprite[frameCount];
+            for (int index = 0; index < frameCount; index += 1)
+            {
+                frames[index] = Resources.Load<Sprite>(
+                    $"{prefix}-{index + 1:00}-v01");
+                if (frames[index] == null)
+                {
+                    Debug.LogWarning(
+                        $"Action artwork frame missing: {prefix}-{index + 1:00}-v01. " +
+                        "Using the procedural pose fallback.");
+                    return new Sprite[0];
+                }
+            }
+            return frames;
         }
 
         private static float LengthFor(HumanArchetype archetype)

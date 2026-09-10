@@ -62,6 +62,7 @@ urban-wildlife-tangible-unity/
 - [x] 完成三种动物的手绘俯视Sprite与程序动画V0.1
 - [x] 完成手绘公园地图、三类人物Sprite与整体显示层V0.2
 - [x] 完成人类与动物六类动作的8 FPS逐帧节奏样板
+- [x] 接入鸽子进食与Visitor喂食的首批独立六帧动画素材
 - [x] 完成Plan、Confirm、Run、Observe单周期与最小研究日志输出
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 

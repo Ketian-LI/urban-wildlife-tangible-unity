@@ -2,6 +2,27 @@
 
 This directory contains the generated Unity animal presentation assets used by the P0 prototype.
 
+## Active V0.4 pigeon feeding sequence
+
+The pigeon now has six independently drawn feeding frames at the shared 8 FPS stepped-animation rate:
+
+- `pigeon-side-feed-01-v01.png`: upright start
+- `pigeon-side-feed-02-v01.png`: head lowering
+- `pigeon-side-feed-03-v01.png`: first peck
+- `pigeon-side-feed-04-v01.png`: second peck
+- `pigeon-side-feed-05-v01.png`: rising
+- `pigeon-side-feed-06-v01.png`: upright return
+
+The frames were generated as one 3 x 2 contact sheet, split into equal 512 x 512 cells with `tools/split_sprite_sheet.py`, and converted from a uniform green isolation plate to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`. Runtime uses the true frames only for the pigeon Feeding state; squirrel and fox retain the procedural pose fallback until their own sets are approved.
+
+Generation mode: built-in image generation tool. Final prompt:
+
+```text
+Create a production-ready six-frame Unity sprite sheet for one urban rock pigeon performing a feeding cycle. Arrange exactly six equal square cells in a clean 3-column by 2-row grid, read left-to-right across the top row and then the bottom row: 1 upright alert side profile, 2 lowering the head, 3 beak touching the ground for a first peck, 4 a slightly different second peck, 5 lifting the head and chest, 6 returned upright. Keep the same single pigeon, right-facing side profile, anatomy, size, placement, grey plumage, charcoal wing bars, iridescent green-purple neck, orange eye and coral-red feet in every cell. Use the approved expressive natural-history print direction: confident variable dark ink contours, coloured-pencil hatching, screen-print grain, slightly exaggerated readable silhouette and selective coral/magenta accents; sophisticated rather than childish, with consistent saturation and neutral daylight. Put every cell on perfectly flat uniform chroma green #00FF00. No ground, shadow, labels, numbers, dividers, border, text, extra animal, detached limb, cropping, checkerboard or background texture. Keep generous equal padding and make adjoining poses read as a restrained 8 FPS loop.
+```
+
+Contact sheet: `docs/images/unity/animation-frames-v01/pigeon-feed-sheet-v01.png`.
+
 ## Active V0.3 side-profile walk set
 
 Updated on 2026-09-10 after comparison with the earlier web simulation. Each species now uses two right-facing side-profile frames. Runtime movement keeps the artwork screen-facing, alternates the frames only while moving, and uses horizontal flipping instead of continuously rotating the entire animal toward every waypoint.

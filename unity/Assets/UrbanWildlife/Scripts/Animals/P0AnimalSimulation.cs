@@ -20,6 +20,7 @@ namespace UrbanWildlife.Animals
         public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
         public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
         public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
+        public const int PigeonFeedArtworkFrameCount = 6;
         public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
         public const int RiseFrameCount = SteppedCharacterAnimation.RiseFrameCount;
         public const float ScreenFacingSpriteRotationDegrees = 0f;
@@ -44,6 +45,7 @@ namespace UrbanWildlife.Animals
             public SpriteRenderer spriteRenderer;
             public Sprite standingSprite;
             public Sprite alternateWalkSprite;
+            public Sprite[] feedingSprites;
             public Vector3 artworkBaseScale;
             public Vector3 artworkBasePosition;
             public float animationOffset;
@@ -291,6 +293,9 @@ namespace UrbanWildlife.Animals
                 animal.spriteRenderer = spriteRenderer;
                 animal.standingSprite = sourceSprite;
                 animal.alternateWalkSprite = alternateWalkSprite;
+                animal.feedingSprites = LoadActionSprites(
+                    FeedingResourcePrefixFor(animal.model.Species),
+                    PigeonFeedArtworkFrameCount);
                 Material paletteMaterial = SpritePaletteMaterial.Create(
                     PaletteSaturationFor(animal.model.Species),
                     PresentationBrightness,
@@ -347,16 +352,31 @@ namespace UrbanWildlife.Animals
             float sampledElapsed = action == CharacterAnimationAction.Walking
                 ? elapsed * speciesRate
                 : elapsed;
-            float offset = IsLooping(action) ? animal.animationOffset : 0f;
+            bool hasActionArtwork = action == CharacterAnimationAction.Feeding &&
+                animal.feedingSprites != null &&
+                animal.feedingSprites.Length == FeedFrameCount;
+            float offset = IsLooping(action) && !hasActionArtwork
+                ? animal.animationOffset
+                : 0f;
             CharacterPose pose = SteppedCharacterAnimation.Sample(action, sampledElapsed, offset);
+            Sprite selectedSprite = animal.standingSprite;
+            bool usesActionArtwork = hasActionArtwork;
             if (animal.spriteRenderer != null)
             {
-                bool useAlternateFrame =
-                    animal.alternateWalkSprite != null &&
-                    SteppedCharacterAnimation.UseAlternateArtwork(action, pose.FrameIndex);
-                animal.spriteRenderer.sprite = useAlternateFrame
-                    ? animal.alternateWalkSprite
-                    : animal.standingSprite;
+                if (usesActionArtwork)
+                {
+                    selectedSprite = animal.feedingSprites[pose.FrameIndex];
+                }
+                else
+                {
+                    bool useAlternateFrame =
+                        animal.alternateWalkSprite != null &&
+                        SteppedCharacterAnimation.UseAlternateArtwork(action, pose.FrameIndex);
+                    selectedSprite = useAlternateFrame
+                        ? animal.alternateWalkSprite
+                        : animal.standingSprite;
+                }
+                animal.spriteRenderer.sprite = selectedSprite;
                 bool renderedFacingRight = action == CharacterAnimationAction.Turning &&
                     !SteppedCharacterAnimation.HasTurnPassedMidpoint(
                         Mathf.Max(0f, Time.time - animal.turnStartedAt))
@@ -370,12 +390,21 @@ namespace UrbanWildlife.Animals
                 ScreenFacingSpriteRotationDegrees + pose.SwayDegrees,
                 0f);
 
-            animal.artwork.localScale = Vector3.Scale(
-                animal.artworkBaseScale,
-                new Vector3(pose.WidthScale, pose.HeightScale, 1f));
+            Vector3 frameBaseScale = animal.artworkBaseScale;
+            if (usesActionArtwork && selectedSprite != null)
+            {
+                float uniformScale = LengthFor(animal.model.Species) /
+                    Mathf.Max(0.001f, selectedSprite.bounds.size.x);
+                frameBaseScale = Vector3.one * uniformScale;
+            }
+            animal.artwork.localScale = usesActionArtwork
+                ? frameBaseScale
+                : Vector3.Scale(
+                    frameBaseScale,
+                    new Vector3(pose.WidthScale, pose.HeightScale, 1f));
             float liftScale = StepLiftFor(animal.model.Species) / 0.004f;
             animal.artwork.localPosition = animal.artworkBasePosition +
-                Vector3.up * (pose.Lift * liftScale);
+                Vector3.up * (usesActionArtwork ? 0f : pose.Lift * liftScale);
         }
 
         private static CharacterAnimationAction ResolveAction(RuntimeAnimal animal, bool moving)
@@ -469,6 +498,36 @@ namespace UrbanWildlife.Animals
                 default:
                     return "UrbanWildlife/Animals/fox-side-walk-b-v01";
             }
+        }
+
+        private static string FeedingResourcePrefixFor(AnimalSpecies species)
+        {
+            return species == AnimalSpecies.Pigeon
+                ? "UrbanWildlife/Animals/pigeon-side-feed"
+                : string.Empty;
+        }
+
+        private static Sprite[] LoadActionSprites(string prefix, int frameCount)
+        {
+            if (string.IsNullOrEmpty(prefix))
+            {
+                return new Sprite[0];
+            }
+
+            Sprite[] frames = new Sprite[frameCount];
+            for (int index = 0; index < frameCount; index += 1)
+            {
+                frames[index] = Resources.Load<Sprite>(
+                    $"{prefix}-{index + 1:00}-v01");
+                if (frames[index] == null)
+                {
+                    Debug.LogWarning(
+                        $"Action artwork frame missing: {prefix}-{index + 1:00}-v01. " +
+                        "Using the procedural pose fallback.");
+                    return new Sprite[0];
+                }
+            }
+            return frames;
         }
 
         private static float WalkFramesPerSecondFor(AnimalSpecies species)

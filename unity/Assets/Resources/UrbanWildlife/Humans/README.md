@@ -2,6 +2,20 @@
 
 Generated on 2026-09-09 with the built-in image generation tool for the Unity P0 prototype.
 
+## Active V0.6 Visitor feeding sequence
+
+Visitor now uses six independently drawn frames during the `Visiting` state: upright, reaching into the satchel, extending seed, releasing seed, withdrawing the hand and returning upright. The character remains front-readable from the same high-angle map view, with realistic adult proportions and both face and shoe toes oriented consistently.
+
+The source is a 3 x 2 contact sheet split into equal 512 x 512 cells with `tools/split_sprite_sheet.py`, then converted from uniform green to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`. The active files are `visitor-feed-01-v01.png` through `visitor-feed-06-v01.png`. Walker and Dweller retain their procedural action-pose fallback until separate true-frame sets are approved.
+
+Generation mode: built-in image generation tool. Final prompt:
+
+```text
+Create a production-ready six-frame Unity sprite sheet for one adult female park Visitor performing a small feeding gesture. Arrange exactly six equal square cells in a clean 3-column by 2-row grid, read left-to-right across the top row and then the bottom row: 1 upright neutral stance, 2 reaching one hand toward the tan crossbody satchel, 3 extending that hand downward with a small pinch of seed, 4 releasing a few visible seed grains, 5 withdrawing the empty hand, 6 returned upright. Preserve one consistent character in every cell: realistic adult proportions, brown hair in a bun, teal hooded coat, burgundy trousers, tan crossbody satchel and grey trainers. Use a consistent high-angle front-facing orthographic view so her face, chest and both shoe toes point toward the bottom of the canvas. Apply the approved expressive natural-history print direction: variable dark ink contours, coloured-pencil hatching, screen-print grain, slightly exaggerated gesture and selective coral/magenta accents, with unified saturation and neutral daylight. Every cell must have flat uniform chroma green #00FF00 outside the figure. No ground, shadow, furniture, animals, labels, numbers, dividers, border, text, extra person, extra limbs, reversed feet, cropping, checkerboard or background texture. Keep equal padding, stable scale and a restrained 8 FPS loop.
+```
+
+Contact sheet: `docs/images/unity/animation-frames-v01/visitor-feed-sheet-v01.png`.
+
 Assets:
 
 - `walker-topdown-v05.png` (active; realistic adult proportions)

@@ -61,10 +61,11 @@ urban-wildlife-tangible-unity/
 - [x] 接入鸽子、松鼠、狐狸三种基础动物状态机
 - [x] 完成三种动物的手绘俯视Sprite与程序动画V0.1
 - [x] 完成手绘公园地图、三类人物Sprite与整体显示层V0.2
+- [x] 完成人类与动物六类动作的8 FPS逐帧节奏样板
 - [x] 完成Plan、Confirm、Run、Observe单周期与最小研究日志输出
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 
-工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md) 和 [`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)。
+工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md) 和 [`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md)。
 材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
 当前Unity显示层组合预览（三类人物与动物采用接近真实的相对大小，规划路径显示为写实砂砾公园步道）见 [`docs/images/unity/visual-layer-v06-realistic-road-preview.png`](docs/images/unity/visual-layer-v06-realistic-road-preview.png)。
 

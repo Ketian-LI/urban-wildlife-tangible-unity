@@ -16,8 +16,13 @@ namespace UrbanWildlife.Humans
         public const float WalkerDisplayLength = 0.89f;
         public const float DwellerDisplayLength = 0.84f;
         public const float VisitorDisplayLength = 0.85f;
-        public const int WalkFrameCount = 2;
-        public const float WalkFramesPerSecond = 3.4f;
+        public const int IdleFrameCount = SteppedCharacterAnimation.IdleFrameCount;
+        public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
+        public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
+        public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
+        public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
+        public const int RiseFrameCount = SteppedCharacterAnimation.RiseFrameCount;
+        public const float WalkFramesPerSecond = SteppedCharacterAnimation.FramesPerSecond;
         public const float IdleSwaySeconds = 6.8f;
         public const float PresentationSaturation = 0.72f;
         public const float PresentationBrightness = 0.91f;
@@ -41,8 +46,15 @@ namespace UrbanWildlife.Humans
             public Vector3 artworkBasePosition;
             public float animationOffset;
             public bool facingRight;
+            public bool turnFromFacingRight;
             public bool ownsMaterial;
             public HumanActivityState lastState;
+            public CharacterAnimationAction lastAnimationAction;
+            public Vector2 lastMovementDirection;
+            public float actionStartedAt;
+            public float turnStartedAt;
+            public float turnEndsAt;
+            public float riseEndsAt;
             public int completedTrips;
         }
 
@@ -139,17 +151,22 @@ namespace UrbanWildlife.Humans
                 human.visual.localPosition = new Vector3(current.x, 0.32f, current.y);
                 Vector2 movement = current - previous;
                 bool moving = !repeated && movement.sqrMagnitude > 0.000001f;
-                if (moving && Mathf.Abs(movement.x) > 0.00001f)
+                if (moving)
                 {
-                    human.facingRight = movement.x >= 0f;
+                    UpdateHeading(human, movement);
                 }
-                ApplyMotion(human, moving);
 
                 if (human.lastState != human.model.State)
                 {
+                    if (IsActivityState(human.lastState) &&
+                        human.model.State == HumanActivityState.Moving)
+                    {
+                        BeginRise(human);
+                    }
                     human.lastState = human.model.State;
                     ApplyColour(human);
                 }
+                ApplyMotion(human, moving);
             }
         }
 
@@ -203,7 +220,10 @@ namespace UrbanWildlife.Humans
                     visual = visual.transform,
                     animationOffset = index * 0.83f,
                     facingRight = (index & 1) == 0,
+                    turnFromFacingRight = (index & 1) == 0,
                     lastState = model.State,
+                    lastAnimationAction = CharacterAnimationAction.Idle,
+                    actionStartedAt = Time.time,
                 };
                 CreateArtwork(runtime);
                 ApplyColour(runtime);
@@ -321,50 +341,99 @@ namespace UrbanWildlife.Humans
 
         private static void ApplyMotion(RuntimeHuman human, bool moving)
         {
-            float time = Time.time + human.animationOffset;
-            float stepPhase = time * WalkFramesPerSecond;
+            CharacterAnimationAction action = ResolveAction(human, moving);
+            if (human.lastAnimationAction != action)
+            {
+                human.lastAnimationAction = action;
+                human.actionStartedAt = Time.time;
+            }
+
+            float elapsed = Mathf.Max(0f, Time.time - human.actionStartedAt);
+            float offset = IsLooping(action) ? human.animationOffset : 0f;
+            CharacterPose pose = SteppedCharacterAnimation.Sample(action, elapsed, offset);
             if (human.spriteRenderer != null)
             {
-                bool useAlternateFrame = moving &&
+                bool useAlternateFrame =
                     human.alternateWalkSprite != null &&
-                    (Mathf.FloorToInt(stepPhase) & 1) == 1;
+                    SteppedCharacterAnimation.UseAlternateArtwork(action, pose.FrameIndex);
                 human.spriteRenderer.sprite = useAlternateFrame
                     ? human.alternateWalkSprite
                     : human.standingSprite;
-                human.spriteRenderer.flipX = !human.facingRight;
+                bool renderedFacingRight = action == CharacterAnimationAction.Turning &&
+                    !SteppedCharacterAnimation.HasTurnPassedMidpoint(
+                        Mathf.Max(0f, Time.time - human.turnStartedAt))
+                    ? human.turnFromFacingRight
+                    : human.facingRight;
+                human.spriteRenderer.flipX = !renderedFacingRight;
             }
 
-            float sway = moving
-                ? Mathf.Sin(stepPhase * Mathf.PI) * 0.65f
-                : Mathf.Sin(time * (2f * Mathf.PI / IdleSwaySeconds)) * 1.35f;
-            if (human.model.State == HumanActivityState.Visiting)
-            {
-                sway += Mathf.Sin(time * 1.35f) * 0.75f;
-            }
             human.visual.localRotation = Quaternion.Euler(
                 0f,
-                ScreenFacingSpriteRotationDegrees + sway,
+                ScreenFacingSpriteRotationDegrees + pose.SwayDegrees,
                 0f);
 
-            float pulse = 1f;
-            if (moving)
+            human.artwork.localScale = Vector3.Scale(
+                human.artworkBaseScale,
+                new Vector3(pose.WidthScale, pose.HeightScale, 1f));
+            human.artwork.localPosition = human.artworkBasePosition + Vector3.up * pose.Lift;
+        }
+
+        private static CharacterAnimationAction ResolveAction(RuntimeHuman human, bool moving)
+        {
+            if (Time.time < human.turnEndsAt)
             {
-                pulse += Mathf.Sin(stepPhase * Mathf.PI) * 0.006f;
+                return CharacterAnimationAction.Turning;
             }
-            else if (human.model.State == HumanActivityState.Dwelling ||
-                     human.model.State == HumanActivityState.Visiting)
+            if (Time.time < human.riseEndsAt)
             {
-                pulse += Mathf.Sin(time * 1.35f) * 0.01f;
+                return CharacterAnimationAction.Rising;
             }
-            else
+            if (human.model.State == HumanActivityState.Visiting)
             {
-                pulse += Mathf.Sin(time * 1.15f) * 0.005f;
+                return CharacterAnimationAction.Feeding;
             }
-            human.artwork.localScale = human.artworkBaseScale * pulse;
-            float stepLift = moving
-                ? Mathf.Abs(Mathf.Sin(stepPhase * Mathf.PI)) * 0.004f
-                : 0f;
-            human.artwork.localPosition = human.artworkBasePosition + Vector3.up * stepLift;
+            if (human.model.State == HumanActivityState.Dwelling)
+            {
+                return CharacterAnimationAction.Sitting;
+            }
+            return moving
+                ? CharacterAnimationAction.Walking
+                : CharacterAnimationAction.Idle;
+        }
+
+        private static void UpdateHeading(RuntimeHuman human, Vector2 movement)
+        {
+            Vector2 direction = movement.normalized;
+            bool changedDirection = human.lastMovementDirection.sqrMagnitude > 0.5f &&
+                Vector2.Dot(human.lastMovementDirection, direction) < 0.72f;
+            bool nextFacingRight = Mathf.Abs(direction.x) > 0.0001f
+                ? direction.x >= 0f
+                : human.facingRight;
+            if (changedDirection || nextFacingRight != human.facingRight)
+            {
+                human.turnFromFacingRight = human.facingRight;
+                human.facingRight = nextFacingRight;
+                human.turnStartedAt = Time.time;
+                human.turnEndsAt = Time.time + SteppedCharacterAnimation.TurnSeconds;
+            }
+            human.lastMovementDirection = direction;
+        }
+
+        private static void BeginRise(RuntimeHuman human)
+        {
+            human.riseEndsAt = Time.time + SteppedCharacterAnimation.RiseSeconds;
+        }
+
+        private static bool IsActivityState(HumanActivityState state)
+        {
+            return state == HumanActivityState.Dwelling || state == HumanActivityState.Visiting;
+        }
+
+        private static bool IsLooping(CharacterAnimationAction action)
+        {
+            return action == CharacterAnimationAction.Idle ||
+                action == CharacterAnimationAction.Walking ||
+                action == CharacterAnimationAction.Feeding;
         }
 
         private static void ApplyColour(RuntimeHuman human)

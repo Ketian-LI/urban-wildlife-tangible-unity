@@ -355,9 +355,14 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 animal walk sprite is missing or invalid: {spritePath}");
                 }
             }
-            if (P0AnimalSimulation.WalkFrameCount != 2)
+            if (P0AnimalSimulation.IdleFrameCount != 3 ||
+                P0AnimalSimulation.TurnFrameCount != 3 ||
+                P0AnimalSimulation.WalkFrameCount != 6 ||
+                P0AnimalSimulation.FeedFrameCount != 6 ||
+                P0AnimalSimulation.SitFrameCount != 4 ||
+                P0AnimalSimulation.RiseFrameCount != 4)
             {
-                throw new InvalidOperationException("P0 animal walking must use a two-frame gait cycle.");
+                throw new InvalidOperationException("P0 animal stepped-animation frame counts are incorrect.");
             }
             Sprite pigeonSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/pigeon-side-walk-a-v01");
             Sprite squirrelSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/squirrel-side-walk-a-v01");
@@ -382,7 +387,9 @@ namespace UrbanWildlife.EditorTools
                 $"aspects={pigeonAspect:F2}/{squirrelAspect:F2}/{foxAspect:F2} " +
                 $"display_lengths={P0AnimalSimulation.PigeonDisplayLength:F2}/" +
                 $"{P0AnimalSimulation.SquirrelDisplayLength:F2}/{P0AnimalSimulation.FoxDisplayLength:F2}");
-            Debug.Log("UNITY_ANIMAL_WALK_ANIMATION_SMOKE_OK frames=2 species=3 moving_only=True screen_facing=True flip_x=True");
+            Debug.Log(
+                "UNITY_ANIMAL_FLIPBOOK_SMOKE_OK idle=3 turn=3 walk=6 feed=6 sit=4 rise=4 " +
+                "species=3 screen_facing=True flip_x=True");
 
             string[] humanSpritePaths =
             {
@@ -412,11 +419,39 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 human walk sprite is missing or invalid: {spritePath}");
                 }
             }
-            if (P0HumanSimulation.WalkFrameCount != 2 || P0HumanSimulation.WalkFramesPerSecond <= 0f)
+            if (P0HumanSimulation.IdleFrameCount != 3 ||
+                P0HumanSimulation.TurnFrameCount != 3 ||
+                P0HumanSimulation.WalkFrameCount != 6 ||
+                P0HumanSimulation.FeedFrameCount != 6 ||
+                P0HumanSimulation.SitFrameCount != 4 ||
+                P0HumanSimulation.RiseFrameCount != 4 ||
+                P0HumanSimulation.WalkFramesPerSecond != SteppedCharacterAnimation.FramesPerSecond)
             {
-                throw new InvalidOperationException("P0 human walking must use a timed two-frame gait cycle.");
+                throw new InvalidOperationException("P0 human stepped-animation timing is incorrect.");
             }
-            Debug.Log("UNITY_HUMAN_WALK_ANIMATION_SMOKE_OK frames=2 roles=3 moving_only=True");
+            CharacterPose turnMiddle = SteppedCharacterAnimation.Sample(
+                CharacterAnimationAction.Turning,
+                1f / SteppedCharacterAnimation.FramesPerSecond);
+            CharacterPose feedLowered = SteppedCharacterAnimation.Sample(
+                CharacterAnimationAction.Feeding,
+                2f / SteppedCharacterAnimation.FramesPerSecond);
+            CharacterPose seated = SteppedCharacterAnimation.Sample(
+                CharacterAnimationAction.Sitting,
+                20f);
+            CharacterPose risen = SteppedCharacterAnimation.Sample(
+                CharacterAnimationAction.Rising,
+                20f);
+            if (turnMiddle.FrameIndex != 1 || turnMiddle.WidthScale > 0.25f ||
+                feedLowered.FrameIndex != 2 || feedLowered.HeightScale >= 0.95f ||
+                seated.FrameIndex != P0HumanSimulation.SitFrameCount - 1 ||
+                seated.HeightScale >= 0.85f ||
+                risen.FrameIndex != 0 || !Mathf.Approximately(risen.HeightScale, 1f))
+            {
+                throw new InvalidOperationException("Stepped character poses do not match the intended keyframes.");
+            }
+            Debug.Log(
+                "UNITY_HUMAN_FLIPBOOK_SMOKE_OK idle=3 turn=3 walk=6 feed=6 sit=4 rise=4 " +
+                "roles=3 fps=8");
             if (!Mathf.Approximately(P0HumanSimulation.ScreenFacingSpriteRotationDegrees, 0f) ||
                 P0HumanSimulation.IdleSwaySeconds < 6f)
             {
@@ -480,7 +515,7 @@ namespace UrbanWildlife.EditorTools
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=6 animal_sprites=6 map_sprites=1 " +
                 "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True web_style_motion=True " +
                 "animal_side_profile=True palette_harmonized=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
-                "real_size_order=True walk_cycles=6");
+                "real_size_order=True stepped_animation=True actions=idle/turn/walk/feed/sit/rise");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

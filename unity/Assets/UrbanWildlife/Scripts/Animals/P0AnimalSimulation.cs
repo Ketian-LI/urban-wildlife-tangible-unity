@@ -16,7 +16,12 @@ namespace UrbanWildlife.Animals
         public const float PigeonDisplayLength = 0.30f;
         public const float SquirrelDisplayLength = 0.44f;
         public const float FoxDisplayLength = 0.72f;
-        public const int WalkFrameCount = 2;
+        public const int IdleFrameCount = SteppedCharacterAnimation.IdleFrameCount;
+        public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
+        public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
+        public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
+        public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
+        public const int RiseFrameCount = SteppedCharacterAnimation.RiseFrameCount;
         public const float ScreenFacingSpriteRotationDegrees = 0f;
         public const float IdleSwaySeconds = 7.2f;
         public const float PigeonPresentationSaturation = 0.78f;
@@ -43,8 +48,15 @@ namespace UrbanWildlife.Animals
             public Vector3 artworkBasePosition;
             public float animationOffset;
             public bool facingRight;
+            public bool turnFromFacingRight;
             public bool ownsMaterial;
             public AnimalActivityState lastState;
+            public CharacterAnimationAction lastAnimationAction;
+            public Vector2 lastMovementDirection;
+            public float actionStartedAt;
+            public float turnStartedAt;
+            public float turnEndsAt;
+            public float riseEndsAt;
         }
 
         private readonly List<RuntimeAnimal> animals = new List<RuntimeAnimal>();
@@ -132,16 +144,23 @@ namespace UrbanWildlife.Animals
                 Vector2 current = animal.model.Position;
                 animal.visual.localPosition = new Vector3(current.x, 0.28f, current.y);
                 Vector2 movement = current - previous;
-                if (Mathf.Abs(movement.x) > 0.00001f)
+                bool moving = movement.sqrMagnitude > 0.000001f;
+                if (moving)
                 {
-                    animal.facingRight = movement.x >= 0f;
+                    UpdateHeading(animal, movement);
                 }
-                ApplyMotion(animal, movement.sqrMagnitude > 0.000001f);
                 if (animal.lastState != animal.model.State)
                 {
+                    if ((animal.lastState == AnimalActivityState.Feeding ||
+                         animal.lastState == AnimalActivityState.Resting) &&
+                        animal.model.State != animal.lastState)
+                    {
+                        BeginRise(animal);
+                    }
                     animal.lastState = animal.model.State;
                     ApplyColour(animal);
                 }
+                ApplyMotion(animal, moving);
             }
         }
 
@@ -196,7 +215,10 @@ namespace UrbanWildlife.Animals
                     visual = visual.transform,
                     animationOffset = index * 1.37f,
                     facingRight = (index & 1) == 0,
+                    turnFromFacingRight = (index & 1) == 0,
                     lastState = model.State,
+                    lastAnimationAction = CharacterAnimationAction.Idle,
+                    actionStartedAt = Time.time,
                 };
                 CreateArtwork(runtime);
                 ApplyColour(runtime);
@@ -312,42 +334,101 @@ namespace UrbanWildlife.Animals
 
         private static void ApplyMotion(RuntimeAnimal animal, bool moving)
         {
-            float time = Time.time + animal.animationOffset;
-            float walkFramesPerSecond = WalkFramesPerSecondFor(animal.model.Species);
-            float stepPhase = time * walkFramesPerSecond;
+            CharacterAnimationAction action = ResolveAction(animal, moving);
+            if (animal.lastAnimationAction != action)
+            {
+                animal.lastAnimationAction = action;
+                animal.actionStartedAt = Time.time;
+            }
+
+            float elapsed = Mathf.Max(0f, Time.time - animal.actionStartedAt);
+            float speciesRate = WalkFramesPerSecondFor(animal.model.Species) /
+                SteppedCharacterAnimation.FramesPerSecond;
+            float sampledElapsed = action == CharacterAnimationAction.Walking
+                ? elapsed * speciesRate
+                : elapsed;
+            float offset = IsLooping(action) ? animal.animationOffset : 0f;
+            CharacterPose pose = SteppedCharacterAnimation.Sample(action, sampledElapsed, offset);
             if (animal.spriteRenderer != null)
             {
-                bool useAlternateFrame = moving &&
+                bool useAlternateFrame =
                     animal.alternateWalkSprite != null &&
-                    (Mathf.FloorToInt(stepPhase) & 1) == 1;
+                    SteppedCharacterAnimation.UseAlternateArtwork(action, pose.FrameIndex);
                 animal.spriteRenderer.sprite = useAlternateFrame
                     ? animal.alternateWalkSprite
                     : animal.standingSprite;
-                animal.spriteRenderer.flipX = !animal.facingRight;
+                bool renderedFacingRight = action == CharacterAnimationAction.Turning &&
+                    !SteppedCharacterAnimation.HasTurnPassedMidpoint(
+                        Mathf.Max(0f, Time.time - animal.turnStartedAt))
+                    ? animal.turnFromFacingRight
+                    : animal.facingRight;
+                animal.spriteRenderer.flipX = !renderedFacingRight;
             }
 
-            float sway = moving
-                ? Mathf.Sin(stepPhase * Mathf.PI) * 0.45f
-                : Mathf.Sin(time * (2f * Mathf.PI / IdleSwaySeconds)) * 1.15f;
             animal.visual.localRotation = Quaternion.Euler(
                 0f,
-                ScreenFacingSpriteRotationDegrees + sway,
+                ScreenFacingSpriteRotationDegrees + pose.SwayDegrees,
                 0f);
 
-            float pulse = 1f;
+            animal.artwork.localScale = Vector3.Scale(
+                animal.artworkBaseScale,
+                new Vector3(pose.WidthScale, pose.HeightScale, 1f));
+            float liftScale = StepLiftFor(animal.model.Species) / 0.004f;
+            animal.artwork.localPosition = animal.artworkBasePosition +
+                Vector3.up * (pose.Lift * liftScale);
+        }
+
+        private static CharacterAnimationAction ResolveAction(RuntimeAnimal animal, bool moving)
+        {
+            if (Time.time < animal.turnEndsAt)
+            {
+                return CharacterAnimationAction.Turning;
+            }
+            if (Time.time < animal.riseEndsAt)
+            {
+                return CharacterAnimationAction.Rising;
+            }
             if (animal.model.State == AnimalActivityState.Feeding)
             {
-                pulse += Mathf.Sin(time * 5f) * 0.018f;
+                return CharacterAnimationAction.Feeding;
             }
-            else if (!moving)
+            if (animal.model.State == AnimalActivityState.Resting)
             {
-                pulse += Mathf.Sin(time * 1.2f) * 0.007f;
+                return CharacterAnimationAction.Sitting;
             }
-            animal.artwork.localScale = animal.artworkBaseScale * pulse;
-            float gaitLift = moving
-                ? Mathf.Abs(Mathf.Sin(stepPhase * Mathf.PI)) * StepLiftFor(animal.model.Species)
-                : 0f;
-            animal.artwork.localPosition = animal.artworkBasePosition + Vector3.up * gaitLift;
+            return moving
+                ? CharacterAnimationAction.Walking
+                : CharacterAnimationAction.Idle;
+        }
+
+        private static void UpdateHeading(RuntimeAnimal animal, Vector2 movement)
+        {
+            Vector2 direction = movement.normalized;
+            bool changedDirection = animal.lastMovementDirection.sqrMagnitude > 0.5f &&
+                Vector2.Dot(animal.lastMovementDirection, direction) < 0.72f;
+            bool nextFacingRight = Mathf.Abs(direction.x) > 0.0001f
+                ? direction.x >= 0f
+                : animal.facingRight;
+            if (changedDirection || nextFacingRight != animal.facingRight)
+            {
+                animal.turnFromFacingRight = animal.facingRight;
+                animal.facingRight = nextFacingRight;
+                animal.turnStartedAt = Time.time;
+                animal.turnEndsAt = Time.time + SteppedCharacterAnimation.TurnSeconds;
+            }
+            animal.lastMovementDirection = direction;
+        }
+
+        private static void BeginRise(RuntimeAnimal animal)
+        {
+            animal.riseEndsAt = Time.time + SteppedCharacterAnimation.RiseSeconds;
+        }
+
+        private static bool IsLooping(CharacterAnimationAction action)
+        {
+            return action == CharacterAnimationAction.Idle ||
+                action == CharacterAnimationAction.Walking ||
+                action == CharacterAnimationAction.Feeding;
         }
 
         private static void ApplyColour(RuntimeAnimal animal)

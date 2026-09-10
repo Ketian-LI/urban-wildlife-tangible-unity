@@ -41,8 +41,14 @@ Prompt direction: handcrafted museum-quality miniature park diorama viewed direc
 
 Prompt direction: use the tactile board structure of B as the foundation, add restrained coloured-pencil paper grain and layered botanical illustration, reduce perimeter decoration by roughly one third, and reserve coral and mustard for small functional accents. People, animals and landscape use the same matte wooden-paper token language; plaza and pond boundaries are built into their materials instead of drawn as coloured rings.
 
+### F — Expressive natural-history print
+
+![Option F](option-f-expressive-natural-history-print.png)
+
+Prompt direction: push E toward an authored natural-history print using coloured-pencil hatching, variable ink outlines, linocut marks, risograph texture and selective vermilion/magenta accents. Exaggerate animal and botanical silhouettes while keeping the asphalt path as a clear near-charcoal field and preserving open playable grass. Use British urban-park vegetation and no coloured zone rings.
+
 ## Suggested decision
 
-Option E is the recommended combined direction. It keeps the tangible quality of B and the readability needed for the Unity MVP, while adding a more personal coloured-pencil and botanical illustration identity.
+Option F is the strongest high-character art direction; option E remains the safer, quieter alternative. F should be implemented with two texture levels: expressive detail in the environment and simpler, higher-contrast surfaces in camera-critical path and token recognition areas.
 
 Generated with the built-in image generation model using `visual-layer-v11-unified-character-palette-preview.png` as the composition reference.

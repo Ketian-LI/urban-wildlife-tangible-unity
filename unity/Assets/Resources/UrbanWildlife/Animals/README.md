@@ -2,6 +2,12 @@
 
 This directory contains the generated Unity animal presentation assets used by the P0 prototype.
 
+## Active V0.5 six-frame walking sequences
+
+Pigeon, Squirrel and Fox now each use six independent right-facing side-profile frames during `Walking`. The two pigeon feet and the quadrupeds' diagonal limb pairs alternate front/back through contact, transfer and passing poses. Each set is normalized to a stable species width, centre and paw baseline; runtime disables procedural whole-body squash, stretch and lift while the true frames play.
+
+Active files are `pigeon-walk-01-v01.png` through `pigeon-walk-06-v01.png`, with equivalent `squirrel-walk-*` and `fox-walk-*` sets. Source contact sheets, exact built-in image-generation prompts and conversion notes are retained in `docs/images/unity/animation-frames-v03/`.
+
 ## Active V0.4 pigeon feeding sequence
 
 The pigeon now has six independently drawn feeding frames at the shared 8 FPS stepped-animation rate:
@@ -13,7 +19,7 @@ The pigeon now has six independently drawn feeding frames at the shared 8 FPS st
 - `pigeon-side-feed-05-v01.png`: rising
 - `pigeon-side-feed-06-v01.png`: upright return
 
-The frames were generated as one 3 x 2 contact sheet, split into equal 512 x 512 cells with `tools/split_sprite_sheet.py`, and converted from a uniform green isolation plate to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`. Runtime uses the true frames only for the pigeon Feeding state; squirrel and fox retain the procedural pose fallback until their own sets are approved.
+The frames were generated as one 3 x 2 contact sheet, split into equal 512 x 512 cells with `tools/split_sprite_sheet.py`, and converted from a uniform green isolation plate to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`. All three species now have approved independent Feeding sets; this section preserves the original pigeon prompt.
 
 Generation mode: built-in image generation tool. Final prompt:
 
@@ -23,9 +29,9 @@ Create a production-ready six-frame Unity sprite sheet for one urban rock pigeon
 
 Contact sheet: `docs/images/unity/animation-frames-v01/pigeon-feed-sheet-v01.png`.
 
-## Active V0.3 side-profile walk set
+## Superseded V0.3 two-frame side-profile walk set
 
-Updated on 2026-09-10 after comparison with the earlier web simulation. Each species now uses two right-facing side-profile frames. Runtime movement keeps the artwork screen-facing, alternates the frames only while moving, and uses horizontal flipping instead of continuously rotating the entire animal toward every waypoint.
+These two-frame assets established the side-profile identities after comparison with the earlier web simulation. They remain as visual fallbacks; the active Walking state now uses the V0.5 six-frame sequences above.
 
 Active assets:
 

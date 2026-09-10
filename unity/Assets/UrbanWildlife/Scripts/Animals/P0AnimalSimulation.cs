@@ -19,6 +19,10 @@ namespace UrbanWildlife.Animals
         public const int IdleFrameCount = SteppedCharacterAnimation.IdleFrameCount;
         public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
         public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
+        public const int WalkArtworkFrameCount = 6;
+        public const int PigeonWalkArtworkFrameCount = WalkArtworkFrameCount;
+        public const int SquirrelWalkArtworkFrameCount = WalkArtworkFrameCount;
+        public const int FoxWalkArtworkFrameCount = WalkArtworkFrameCount;
         public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
         public const int FeedArtworkFrameCount = 6;
         public const int PigeonFeedArtworkFrameCount = FeedArtworkFrameCount;
@@ -48,6 +52,7 @@ namespace UrbanWildlife.Animals
             public SpriteRenderer spriteRenderer;
             public Sprite standingSprite;
             public Sprite alternateWalkSprite;
+            public Sprite[] walkingSprites;
             public Sprite[] feedingSprites;
             public Vector3 artworkBaseScale;
             public Vector3 artworkBasePosition;
@@ -296,6 +301,9 @@ namespace UrbanWildlife.Animals
                 animal.spriteRenderer = spriteRenderer;
                 animal.standingSprite = sourceSprite;
                 animal.alternateWalkSprite = alternateWalkSprite;
+                animal.walkingSprites = LoadActionSprites(
+                    WalkingResourcePrefixFor(animal.model.Species),
+                    WalkArtworkFrameCount);
                 animal.feedingSprites = LoadActionSprites(
                     FeedingResourcePrefixFor(animal.model.Species),
                     FeedArtworkFrameCount);
@@ -355,9 +363,13 @@ namespace UrbanWildlife.Animals
             float sampledElapsed = action == CharacterAnimationAction.Walking
                 ? elapsed * speciesRate
                 : elapsed;
-            bool hasActionArtwork = action == CharacterAnimationAction.Feeding &&
+            bool hasWalkingArtwork = action == CharacterAnimationAction.Walking &&
+                animal.walkingSprites != null &&
+                animal.walkingSprites.Length == WalkFrameCount;
+            bool hasFeedingArtwork = action == CharacterAnimationAction.Feeding &&
                 animal.feedingSprites != null &&
                 animal.feedingSprites.Length == FeedFrameCount;
+            bool hasActionArtwork = hasWalkingArtwork || hasFeedingArtwork;
             float offset = IsLooping(action) && !hasActionArtwork
                 ? animal.animationOffset
                 : 0f;
@@ -368,7 +380,9 @@ namespace UrbanWildlife.Animals
             {
                 if (usesActionArtwork)
                 {
-                    selectedSprite = animal.feedingSprites[pose.FrameIndex];
+                    selectedSprite = hasWalkingArtwork
+                        ? animal.walkingSprites[pose.FrameIndex]
+                        : animal.feedingSprites[pose.FrameIndex];
                 }
                 else
                 {
@@ -513,6 +527,19 @@ namespace UrbanWildlife.Animals
                     return "UrbanWildlife/Animals/squirrel-feed";
                 default:
                     return "UrbanWildlife/Animals/fox-feed";
+            }
+        }
+
+        private static string WalkingResourcePrefixFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return "UrbanWildlife/Animals/pigeon-walk";
+                case AnimalSpecies.Squirrel:
+                    return "UrbanWildlife/Animals/squirrel-walk";
+                default:
+                    return "UrbanWildlife/Animals/fox-walk";
             }
         }
 

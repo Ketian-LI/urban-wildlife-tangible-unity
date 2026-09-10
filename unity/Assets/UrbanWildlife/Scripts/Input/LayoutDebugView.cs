@@ -111,18 +111,6 @@ namespace UrbanWildlife.Input
                 Debug.LogWarning("Illustrated S001 map is missing; using a green fallback surface.");
             }
 
-            CreateEllipseOutline(
-                boardRoot.transform,
-                "Central plaza guide",
-                NormalizedToLocal(0.5f, 0.3f, 0.07f),
-                new Vector2(2f, 1.4f),
-                new Color(0.96f, 0.76f, 0.38f, 0.9f));
-            CreateEllipseOutline(
-                boardRoot.transform,
-                "Pond guide",
-                NormalizedToLocal(0.556f, 0.7f, 0.07f),
-                new Vector2(1.8f, 1.2f),
-                new Color(0.38f, 0.78f, 0.78f, 0.9f));
             CreateParkGateGuide(boardRoot.transform, "Entrance A guide", 0.033f, 0.5f, 0.6f, 0.8f, "A", "ENTRY");
             CreateParkGateGuide(boardRoot.transform, "Exit B guide", 0.967f, 0.5f, 0.6f, 0.8f, "B", "EXIT");
         }

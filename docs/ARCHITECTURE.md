@@ -179,9 +179,9 @@ Observed crossings, feeding, waiting and avoidance
 - `AnimalEnvironmentPlanner`负责布局到动物资源关系的确定性映射，`AnimalAgentStateMachine`不依赖Unity场景对象，`P0AnimalSimulation`只负责运行期感知、实例和可视化。
 - 动物显示层与行为状态机保持分离：`P0AnimalSimulation`从`Resources/UrbanWildlife/Animals`加载透明俯视Sprite，并只根据状态机结果处理平滑转向、待机摆动、进食脉动与状态色；替换美术不会改变生态规则或研究日志。
 - V0.2松鼠和狐狸通过透明轮廓顶点的宽高比进行显示层回归检查：松鼠使用宽圆C形侧尾，狐狸使用细长直尾、黑腿和白色尾尖；检查只保护地图尺寸下的物种可辨性，不参与行为判定。
-- 动物位置仍完全由状态机决定；表现层以8 FPS采样共用待机、转身、行走、进食、坐下和起身节奏。鸽子、松鼠和狐狸的Feeding各使用6张独立Sprite，其余动作可回退到两图循环与轻微程序姿态，不改变生态逻辑。
-- S001环境显示层从`Resources/UrbanWildlife/Environment`加载3:2城市公园V0.3底图；红砖街区、铺装、围栏、路灯、植被和池塘只建立空间语境，入口、出口、广场与池塘的精确边界仍由场景JSON坐标驱动的矢量线叠加，底图像素不参与规则判断。
-- 人类显示层从`Resources/UrbanWildlife/Humans`按Archetype加载透明Sprite。`HumanAgentStateMachine`继续决定位置和状态；表现层为Walker行走、Dweller坐下/起身和Visitor喂食选择独立动作帧，其他动作保留共用离散关键帧与回退图。
+- 动物位置仍完全由状态机决定；表现层以8 FPS采样共用待机、转身、行走、进食、坐下和起身节奏。鸽子、松鼠和狐狸的Walking与Feeding各使用6张独立Sprite；行走帧直接绘制两腿或四肢的交替步态，启用时关闭整只动物的程序缩放和抬升，不改变生态逻辑。
+- S001环境显示层从`Resources/UrbanWildlife/Environment`加载3:2城市公园V0.3底图；红砖街区、铺装、围栏、路灯、植被和池塘只建立空间语境。入口/出口仍有运行时门体提示；广场与池塘不再叠加黄色或青色轮廓，规划判定始终读取场景JSON中的精确坐标，底图像素不参与规则判断。
+- 人类显示层从`Resources/UrbanWildlife/Humans`按Archetype加载透明Sprite。`HumanAgentStateMachine`继续决定位置和状态；Walker、Dweller和Visitor的Walking各使用6张独立帧，每组以角色参考帧统一高度、水平中心和鞋底基线。Dweller坐下/起身和Visitor喂食继续选择各自独立动作帧，其余动作保留共用离散关键帧与回退图。
 - Walker、Dweller与Visitor统一采用高角度斜俯视正脸Sprite，眼、鼻和嘴在地图尺寸下可读；脸与鞋尖均朝源图下方。P0HumanSimulation先加入固定180°朝向补偿，再按移动方向整体旋转Sprite，不单独改变脸、腿或脚。
 - 角色显示层以约1 Unity单位对应2米的代表性体长作为相对比例基准：Walker 0.89、Dweller 0.84、Visitor 0.85、鸽子0.30、松鼠0.44、狐狸0.72。后3项为地图可读性调整后的显示长度；该值只缩放Sprite，不进入路线速度、干扰半径、碰撞或生态判定。
 - `LayoutDebugView`把每次确认布局组织为7个语义根对象：1个地图、1条路径和5个Token；装饰子对象不再影响输入验收计数。运行期创建的Mesh和Material在重载布局时显式释放。

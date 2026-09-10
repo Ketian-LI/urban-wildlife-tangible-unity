@@ -117,6 +117,19 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"Refined P0 visual is missing: {visualPath}");
                 }
             }
+            string[] removedGuidePaths =
+            {
+                "Runtime Illustrated Layout/Board 90x60cm/Central plaza guide",
+                "Runtime Illustrated Layout/Board 90x60cm/Pond guide",
+            };
+            foreach (string removedGuidePath in removedGuidePaths)
+            {
+                if (smokeObject.transform.Find(removedGuidePath) != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Obsolete coloured planning ring is still present: {removedGuidePath}");
+                }
+            }
             UnityEngine.Object.DestroyImmediate(smokeObject);
 
             string scenarioPath = Path.GetFullPath(Path.Combine(
@@ -356,6 +369,26 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 animal walk sprite is missing or invalid: {spritePath}");
                 }
             }
+            string[] animalTrueWalkSpritePaths = new[]
+            {
+                "pigeon-walk",
+                "squirrel-walk",
+                "fox-walk",
+            }
+                .SelectMany(prefix => Enumerable.Range(
+                        1,
+                        P0AnimalSimulation.WalkArtworkFrameCount)
+                    .Select(index => $"UrbanWildlife/Animals/{prefix}-{index:00}-v01"))
+                .ToArray();
+            foreach (string spritePath in animalTrueWalkSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.x <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"P0 animal true-walk sprite is missing or invalid: {spritePath}");
+                }
+            }
             string[] pigeonFeedSpritePaths = Enumerable.Range(
                     1,
                     P0AnimalSimulation.PigeonFeedArtworkFrameCount)
@@ -392,6 +425,10 @@ namespace UrbanWildlife.EditorTools
             if (P0AnimalSimulation.IdleFrameCount != 3 ||
                 P0AnimalSimulation.TurnFrameCount != 3 ||
                 P0AnimalSimulation.WalkFrameCount != 6 ||
+                P0AnimalSimulation.WalkArtworkFrameCount != 6 ||
+                P0AnimalSimulation.PigeonWalkArtworkFrameCount != 6 ||
+                P0AnimalSimulation.SquirrelWalkArtworkFrameCount != 6 ||
+                P0AnimalSimulation.FoxWalkArtworkFrameCount != 6 ||
                 P0AnimalSimulation.FeedFrameCount != 6 ||
                 P0AnimalSimulation.PigeonFeedArtworkFrameCount != 6 ||
                 P0AnimalSimulation.SquirrelFeedArtworkFrameCount != 6 ||
@@ -427,6 +464,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_ANIMAL_FLIPBOOK_SMOKE_OK idle=3 turn=3 walk=6 feed=6 sit=4 rise=4 " +
                 "species=3 screen_facing=True flip_x=True");
+            Debug.Log(
+                "UNITY_ANIMAL_WALK_ARTWORK_SMOKE_OK species=3 frames_per_species=6 " +
+                "leg_alternation=True normalized_scale=True procedural_deformation=False");
             Debug.Log(
                 "UNITY_PIGEON_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
                 "sequence=stand/lower/peck/peck/rise/stand procedural_fallback=True");
@@ -476,17 +516,24 @@ namespace UrbanWildlife.EditorTools
                         $"P0 visitor feeding sprite is missing or invalid: {spritePath}");
                 }
             }
-            string[] walkerWalkSpritePaths = Enumerable.Range(
-                    1,
-                    P0HumanSimulation.WalkerWalkArtworkFrameCount)
-                .Select(index => $"UrbanWildlife/Humans/walker-walk-{index:00}-v01")
+            string[] humanTrueWalkSpritePaths = new[]
+            {
+                new { Prefix = "walker-walk", Version = "v02" },
+                new { Prefix = "dweller-walk", Version = "v01" },
+                new { Prefix = "visitor-walk", Version = "v01" },
+            }
+                .SelectMany(item => Enumerable.Range(
+                        1,
+                        P0HumanSimulation.HumanWalkArtworkFrameCount)
+                    .Select(index =>
+                        $"UrbanWildlife/Humans/{item.Prefix}-{index:00}-{item.Version}"))
                 .ToArray();
             string[] dwellerSitSpritePaths = Enumerable.Range(
                     1,
                     P0HumanSimulation.DwellerSitArtworkFrameCount)
                 .Select(index => $"UrbanWildlife/Humans/dweller-sit-{index:00}-v01")
                 .ToArray();
-            foreach (string spritePath in walkerWalkSpritePaths.Concat(dwellerSitSpritePaths))
+            foreach (string spritePath in humanTrueWalkSpritePaths.Concat(dwellerSitSpritePaths))
             {
                 Sprite sprite = Resources.Load<Sprite>(spritePath);
                 if (sprite == null || sprite.texture == null || sprite.bounds.size.y <= 0f)
@@ -499,7 +546,10 @@ namespace UrbanWildlife.EditorTools
                 P0HumanSimulation.TurnFrameCount != 3 ||
                 P0HumanSimulation.WalkFrameCount != 6 ||
                 P0HumanSimulation.FeedFrameCount != 6 ||
+                P0HumanSimulation.HumanWalkArtworkFrameCount != 6 ||
                 P0HumanSimulation.WalkerWalkArtworkFrameCount != 6 ||
+                P0HumanSimulation.DwellerWalkArtworkFrameCount != 6 ||
+                P0HumanSimulation.VisitorWalkArtworkFrameCount != 6 ||
                 P0HumanSimulation.VisitorFeedArtworkFrameCount != 6 ||
                 P0HumanSimulation.SitFrameCount != 4 ||
                 P0HumanSimulation.DwellerSitArtworkFrameCount != 4 ||
@@ -531,6 +581,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_HUMAN_FLIPBOOK_SMOKE_OK idle=3 turn=3 walk=6 feed=6 sit=4 rise=4 " +
                 "roles=3 fps=8");
+            Debug.Log(
+                "UNITY_HUMAN_WALK_ARTWORK_SMOKE_OK roles=3 frames_per_role=6 " +
+                "normalized_height=True fixed_baseline=True procedural_deformation=False");
             Debug.Log(
                 "UNITY_VISITOR_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
                 "sequence=stand/reach/extend/release/withdraw/stand procedural_fallback=True");
@@ -597,11 +650,15 @@ namespace UrbanWildlife.EditorTools
             Debug.Log("UNITY_PLANNING_AREA_SMOKE_OK woodland=forest food_hotspots=bench/plaza ids_preserved=True");
             Debug.Log("UNITY_PARK_GATE_SMOKE_OK entrance=open_fence_gate exit=mirrored_open_fence_gate ids=A/B");
             Debug.Log(
-                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=22 animal_sprites=24 map_sprites=1 " +
+                "UNITY_FIXED_REGION_PRESENTATION_SMOKE_OK plaza_ring=False pond_ring=False " +
+                "background_landmarks=True");
+            Debug.Log(
+                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=40 animal_sprites=42 map_sprites=1 " +
                 "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True web_style_motion=True " +
                 "animal_side_profile=True palette_harmonized=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
                 "real_size_order=True stepped_animation=True actions=idle/turn/walk/feed/sit/rise " +
-                "true_action_artwork=pigeon_feed/squirrel_feed/fox_feed/walker_walk/dweller_sit_rise/visitor_feed");
+                "true_action_artwork=pigeon_walk_feed/squirrel_walk_feed/fox_walk_feed/" +
+                "walker_walk/dweller_walk_sit_rise/visitor_walk_feed");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

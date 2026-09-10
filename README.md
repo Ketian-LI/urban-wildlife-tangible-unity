@@ -64,6 +64,8 @@ urban-wildlife-tangible-unity/
 - [x] 完成人类与动物六类动作的8 FPS逐帧节奏样板
 - [x] 接入三种动物进食、Walker行走、Dweller坐下/起身与Visitor喂食的独立逐帧动画素材
 - [x] 将Unity底图更新为有红砖街区、围栏、路灯、城市铺装与管理型池塘的城市公园V0.3
+- [x] 移除广场与池塘的黄/蓝提示圈，以铺装、岸线与植被直接表达固定区域
+- [x] 完成三类人物的等高等基线6帧行走，并接入三种动物的前后肢交替行走帧
 - [x] 完成Plan、Confirm、Run、Observe单周期与最小研究日志输出
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 

@@ -2,11 +2,17 @@
 
 Generated on 2026-09-09 with the built-in image generation tool for the Unity P0 prototype.
 
+## Active V0.7 stabilized walking sequences
+
+Walker, Dweller and Visitor now each use six independent high-angle, front-readable walking frames. All frames in a role share a normalized character height, horizontal centre and shoe baseline, so adjacent poses no longer change the person's apparent size or flash vertically. Runtime uses `walker-walk-01-v02.png` through `walker-walk-06-v02.png`, plus the corresponding `dweller-walk-*-v01.png` and `visitor-walk-*-v01.png` sets, and disables procedural squash, stretch and lift while they play.
+
+The source contact sheets, exact built-in image-generation prompts and deterministic background-removal/normalization notes are retained in `docs/images/unity/animation-frames-v03/`.
+
 ## Active V0.6 Visitor feeding sequence
 
 Visitor now uses six independently drawn frames during the `Visiting` state: upright, reaching into the satchel, extending seed, releasing seed, withdrawing the hand and returning upright. The character remains front-readable from the same high-angle map view, with realistic adult proportions and both face and shoe toes oriented consistently.
 
-The source is a 3 x 2 contact sheet split into equal 512 x 512 cells with `tools/split_sprite_sheet.py`, then converted from uniform green to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`. The active files are `visitor-feed-01-v01.png` through `visitor-feed-06-v01.png`. Walker and Dweller retain their procedural action-pose fallback until separate true-frame sets are approved.
+The source is a 3 x 2 contact sheet split into equal 512 x 512 cells with `tools/split_sprite_sheet.py`, then converted from uniform green to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`. The active files are `visitor-feed-01-v01.png` through `visitor-feed-06-v01.png`. Independent walking sets for all three roles and Dweller's separate sit/rise set are now approved; common procedural poses remain only for actions without dedicated artwork.
 
 Generation mode: built-in image generation tool. Final prompt:
 

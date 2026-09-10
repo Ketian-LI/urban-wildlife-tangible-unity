@@ -20,7 +20,10 @@ namespace UrbanWildlife.Humans
         public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
         public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
         public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
-        public const int WalkerWalkArtworkFrameCount = 6;
+        public const int HumanWalkArtworkFrameCount = 6;
+        public const int WalkerWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
+        public const int DwellerWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
+        public const int VisitorWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
         public const int VisitorFeedArtworkFrameCount = 6;
         public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
         public const int DwellerSitArtworkFrameCount = 4;
@@ -308,7 +311,8 @@ namespace UrbanWildlife.Humans
                 human.alternateWalkSprite = alternateWalkSprite;
                 human.walkingSprites = LoadActionSprites(
                     WalkingResourcePrefixFor(human.model.Archetype),
-                    WalkerWalkArtworkFrameCount);
+                    HumanWalkArtworkFrameCount,
+                    WalkingResourceVersionFor(human.model.Archetype));
                 human.feedingSprites = LoadActionSprites(
                     FeedingResourcePrefixFor(human.model.Archetype),
                     VisitorFeedArtworkFrameCount);
@@ -547,9 +551,20 @@ namespace UrbanWildlife.Humans
 
         private static string WalkingResourcePrefixFor(HumanArchetype archetype)
         {
-            return archetype == HumanArchetype.Walker
-                ? "UrbanWildlife/Humans/walker-walk"
-                : string.Empty;
+            switch (archetype)
+            {
+                case HumanArchetype.Walker:
+                    return "UrbanWildlife/Humans/walker-walk";
+                case HumanArchetype.Dweller:
+                    return "UrbanWildlife/Humans/dweller-walk";
+                default:
+                    return "UrbanWildlife/Humans/visitor-walk";
+            }
+        }
+
+        private static string WalkingResourceVersionFor(HumanArchetype archetype)
+        {
+            return archetype == HumanArchetype.Walker ? "v02" : "v01";
         }
 
         private static string SittingResourcePrefixFor(HumanArchetype archetype)
@@ -559,7 +574,10 @@ namespace UrbanWildlife.Humans
                 : string.Empty;
         }
 
-        private static Sprite[] LoadActionSprites(string prefix, int frameCount)
+        private static Sprite[] LoadActionSprites(
+            string prefix,
+            int frameCount,
+            string version = "v01")
         {
             if (string.IsNullOrEmpty(prefix))
             {
@@ -570,11 +588,11 @@ namespace UrbanWildlife.Humans
             for (int index = 0; index < frameCount; index += 1)
             {
                 frames[index] = Resources.Load<Sprite>(
-                    $"{prefix}-{index + 1:00}-v01");
+                    $"{prefix}-{index + 1:00}-{version}");
                 if (frames[index] == null)
                 {
                     Debug.LogWarning(
-                        $"Action artwork frame missing: {prefix}-{index + 1:00}-v01. " +
+                        $"Action artwork frame missing: {prefix}-{index + 1:00}-{version}. " +
                         "Using the procedural pose fallback.");
                     return new Sprite[0];
                 }

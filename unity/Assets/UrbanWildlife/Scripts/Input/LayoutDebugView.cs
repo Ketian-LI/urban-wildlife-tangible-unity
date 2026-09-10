@@ -10,6 +10,7 @@ namespace UrbanWildlife.Input
         private const string WoodlandGroveResourcePath = "UrbanWildlife/Environment/woodland-forest-grove-v01";
         private const string PlazaResourcePath = "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string BenchResourcePath = "UrbanWildlife/Environment/human-activity-bench-v01";
+        private const string ParkGateResourcePath = "UrbanWildlife/Environment/park-fence-gate-open-v01";
 
         [SerializeField]
         private Vector2 boardSizeUnits = new Vector2(9f, 6f);
@@ -423,7 +424,8 @@ namespace UrbanWildlife.Input
             string resourcePath,
             float displayWidth,
             float height,
-            int sortingOrder)
+            int sortingOrder,
+            bool mirrorX = false)
         {
             Sprite sprite = Resources.Load<Sprite>(resourcePath);
             if (sprite == null)
@@ -437,7 +439,10 @@ namespace UrbanWildlife.Input
             artwork.transform.localPosition = new Vector3(0f, height, 0f);
             artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             float uniformScale = displayWidth / Mathf.Max(0.001f, sprite.bounds.size.x);
-            artwork.transform.localScale = Vector3.one * uniformScale;
+            artwork.transform.localScale = new Vector3(
+                mirrorX ? -uniformScale : uniformScale,
+                uniformScale,
+                uniformScale);
             SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.sortingOrder = sortingOrder;
@@ -468,6 +473,37 @@ namespace UrbanWildlife.Input
             string label,
             string caption)
         {
+            GameObject guide = new GameObject(name);
+            guide.transform.SetParent(parent, false);
+            guide.transform.localPosition = NormalizedToLocal(xNorm, yNorm, 0.07f);
+            float inward = xNorm < 0.5f ? 1f : -1f;
+            if (CreateEnvironmentSprite(
+                    guide.transform,
+                    "Open wrought-iron fence gate",
+                    ParkGateResourcePath,
+                    1.12f,
+                    0.012f,
+                    26,
+                    inward < 0f))
+            {
+                Transform gateBadge = CreateAnchor(
+                    guide.transform,
+                    $"Gate ID {label}",
+                    new Vector2(inward * 0.36f, 0f));
+                Vector2[] badgeDisc = RegularPolygon(20, 0.095f, 0f);
+                Color badgeInk = new Color(0.16f, 0.1f, 0.045f, 1f);
+                CreatePolygon(
+                    gateBadge,
+                    "Gate ID badge fill",
+                    badgeDisc,
+                    0.052f,
+                    new Color(0.96f, 0.82f, 0.55f, 0.97f),
+                    27);
+                CreateOutline(gateBadge, "Gate ID badge outline", badgeDisc, 0.058f, 0.014f, badgeInk, 28);
+                CreateSmallLabel(gateBadge, label, 0.068f, badgeInk);
+                return;
+            }
+
             Vector2[] points =
             {
                 new Vector2(-width * 0.5f, -height * 0.5f),
@@ -475,13 +511,9 @@ namespace UrbanWildlife.Input
                 new Vector2(width * 0.5f, height * 0.5f),
                 new Vector2(-width * 0.5f, height * 0.5f),
             };
-            GameObject guide = new GameObject(name);
-            guide.transform.SetParent(parent, false);
-            guide.transform.localPosition = NormalizedToLocal(xNorm, yNorm, 0.07f);
             CreatePolygon(guide.transform, "Gate landing", points, 0f, new Color(0.96f, 0.82f, 0.53f, 0.38f), 4);
             CreateOutline(guide.transform, "Boundary", points, 0.01f, 0.018f, new Color(1f, 0.91f, 0.65f, 0.92f), 5);
 
-            float inward = xNorm < 0.5f ? 1f : -1f;
             Vector2[] postOuter =
             {
                 new Vector2(-0.085f, -0.105f),

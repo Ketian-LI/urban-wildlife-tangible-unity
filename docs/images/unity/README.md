@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v08-fence-gates-preview.png`
+
+Rendered on 2026-09-10 in Unity 6000.3.4f1. Entrance A and Exit B now use a strict top-down wrought-iron fence-gate sprite with short boundary fence sections, stone posts, two open gate leaves, and a gravel threshold. Exit B mirrors the source artwork so both gates open toward the park interior. Small A/B badges preserve the research landmarks.
+
+The replacement is visual only. Entrance/exit coordinates and all path-continuity checks are unchanged.
+
 ## `visual-layer-v07-planning-areas-preview.png`
 
 Rendered on 2026-09-10 in Unity 6000.3.4f1 from the active presentation layer. Woodland IDs 20 and 21 now appear as movable forest groves. Food Hotspot IDs 10 and 12 appear as bench rest areas, while ID 11 appears as a small paved plaza. The Food Hotspot meaning is a human-activity/crumb opportunity rather than literal food.

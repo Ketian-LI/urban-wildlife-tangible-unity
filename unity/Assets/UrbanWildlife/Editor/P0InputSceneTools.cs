@@ -101,8 +101,8 @@ namespace UrbanWildlife.EditorTools
             }
             string[] refinedVisualPaths =
             {
-                "Runtime Illustrated Layout/Board 90x60cm/Entrance A guide/Park gate arch",
-                "Runtime Illustrated Layout/Board 90x60cm/Exit B guide/Park gate arch",
+                "Runtime Illustrated Layout/Board 90x60cm/Entrance A guide/Open wrought-iron fence gate",
+                "Runtime Illustrated Layout/Board 90x60cm/Exit B guide/Open wrought-iron fence gate",
                 "Runtime Illustrated Layout/food_hotspot 10/Bench rest area artwork",
                 "Runtime Illustrated Layout/food_hotspot 11/Plaza activity area artwork",
                 "Runtime Illustrated Layout/woodland 20/Woodland forest grove artwork",
@@ -429,6 +429,7 @@ namespace UrbanWildlife.EditorTools
                 "UrbanWildlife/Environment/woodland-forest-grove-v01",
                 "UrbanWildlife/Environment/human-activity-plaza-v01",
                 "UrbanWildlife/Environment/human-activity-bench-v01",
+                "UrbanWildlife/Environment/park-fence-gate-open-v01",
             };
             foreach (string spritePath in planningAreaSpritePaths)
             {
@@ -439,9 +440,10 @@ namespace UrbanWildlife.EditorTools
                 }
             }
             Debug.Log("UNITY_PLANNING_AREA_SMOKE_OK woodland=forest food_hotspots=bench/plaza ids_preserved=True");
+            Debug.Log("UNITY_PARK_GATE_SMOKE_OK entrance=open_fence_gate exit=mirrored_open_fence_gate ids=A/B");
             Debug.Log(
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=6 animal_sprites=6 map_sprites=1 " +
-                "planning_area_sprites=3 semantic_elements=7 refined_visuals=6 realistic_path=True human_heading_offset=180 " +
+                "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 realistic_path=True human_heading_offset=180 " +
                 "human_lengths=0.89/0.84/0.85 real_size_order=True walk_cycles=6");
 
             string loggerSmokeRoot = Path.Combine(

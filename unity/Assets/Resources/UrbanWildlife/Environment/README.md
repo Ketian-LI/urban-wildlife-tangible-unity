@@ -64,6 +64,7 @@ Generated on 2026-09-10 with the built-in image generation tool. These presentat
 - `woodland-forest-grove-v01.png`: Woodland IDs 20 and 21.
 - `human-activity-bench-v01.png`: even Food Hotspot IDs 10 and 12.
 - `human-activity-plaza-v01.png`: odd Food Hotspot ID 11.
+- `park-fence-gate-open-v01.png`: Entrance A and its mirrored Exit B.
 
 The simulation still records `woodland` and `food_hotspot`. “Food Hotspot” now means a human-activity setting where discarded crumbs or feeding opportunities may occur, not a literal movable food object.
 
@@ -103,4 +104,20 @@ Use case: precise-object-edit. Asset type: Unity environment sprite isolation pl
 
 ```text
 Use case: precise-object-edit. Asset type: Unity environment sprite isolation plate. Preserve the bench rest area itself exactly: same strict top-down wooden slat bench, dark iron supports, rounded gravel pad, grass fringe, flowers, colors, painterly style, scale, centering, and complete silhouette. Change ONLY the entire background and glow outside the rest area to one perfectly flat uniform chroma-key green RGB (0,255,0), hex #00FF00. The green must stop at the rest area's clean antialiased silhouette. No dark vignette, gradient, cast shadow plate beyond the rest area, aura, glow, checkerboard, texture outside the area, people, animals, bins, signs, food, text, label, border, or watermark.
+```
+
+## Open fence gate V0.1
+
+The same transparent gate sprite is used at both park openings. Entrance A uses the source orientation; Exit B mirrors it horizontally so both pairs of gate leaves open toward the park interior. The small A/B badges are drawn separately by Unity.
+
+### Gate generation prompt
+
+```text
+Use case: stylized-concept. Asset type: transparent Unity top-down environment sprite. The supplied park board is a STYLE REFERENCE ONLY. Create one clearly readable public-park wrought-iron fence gate viewed in strict orthographic directly overhead view. Orientation is exact: the boundary fence runs vertically from the TOP edge toward the BOTTOM edge of the sprite, with a central pedestrian opening that allows travel horizontally from LEFT to RIGHT. At the upper and lower sides of the opening are two sturdy square warm-stone gateposts. Short dark charcoal wrought-iron fence panels extend vertically upward from the upper post and vertically downward from the lower post. Two matching iron gate leaves are hinged to those posts and stand visibly open about 55 degrees toward the RIGHT side, forming a welcoming open passage; include a small warm gravel threshold inside the opening. The gate should look like a real British urban park entrance, with readable parallel bars and small restrained finials, not an abstract icon or arch. Match the gentle hand-painted semi-realistic park-game illustration, refined texture, soft daylight and palette of the reference. Center the complete gate-and-short-fence assembly with generous padding on a genuinely transparent RGBA background and clean antialiased edges. No people, animals, signs, lettering, labels, arrows, numbers, food, benches, trees, large ground patch, border, vignette, glow, watermark, checkerboard, perspective tilt, front view, or closed gate.
+```
+
+### Gate isolation prompt
+
+```text
+Use case: precise-object-edit. Asset type: Unity environment sprite isolation plate. Preserve the complete park gate assembly exactly: identical strict top-down composition, vertical fence line, two short fence runs, two stone posts, two open wrought-iron gate leaves pointing right, gravel threshold, bars, finials, colors, painterly rendering, scale, centering, and every object edge. Change ONLY every checkerboard/background pixel outside the gate, fence, posts, and gravel threshold to one perfectly flat uniform chroma-key green RGB (0,255,0), hex #00FF00. The green must stop at clean antialiased object edges. No checkerboard, white/grey squares, vignette, gradient, cast shadow plate, aura, glow, extra fence, extra gate, text, label, arrow, number, border, or watermark. Do not redraw or restyle the gate.
 ```

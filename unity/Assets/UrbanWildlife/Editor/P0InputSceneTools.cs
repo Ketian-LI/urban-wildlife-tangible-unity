@@ -103,8 +103,9 @@ namespace UrbanWildlife.EditorTools
             {
                 "Runtime Illustrated Layout/Board 90x60cm/Entrance A guide/Park gate arch",
                 "Runtime Illustrated Layout/Board 90x60cm/Exit B guide/Park gate arch",
-                "Runtime Illustrated Layout/food_hotspot 10/Activity dot 0",
-                "Runtime Illustrated Layout/woodland 20/Woodland central vein",
+                "Runtime Illustrated Layout/food_hotspot 10/Bench rest area artwork",
+                "Runtime Illustrated Layout/food_hotspot 11/Plaza activity area artwork",
+                "Runtime Illustrated Layout/woodland 20/Woodland forest grove artwork",
                 "Runtime Illustrated Layout/Planned Human Path/Road gravel surface",
             };
             foreach (string visualPath in refinedVisualPaths)
@@ -423,9 +424,24 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("P0 illustrated park map is missing or invalid.");
             }
+            string[] planningAreaSpritePaths =
+            {
+                "UrbanWildlife/Environment/woodland-forest-grove-v01",
+                "UrbanWildlife/Environment/human-activity-plaza-v01",
+                "UrbanWildlife/Environment/human-activity-bench-v01",
+            };
+            foreach (string spritePath in planningAreaSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.x <= 0f)
+                {
+                    throw new InvalidOperationException($"P0 planning-area sprite is missing or invalid: {spritePath}");
+                }
+            }
+            Debug.Log("UNITY_PLANNING_AREA_SMOKE_OK woodland=forest food_hotspots=bench/plaza ids_preserved=True");
             Debug.Log(
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=6 animal_sprites=6 map_sprites=1 " +
-                "semantic_elements=7 refined_visuals=5 realistic_path=True human_heading_offset=180 " +
+                "planning_area_sprites=3 semantic_elements=7 refined_visuals=6 realistic_path=True human_heading_offset=180 " +
                 "human_lengths=0.89/0.84/0.85 real_size_order=True walk_cycles=6");
 
             string loggerSmokeRoot = Path.Combine(

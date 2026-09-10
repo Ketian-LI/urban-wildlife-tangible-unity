@@ -7,6 +7,9 @@ namespace UrbanWildlife.Input
     public sealed class LayoutDebugView : MonoBehaviour
     {
         private const string ParkMapResourcePath = "UrbanWildlife/Environment/park-board-s001-v02";
+        private const string WoodlandGroveResourcePath = "UrbanWildlife/Environment/woodland-forest-grove-v01";
+        private const string PlazaResourcePath = "UrbanWildlife/Environment/human-activity-plaza-v01";
+        private const string BenchResourcePath = "UrbanWildlife/Environment/human-activity-bench-v01";
 
         [SerializeField]
         private Vector2 boardSizeUnits = new Vector2(9f, 6f);
@@ -267,6 +270,21 @@ namespace UrbanWildlife.Input
 
         private void CreateFoodToken(Transform parent, int id)
         {
+            bool useBench = id % 2 == 0;
+            string sceneName = useBench ? "Bench rest area artwork" : "Plaza activity area artwork";
+            string resourcePath = useBench ? BenchResourcePath : PlazaResourcePath;
+            float displayWidth = useBench ? 1.12f : 1.08f;
+            if (CreateEnvironmentSprite(parent, sceneName, resourcePath, displayWidth, 0.018f, 20))
+            {
+                CreateTokenIdBadge(
+                    parent,
+                    id,
+                    new Vector2(0f, -0.48f),
+                    new Color(0.96f, 0.8f, 0.48f, 0.97f),
+                    new Color(0.25f, 0.13f, 0.045f, 1f));
+                return;
+            }
+
             Vector2[] outer = RegularPolygon(6, 0.4f, 30f);
             Vector2[] rim = RegularPolygon(6, 0.345f, 30f);
             Vector2[] inner = RegularPolygon(6, 0.292f, 30f);
@@ -308,6 +326,23 @@ namespace UrbanWildlife.Input
 
         private void CreateWoodlandToken(Transform parent, int id)
         {
+            if (CreateEnvironmentSprite(
+                    parent,
+                    "Woodland forest grove artwork",
+                    WoodlandGroveResourcePath,
+                    1.55f,
+                    0.018f,
+                    20))
+            {
+                CreateTokenIdBadge(
+                    parent,
+                    id,
+                    new Vector2(0f, -0.56f),
+                    new Color(0.78f, 0.86f, 0.54f, 0.97f),
+                    new Color(0.09f, 0.2f, 0.09f, 1f));
+                return;
+            }
+
             Vector2[] leaf =
             {
                 new Vector2(0f, 0.48f),
@@ -380,6 +415,47 @@ namespace UrbanWildlife.Input
             CreatePolygon(parent, "Woodland wooden heart", RegularPolygon(24, 0.15f, 7.5f), 0.058f, new Color(0.86f, 0.67f, 0.4f, 1f), 24);
             CreateOutline(parent, "Woodland growth ring", RegularPolygon(24, 0.185f, 7.5f), 0.064f, 0.012f, new Color(0.47f, 0.29f, 0.12f, 0.9f), 25);
             CreateLabel(parent, id.ToString(), 0.075f, new Color(0.16f, 0.09f, 0.035f, 1f));
+        }
+
+        private static bool CreateEnvironmentSprite(
+            Transform parent,
+            string name,
+            string resourcePath,
+            float displayWidth,
+            float height,
+            int sortingOrder)
+        {
+            Sprite sprite = Resources.Load<Sprite>(resourcePath);
+            if (sprite == null)
+            {
+                Debug.LogWarning($"Planning-area sprite missing: {resourcePath}; using the procedural fallback.");
+                return false;
+            }
+
+            GameObject artwork = new GameObject(name);
+            artwork.transform.SetParent(parent, false);
+            artwork.transform.localPosition = new Vector3(0f, height, 0f);
+            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            float uniformScale = displayWidth / Mathf.Max(0.001f, sprite.bounds.size.x);
+            artwork.transform.localScale = Vector3.one * uniformScale;
+            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = sortingOrder;
+            return true;
+        }
+
+        private void CreateTokenIdBadge(
+            Transform parent,
+            int id,
+            Vector2 offset,
+            Color fill,
+            Color ink)
+        {
+            Transform badge = CreateAnchor(parent, $"Research ID {id}", offset);
+            Vector2[] disc = RegularPolygon(20, 0.105f, 0f);
+            CreatePolygon(badge, "ID badge fill", disc, 0.052f, fill, 27);
+            CreateOutline(badge, "ID badge outline", disc, 0.058f, 0.014f, ink, 28);
+            CreateSmallLabel(badge, id.ToString(), 0.068f, ink);
         }
 
         private void CreateParkGateGuide(

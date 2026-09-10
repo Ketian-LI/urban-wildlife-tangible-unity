@@ -56,3 +56,51 @@ Constraints: no benches, no lampposts, no stone posts, no people, no animals, no
 ```
 
 This generated image is a prototype asset. Before final submission, record the selected provenance statement and confirm the course policy for AI-assisted visual material.
+
+## Movable planning-area sprites V0.1
+
+Generated on 2026-09-10 with the built-in image generation tool. These presentation assets replace the abstract Food and Woodland icons without changing the recognised token types or IDs:
+
+- `woodland-forest-grove-v01.png`: Woodland IDs 20 and 21.
+- `human-activity-bench-v01.png`: even Food Hotspot IDs 10 and 12.
+- `human-activity-plaza-v01.png`: odd Food Hotspot ID 11.
+
+The simulation still records `woodland` and `food_hotspot`. “Food Hotspot” now means a human-activity setting where discarded crumbs or feeding opportunities may occur, not a literal movable food object.
+
+Generation mode: built-in `stylized-concept`, followed by a built-in `precise-object-edit` isolation pass. The uniform green plates were converted to RGBA with `tools/chroma_key_sprite.py`.
+
+### Forest grove generation prompt
+
+```text
+Use case: stylized-concept. Asset type: transparent Unity top-down environment sprite. The supplied park board is a STYLE REFERENCE ONLY. Create one compact movable urban-park woodland/forest grove viewed in strict orthographic top-down view: a clearly readable cluster of five to seven mature deciduous tree canopies with varied olive, moss, and deep forest greens, visible small brown trunks through a few canopy gaps, low shrubs, ferns, leaf litter, and two or three small natural stones. Form an irregular oval forest patch, wider than tall, with a strong natural silhouette and enough internal gaps to read as a grove rather than one giant bush. Match the gentle hand-painted semi-realistic British park game illustration, soft daylight, refined painterly texture and scale language of the reference. Isolate the complete grove on a genuinely transparent RGBA background with generous padding and clean antialiased edges. No people, animals, paths, benches, buildings, food, tokens, labels, numbers, text, border, shadow plate, glow, watermark, or checkerboard.
+```
+
+### Plaza generation prompt
+
+```text
+Use case: stylized-concept. Asset type: transparent Unity top-down environment sprite. The supplied park board is a STYLE REFERENCE ONLY. Create one small human-activity plaza viewed in strict orthographic top-down view: a compact circular-to-oval paved area made from warm pale sandstone setts, with a subtle concentric paving pattern, slightly irregular stone edges, and a very thin fringe of grass and a few tiny low flowers around part of the perimeter. It must clearly read as a public park plaza and a potential human gathering/crumb hotspot, but show no literal food. Match the gentle hand-painted semi-realistic British park game illustration, soft daylight, refined painterly texture and scale language of the reference. Isolate the complete plaza on a genuinely transparent RGBA background with generous padding and clean antialiased edges. No people, animals, furniture, paths extending off canvas, food icons, tokens, labels, numbers, text, border, cast shadow, glow, watermark, or checkerboard.
+```
+
+### Bench generation prompt
+
+```text
+Use case: stylized-concept. Asset type: transparent Unity top-down environment sprite. The supplied park board is a STYLE REFERENCE ONLY. Create one compact park bench rest area viewed in strict orthographic top-down view: a single realistic wooden slat bench with dark iron supports, placed on a small rounded rectangle of warm compacted gravel or pale paving, with a narrow soft grass fringe and two or three tiny low wildflowers at the edge. The bench must be instantly readable from above and suggest a human resting/crumb hotspot without showing literal food. Match the gentle hand-painted semi-realistic British park game illustration, soft daylight, refined painterly texture and scale language of the reference. Isolate the complete bench area on a genuinely transparent RGBA background with generous padding and clean antialiased edges. No people, animals, tables, bins, signs, food icons, tokens, labels, numbers, text, border, cast shadow beyond the object, glow, watermark, or checkerboard.
+```
+
+### Forest grove isolation prompt
+
+```text
+Use case: precise-object-edit. Asset type: Unity environment sprite isolation plate. Preserve the forest grove itself exactly: same top-down composition, tree count, canopy shapes, trunks, shrubs, ferns, stones, leaf litter, colors, painterly style, scale, centering, and complete silhouette. Change ONLY the entire background and glow outside the grove to one perfectly flat uniform chroma-key green RGB (0,255,0), hex #00FF00. The green must stop at the grove's clean antialiased silhouette. No dark vignette, gradient, cast shadow plate, aura, glow, checkerboard, texture, ground outside the grove, text, label, border, or watermark.
+```
+
+### Plaza isolation prompt
+
+```text
+Use case: precise-object-edit. Asset type: Unity environment sprite isolation plate. Preserve the paved plaza itself exactly: same strict top-down oval sandstone paving, concentric pattern, stone edges, grass fringe, flowers, colors, painterly style, scale, centering, and complete silhouette. Change ONLY the entire background and glow outside the plaza to one perfectly flat uniform chroma-key green RGB (0,255,0), hex #00FF00. The green must stop at the plaza's clean antialiased silhouette. No dark vignette, gradient, cast shadow plate, aura, glow, checkerboard, texture outside the plaza, people, animals, furniture, food, text, label, border, or watermark.
+```
+
+### Bench isolation prompt
+
+```text
+Use case: precise-object-edit. Asset type: Unity environment sprite isolation plate. Preserve the bench rest area itself exactly: same strict top-down wooden slat bench, dark iron supports, rounded gravel pad, grass fringe, flowers, colors, painterly style, scale, centering, and complete silhouette. Change ONLY the entire background and glow outside the rest area to one perfectly flat uniform chroma-key green RGB (0,255,0), hex #00FF00. The green must stop at the rest area's clean antialiased silhouette. No dark vignette, gradient, cast shadow plate beyond the rest area, aura, glow, checkerboard, texture outside the area, people, animals, bins, signs, food, text, label, border, or watermark.
+```

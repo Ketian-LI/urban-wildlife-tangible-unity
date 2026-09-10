@@ -157,7 +157,7 @@ namespace UrbanWildlife.Cycle
 
             DrawStatusLine("Human route connected", result.human_connected);
             DrawStatusLine("Animal route reachable", result.animal_reachable);
-            DrawStatusLine("Food hotspots valid", result.food_hotspot_valid);
+            DrawStatusLine("Activity hotspots valid", result.food_hotspot_valid);
             DrawStatusLine($"Changes {result.changes_used}/{result.changes_allowed}", result.within_change_budget);
         }
 

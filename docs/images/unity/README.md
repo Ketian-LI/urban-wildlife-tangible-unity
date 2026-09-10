@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v07-planning-areas-preview.png`
+
+Rendered on 2026-09-10 in Unity 6000.3.4f1 from the active presentation layer. Woodland IDs 20 and 21 now appear as movable forest groves. Food Hotspot IDs 10 and 12 appear as bench rest areas, while ID 11 appears as a small paved plaza. The Food Hotspot meaning is a human-activity/crumb opportunity rather than literal food.
+
+Small edge badges preserve token IDs for research observation. Recognition data, token types, coordinates, angles, constraint checks, human routes, and animal state machines are unchanged.
+
 ## `visual-layer-v06-realistic-road-preview.png`
 
 Rendered on 2026-09-09 in Unity 6000.3.4f1 from the active display layer. The confirmed path Polyline is rendered as a warm-grey gravel park path with dark soil shoulders, pale stone edging, and deterministic light/dark gravel details instead of a solid magenta ribbon.

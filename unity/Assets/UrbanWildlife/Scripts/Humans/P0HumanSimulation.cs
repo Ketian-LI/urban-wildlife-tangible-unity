@@ -11,12 +11,13 @@ namespace UrbanWildlife.Humans
     [RequireComponent(typeof(LayoutPacketReader), typeof(P0CycleController), typeof(LayoutDebugView))]
     public sealed class P0HumanSimulation : MonoBehaviour
     {
-        public const float FrontFacingSpriteHeadingOffsetDegrees = 180f;
+        public const float ScreenFacingSpriteRotationDegrees = 0f;
         public const float WalkerDisplayLength = 0.89f;
         public const float DwellerDisplayLength = 0.84f;
         public const float VisitorDisplayLength = 0.85f;
         public const int WalkFrameCount = 2;
-        public const float WalkFramesPerSecond = 4.6f;
+        public const float WalkFramesPerSecond = 3.4f;
+        public const float IdleSwaySeconds = 6.8f;
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -34,8 +35,8 @@ namespace UrbanWildlife.Humans
             public Sprite alternateWalkSprite;
             public Vector3 artworkBaseScale;
             public Vector3 artworkBasePosition;
-            public float headingDegrees;
             public float animationOffset;
+            public bool facingRight;
             public bool ownsMaterial;
             public HumanActivityState lastState;
             public int completedTrips;
@@ -134,11 +135,9 @@ namespace UrbanWildlife.Humans
                 human.visual.localPosition = new Vector3(current.x, 0.32f, current.y);
                 Vector2 movement = current - previous;
                 bool moving = !repeated && movement.sqrMagnitude > 0.000001f;
-                if (moving)
+                if (moving && Mathf.Abs(movement.x) > 0.00001f)
                 {
-                    float targetHeading = Mathf.Atan2(movement.x, movement.y) * Mathf.Rad2Deg;
-                    float turnBlend = 1f - Mathf.Exp(-9f * Time.deltaTime);
-                    human.headingDegrees = Mathf.LerpAngle(human.headingDegrees, targetHeading, turnBlend);
+                    human.facingRight = movement.x >= 0f;
                 }
                 ApplyMotion(human, moving);
 
@@ -198,8 +197,8 @@ namespace UrbanWildlife.Humans
                     plan = plans[index],
                     model = model,
                     visual = visual.transform,
-                    headingDegrees = 0f,
                     animationOffset = index * 0.83f,
+                    facingRight = (index & 1) == 0,
                     lastState = model.State,
                 };
                 CreateArtwork(runtime);
@@ -315,49 +314,54 @@ namespace UrbanWildlife.Humans
                 human.spriteRenderer.sprite = useAlternateFrame
                     ? human.alternateWalkSprite
                     : human.standingSprite;
+                human.spriteRenderer.flipX = !human.facingRight;
             }
 
             float sway = moving
-                ? Mathf.Sin(stepPhase * Mathf.PI) * 1.1f
-                : Mathf.Sin(time * (2f * Mathf.PI / 5.8f)) * 3.2f;
+                ? Mathf.Sin(stepPhase * Mathf.PI) * 0.65f
+                : Mathf.Sin(time * (2f * Mathf.PI / IdleSwaySeconds)) * 1.35f;
             if (human.model.State == HumanActivityState.Visiting)
             {
-                sway += Mathf.Sin(time * 2.2f) * 2.4f;
+                sway += Mathf.Sin(time * 1.35f) * 0.75f;
             }
             human.visual.localRotation = Quaternion.Euler(
                 0f,
-                human.headingDegrees + FrontFacingSpriteHeadingOffsetDegrees + sway,
+                ScreenFacingSpriteRotationDegrees + sway,
                 0f);
 
             float pulse = 1f;
             if (moving)
             {
-                pulse += Mathf.Sin(stepPhase * Mathf.PI) * 0.012f;
+                pulse += Mathf.Sin(stepPhase * Mathf.PI) * 0.006f;
             }
             else if (human.model.State == HumanActivityState.Dwelling ||
                      human.model.State == HumanActivityState.Visiting)
             {
-                pulse += Mathf.Sin(time * 2f) * 0.022f;
+                pulse += Mathf.Sin(time * 1.35f) * 0.01f;
             }
             else
             {
-                pulse += Mathf.Sin(time * 1.5f) * 0.01f;
+                pulse += Mathf.Sin(time * 1.15f) * 0.005f;
             }
             human.artwork.localScale = human.artworkBaseScale * pulse;
             float stepLift = moving
-                ? Mathf.Abs(Mathf.Sin(stepPhase * Mathf.PI)) * 0.012f
+                ? Mathf.Abs(Mathf.Sin(stepPhase * Mathf.PI)) * 0.004f
                 : 0f;
             human.artwork.localPosition = human.artworkBasePosition + Vector3.up * stepLift;
         }
 
         private static void ApplyColour(RuntimeHuman human)
         {
+            bool visible = human.model.State != HumanActivityState.WaitingToEnter &&
+                human.model.State != HumanActivityState.Finished;
             if (human.spriteRenderer != null)
             {
+                human.spriteRenderer.enabled = visible;
                 human.spriteRenderer.color = SpriteTintFor(human.model.State);
             }
             else if (human.renderer != null && human.renderer.sharedMaterial != null)
             {
+                human.renderer.enabled = visible;
                 human.renderer.sharedMaterial.color = FallbackColourFor(human.model.Archetype);
             }
         }

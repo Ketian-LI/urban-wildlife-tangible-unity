@@ -1,22 +1,47 @@
-# P0 Animal Sprite Set V0.2
+# P0 Animal Sprite Set
 
-Generated on 2026-09-09 with the built-in image generation tool for the Unity P0 prototype.
+This directory contains the generated Unity animal presentation assets used by the P0 prototype.
 
-Assets:
+## Active V0.3 side-profile walk set
+
+Updated on 2026-09-10 after comparison with the earlier web simulation. Each species now uses two right-facing side-profile frames. Runtime movement keeps the artwork screen-facing, alternates the frames only while moving, and uses horizontal flipping instead of continuously rotating the entire animal toward every waypoint.
+
+Active assets:
+
+- `pigeon-side-walk-a-v01.png`
+- `pigeon-side-walk-b-v01.png`
+- `squirrel-side-walk-a-v01.png`
+- `squirrel-side-walk-b-v01.png`
+- `fox-side-walk-a-v01.png`
+- `fox-side-walk-b-v01.png`
+
+The two poses for each species were generated together on a uniform `#00FF00` isolation plate, split into equal cells, and converted to real RGBA transparency with `tools/chroma_key_sprite.py --remove-all-green-spill`. The pigeon keeps its low walking silhouette, the squirrel is distinguished by its tall curled tail, and the fox by its long low body, dark legs, and white tail tip.
+
+### V0.3 generation prompt set
+
+Each species prompt used the current animal design and park board as style references. The common production specification was: a two-frame Unity walk sheet with exactly two equal right-facing side-profile poses, identical proportions and palette, complete anatomy, generous padding, refined hand-painted semi-realistic casual-simulation style, and no ground, shadow, text, border, extra animal, cropping, top-down view, or front view. Species-specific requirements were:
+
+- Pigeon: grey urban rock pigeon, charcoal wing bars, iridescent green-purple neck, orange eye and red feet; contact pose followed by the opposite passing pose with a small head bob.
+- Squirrel: British red squirrel, russet coat, cream belly, ear tufts and a large curved fluffy tail; opposite diagonal leg poses with subtle body rise and tail follow-through.
+- Fox: lean adult urban red fox, white throat and muzzle, dark lower legs and ears, long bushy white-tipped tail; opposite diagonal leg poses with subtle shoulder, hip and tail follow-through.
+
+## Superseded V0.2 top-down set
+
+Retained assets:
 
 - `pigeon-topdown-v01.png`
-- `squirrel-topdown-v02.png` (active; wide C-shaped tail silhouette)
-- `fox-topdown-v02.png` (active; narrow straight-tail silhouette)
+- `squirrel-topdown-v02.png` (wide C-shaped tail silhouette)
+- `fox-topdown-v02.png` (narrow straight-tail silhouette)
 
-The V0.1 squirrel and fox are retained as superseded prototypes. Both used a long orange body with a tail extending directly behind, so their silhouettes were too similar at runtime scale. V0.2 separates them primarily through outline shape, then reinforces the distinction with markings.
+The V0.1 squirrel and fox are retained as superseded prototypes. Both used a long orange body with a tail extending directly behind, so their silhouettes were too similar at runtime scale. V0.2 separated them primarily through outline shape, then reinforced the distinction with markings.
 
-Shared art direction: single animal seen directly from above, head pointing toward the top of the image, gentle hand-painted storybook game illustration, natural but simplified colouring, transparent background, no ground shadow, text or border. Each file is rotated at runtime to follow movement.
+The V0.2 shared art direction was a single animal seen directly from above, head pointing toward the top of the image, gentle hand-painted storybook game illustration, natural but simplified colouring, transparent background, no ground shadow, text or border. These files were rotated at runtime to follow movement.
 
-Generation mode: built-in image generation tool. The active V0.2 squirrel and fox were produced as precise-object edits on uniform green isolation plates, then converted to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`.
+Generation mode: built-in image generation tool. The V0.2 squirrel and fox were produced as precise-object edits on uniform green isolation plates, then converted to RGBA with `tools/chroma_key_sprite.py --remove-all-green-spill`.
 
-## Runtime display scale
+## Active runtime display scale
 
-The active real-size reference uses approximately 1 Unity unit per 2 metres of representative body length: pigeon 0.18 units (about 0.36 m), squirrel 0.24 units including tail (about 0.48 m), and fox 0.55 units including tail (about 1.10 m). These values control only the rendered Sprite length, not movement speed, disturbance radius, collider size, or ecological behavior.
+For readability on the full 60 x 90 cm board, active presentation lengths are pigeon 0.30 units, squirrel 0.44 units including tail, and fox 0.72 units including tail. The ordering remains pigeon < squirrel < fox < human. These values control only the rendered Sprite length, not movement speed, disturbance radius, collider size, or ecological behavior.
 
 ## V0.2 silhouette-separation prompts
 

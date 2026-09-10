@@ -328,9 +328,9 @@ namespace UrbanWildlife.EditorTools
 
             string[] animalSpritePaths =
             {
-                "UrbanWildlife/Animals/pigeon-topdown-v01",
-                "UrbanWildlife/Animals/squirrel-topdown-v02",
-                "UrbanWildlife/Animals/fox-topdown-v02",
+                "UrbanWildlife/Animals/pigeon-side-walk-a-v01",
+                "UrbanWildlife/Animals/squirrel-side-walk-a-v01",
+                "UrbanWildlife/Animals/fox-side-walk-a-v01",
             };
             foreach (string spritePath in animalSpritePaths)
             {
@@ -342,9 +342,9 @@ namespace UrbanWildlife.EditorTools
             }
             string[] animalWalkSpritePaths =
             {
-                "UrbanWildlife/Animals/pigeon-walk-b-v01",
-                "UrbanWildlife/Animals/squirrel-walk-b-v01",
-                "UrbanWildlife/Animals/fox-walk-b-v01",
+                "UrbanWildlife/Animals/pigeon-side-walk-b-v01",
+                "UrbanWildlife/Animals/squirrel-side-walk-b-v01",
+                "UrbanWildlife/Animals/fox-side-walk-b-v01",
             };
             foreach (string spritePath in animalWalkSpritePaths)
             {
@@ -358,21 +358,30 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("P0 animal walking must use a two-frame gait cycle.");
             }
-            Sprite squirrelSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/squirrel-topdown-v02");
-            Sprite foxSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/fox-topdown-v02");
+            Sprite pigeonSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/pigeon-side-walk-a-v01");
+            Sprite squirrelSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/squirrel-side-walk-a-v01");
+            Sprite foxSprite = Resources.Load<Sprite>("UrbanWildlife/Animals/fox-side-walk-a-v01");
+            float pigeonAspect = TightSpriteAspect(pigeonSprite);
             float squirrelAspect = TightSpriteAspect(squirrelSprite);
             float foxAspect = TightSpriteAspect(foxSprite);
-            if (squirrelAspect <= foxAspect * 2f)
+            if (pigeonAspect <= 1f || squirrelAspect <= 1f || foxAspect <= 1f ||
+                foxAspect <= squirrelAspect * 1.2f)
             {
                 throw new InvalidOperationException(
-                    $"Squirrel and fox silhouettes are not distinct enough: {squirrelAspect:F2} vs {foxAspect:F2}.");
+                    $"Animal side-profile silhouettes are not distinct enough: " +
+                    $"{pigeonAspect:F2}/{squirrelAspect:F2}/{foxAspect:F2}.");
+            }
+            if (!Mathf.Approximately(P0AnimalSimulation.ScreenFacingSpriteRotationDegrees, 0f) ||
+                P0AnimalSimulation.IdleSwaySeconds < 6f)
+            {
+                throw new InvalidOperationException("Animal sprites must stay screen-facing with a slow web-style idle sway.");
             }
             Debug.Log(
-                $"UNITY_ANIMAL_SPRITE_SMOKE_OK sprites=3 transparent_import=True topdown=True " +
-                $"squirrel_aspect={squirrelAspect:F2} fox_aspect={foxAspect:F2} " +
+                $"UNITY_ANIMAL_SPRITE_SMOKE_OK sprites=3 transparent_import=True side_profile=True " +
+                $"aspects={pigeonAspect:F2}/{squirrelAspect:F2}/{foxAspect:F2} " +
                 $"display_lengths={P0AnimalSimulation.PigeonDisplayLength:F2}/" +
                 $"{P0AnimalSimulation.SquirrelDisplayLength:F2}/{P0AnimalSimulation.FoxDisplayLength:F2}");
-            Debug.Log("UNITY_ANIMAL_WALK_ANIMATION_SMOKE_OK frames=2 species=3 moving_only=True");
+            Debug.Log("UNITY_ANIMAL_WALK_ANIMATION_SMOKE_OK frames=2 species=3 moving_only=True screen_facing=True flip_x=True");
 
             string[] humanSpritePaths =
             {
@@ -407,9 +416,10 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("P0 human walking must use a timed two-frame gait cycle.");
             }
             Debug.Log("UNITY_HUMAN_WALK_ANIMATION_SMOKE_OK frames=2 roles=3 moving_only=True");
-            if (!Mathf.Approximately(P0HumanSimulation.FrontFacingSpriteHeadingOffsetDegrees, 180f))
+            if (!Mathf.Approximately(P0HumanSimulation.ScreenFacingSpriteRotationDegrees, 0f) ||
+                P0HumanSimulation.IdleSwaySeconds < 6f)
             {
-                throw new InvalidOperationException("Front-facing human sprites require a 180-degree heading offset.");
+                throw new InvalidOperationException("Human sprites must stay screen-facing with a slow web-style idle sway.");
             }
             if (!(P0AnimalSimulation.PigeonDisplayLength < P0AnimalSimulation.SquirrelDisplayLength &&
                   P0AnimalSimulation.SquirrelDisplayLength < P0AnimalSimulation.FoxDisplayLength &&
@@ -443,8 +453,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log("UNITY_PARK_GATE_SMOKE_OK entrance=open_fence_gate exit=mirrored_open_fence_gate ids=A/B");
             Debug.Log(
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=6 animal_sprites=6 map_sprites=1 " +
-                "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True human_heading_offset=180 " +
-                "human_lengths=0.89/0.84/0.85 real_size_order=True walk_cycles=6");
+                "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True web_style_motion=True " +
+                "animal_side_profile=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
+                "real_size_order=True walk_cycles=6");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),

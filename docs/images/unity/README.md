@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v10-web-motion-side-animals-preview.png`
+
+Rendered on 2026-09-10 in Unity 6000.3.4f1 after comparing the prototype with the earlier web simulation. Humans now stay screen-facing and change direction through horizontal mirroring instead of rotating around every path bend. Their walk cycle is slower, with much smaller sway, scale pulse, and step lift. A completed trip now hides at the exit during its entry delay instead of visibly teleporting across the park.
+
+Pigeon, squirrel, and fox now use dedicated two-frame right-facing side-profile sprites and mirror horizontally when their lateral direction changes. Their presentation lengths increased from 0.18/0.24/0.55 to 0.30/0.44/0.72 Unity units so that all three species remain readable on the complete board while preserving the pigeon < squirrel < fox < human ordering. This static preview validates presentation and scale; runtime smoke checks separately validate both animation frames, screen-facing motion, and horizontal flipping.
+
 ## `visual-layer-v09-asphalt-road-preview.png`
 
 Rendered on 2026-09-10 in Unity 6000.3.4f1. The confirmed route is now presented as a charcoal-grey asphalt park road with pale concrete kerbs and subtle deterministic fine-aggregate flecks. It intentionally has no centre line because it represents a pedestrian park access route rather than a city vehicle road.

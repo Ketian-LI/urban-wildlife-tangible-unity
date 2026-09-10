@@ -12,10 +12,12 @@ namespace UrbanWildlife.Animals
     [RequireComponent(typeof(LayoutPacketReader), typeof(P0CycleController), typeof(P0HumanSimulation))]
     public sealed class P0AnimalSimulation : MonoBehaviour
     {
-        public const float PigeonDisplayLength = 0.18f;
-        public const float SquirrelDisplayLength = 0.24f;
-        public const float FoxDisplayLength = 0.55f;
+        public const float PigeonDisplayLength = 0.30f;
+        public const float SquirrelDisplayLength = 0.44f;
+        public const float FoxDisplayLength = 0.72f;
         public const int WalkFrameCount = 2;
+        public const float ScreenFacingSpriteRotationDegrees = 0f;
+        public const float IdleSwaySeconds = 7.2f;
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -33,8 +35,8 @@ namespace UrbanWildlife.Animals
             public Sprite alternateWalkSprite;
             public Vector3 artworkBaseScale;
             public Vector3 artworkBasePosition;
-            public float headingDegrees;
             public float animationOffset;
+            public bool facingRight;
             public bool ownsMaterial;
             public AnimalActivityState lastState;
         }
@@ -124,11 +126,9 @@ namespace UrbanWildlife.Animals
                 Vector2 current = animal.model.Position;
                 animal.visual.localPosition = new Vector3(current.x, 0.28f, current.y);
                 Vector2 movement = current - previous;
-                if (movement.sqrMagnitude > 0.000001f)
+                if (Mathf.Abs(movement.x) > 0.00001f)
                 {
-                    float targetHeading = Mathf.Atan2(movement.x, movement.y) * Mathf.Rad2Deg;
-                    float turnBlend = 1f - Mathf.Exp(-8f * Time.deltaTime);
-                    animal.headingDegrees = Mathf.LerpAngle(animal.headingDegrees, targetHeading, turnBlend);
+                    animal.facingRight = movement.x >= 0f;
                 }
                 ApplyMotion(animal, movement.sqrMagnitude > 0.000001f);
                 if (animal.lastState != animal.model.State)
@@ -188,8 +188,8 @@ namespace UrbanWildlife.Animals
                     plan = plans[index],
                     model = model,
                     visual = visual.transform,
-                    headingDegrees = 0f,
                     animationOffset = index * 1.37f,
+                    facingRight = (index & 1) == 0,
                     lastState = model.State,
                 };
                 CreateArtwork(runtime);
@@ -254,7 +254,7 @@ namespace UrbanWildlife.Animals
                 spriteRenderer.sprite = sourceSprite;
                 spriteRenderer.sortingOrder = 30;
                 float targetLength = LengthFor(animal.model.Species);
-                float uniformScale = targetLength / Mathf.Max(0.001f, sourceSprite.bounds.size.y);
+                float uniformScale = targetLength / Mathf.Max(0.001f, sourceSprite.bounds.size.x);
                 artwork.transform.localScale = Vector3.one * uniformScale;
                 animal.artwork = artwork.transform;
                 animal.artworkBaseScale = artwork.transform.localScale;
@@ -304,19 +304,25 @@ namespace UrbanWildlife.Animals
                 animal.spriteRenderer.sprite = useAlternateFrame
                     ? animal.alternateWalkSprite
                     : animal.standingSprite;
+                animal.spriteRenderer.flipX = !animal.facingRight;
             }
 
-            float sway = moving ? 0f : Mathf.Sin(time * (2f * Mathf.PI / 7.2f)) * 2.5f;
-            animal.visual.localRotation = Quaternion.Euler(0f, animal.headingDegrees + sway, 0f);
+            float sway = moving
+                ? Mathf.Sin(stepPhase * Mathf.PI) * 0.45f
+                : Mathf.Sin(time * (2f * Mathf.PI / IdleSwaySeconds)) * 1.15f;
+            animal.visual.localRotation = Quaternion.Euler(
+                0f,
+                ScreenFacingSpriteRotationDegrees + sway,
+                0f);
 
             float pulse = 1f;
             if (animal.model.State == AnimalActivityState.Feeding)
             {
-                pulse += Mathf.Sin(time * 9f) * 0.055f;
+                pulse += Mathf.Sin(time * 5f) * 0.018f;
             }
             else if (!moving)
             {
-                pulse += Mathf.Sin(time * 1.8f) * 0.018f;
+                pulse += Mathf.Sin(time * 1.2f) * 0.007f;
             }
             animal.artwork.localScale = animal.artworkBaseScale * pulse;
             float gaitLift = moving
@@ -344,11 +350,11 @@ namespace UrbanWildlife.Animals
             switch (species)
             {
                 case AnimalSpecies.Pigeon:
-                    return "UrbanWildlife/Animals/pigeon-topdown-v01";
+                    return "UrbanWildlife/Animals/pigeon-side-walk-a-v01";
                 case AnimalSpecies.Squirrel:
-                    return "UrbanWildlife/Animals/squirrel-topdown-v02";
+                    return "UrbanWildlife/Animals/squirrel-side-walk-a-v01";
                 default:
-                    return "UrbanWildlife/Animals/fox-topdown-v02";
+                    return "UrbanWildlife/Animals/fox-side-walk-a-v01";
             }
         }
 
@@ -357,11 +363,11 @@ namespace UrbanWildlife.Animals
             switch (species)
             {
                 case AnimalSpecies.Pigeon:
-                    return "UrbanWildlife/Animals/pigeon-walk-b-v01";
+                    return "UrbanWildlife/Animals/pigeon-side-walk-b-v01";
                 case AnimalSpecies.Squirrel:
-                    return "UrbanWildlife/Animals/squirrel-walk-b-v01";
+                    return "UrbanWildlife/Animals/squirrel-side-walk-b-v01";
                 default:
-                    return "UrbanWildlife/Animals/fox-walk-b-v01";
+                    return "UrbanWildlife/Animals/fox-side-walk-b-v01";
             }
         }
 
@@ -370,11 +376,11 @@ namespace UrbanWildlife.Animals
             switch (species)
             {
                 case AnimalSpecies.Pigeon:
-                    return 5.2f;
+                    return 3.2f;
                 case AnimalSpecies.Squirrel:
-                    return 5.8f;
+                    return 3.8f;
                 default:
-                    return 4.8f;
+                    return 3.1f;
             }
         }
 
@@ -383,11 +389,11 @@ namespace UrbanWildlife.Animals
             switch (species)
             {
                 case AnimalSpecies.Pigeon:
-                    return 0.006f;
+                    return 0.002f;
                 case AnimalSpecies.Squirrel:
-                    return 0.016f;
+                    return 0.004f;
                 default:
-                    return 0.008f;
+                    return 0.003f;
             }
         }
 

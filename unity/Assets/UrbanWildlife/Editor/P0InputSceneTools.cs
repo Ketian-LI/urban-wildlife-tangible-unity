@@ -109,6 +109,7 @@ namespace UrbanWildlife.EditorTools
                 "Runtime Illustrated Layout/food_hotspot 11/Plaza activity area artwork",
                 "Runtime Illustrated Layout/woodland 20/Woodland forest grove artwork",
                 "Runtime Illustrated Layout/Planned Human Path/Asphalt surface",
+                "Runtime Illustrated Layout/Planned Human Path/Weathered asphalt details",
             };
             foreach (string visualPath in refinedVisualPaths)
             {
@@ -116,6 +117,20 @@ namespace UrbanWildlife.EditorTools
                 {
                     throw new InvalidOperationException($"Refined P0 visual is missing: {visualPath}");
                 }
+            }
+            LineRenderer asphaltRenderer = smokeObject.transform
+                .Find("Runtime Illustrated Layout/Planned Human Path/Asphalt surface")
+                ?.GetComponent<LineRenderer>();
+            if (asphaltRenderer == null || asphaltRenderer.textureMode != LineTextureMode.Tile ||
+                asphaltRenderer.sharedMaterial == null || asphaltRenderer.sharedMaterial.mainTexture == null ||
+                asphaltRenderer.numCornerVertices < 10 ||
+                smokeObject.transform.Find(
+                    "Runtime Illustrated Layout/Planned Human Path/Weathered asphalt details/Fallen leaf 0") == null ||
+                smokeObject.transform.Find(
+                    "Runtime Illustrated Layout/Planned Human Path/Weathered asphalt details/Ink crack 0") == null)
+            {
+                throw new InvalidOperationException(
+                    "The weathered hand-rendered asphalt path is missing texture, rounded joins or field details.");
             }
             string[] removedGuidePaths =
             {
@@ -828,7 +843,8 @@ namespace UrbanWildlife.EditorTools
                 "background_landmarks=True");
             Debug.Log(
                 "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=40 animal_sprites=42 map_sprites=1 " +
-                "planning_area_sprites=4 semantic_elements=7 refined_visuals=6 asphalt_path=True web_style_motion=True " +
+                "planning_area_sprites=4 semantic_elements=7 refined_visuals=7 asphalt_path=True " +
+                "weathered_asphalt=True road_palette_harmonized=True web_style_motion=True " +
                 "animal_side_profile=True palette_harmonized=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
                 "real_size_order=True stepped_animation=True actions=idle/turn/walk/feed/sit/rise " +
                 "true_action_artwork=pigeon_walk_feed/squirrel_walk_feed/fox_walk_feed/" +

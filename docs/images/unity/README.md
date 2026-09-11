@@ -1,5 +1,11 @@
 # Unity Visual Validation
 
+## `visual-layer-v12-weathered-road-preview.png`
+
+Rendered on 2026-09-11 in Unity 6000.3.4f1. The confirmed route now uses a hand-rendered, near-charcoal asphalt surface with muted olive-brown undertones, a narrow warm-stone edge, softened shoulders, rounded joins, fine aggregate, restrained ink cracks, and occasional autumn leaves. Its darker, weathered palette and small-scale surface variation are matched to the surrounding urban-park illustration instead of reading as a clean black vector ribbon or a pale concrete strip.
+
+The physical camera still detects the high-saturation ribbon selected in the HSV configuration. This Unity treatment is presentation-only: confirmed coordinates, route continuity, pedestrian movement, constraint evaluation, and research logging are unchanged.
+
 ## `visual-layer-v11-unified-character-palette-preview.png`
 
 Rendered on 2026-09-10 in Unity 6000.3.4f1 using the new deterministic park-palette Sprite shader. Humans use 0.72 source saturation; pigeon, squirrel, and fox use 0.78, 0.68, and 0.66 respectively. All characters receive a small brightness reduction and a restrained yellow-green ambient tint so that they sit inside the painted park palette rather than reading as a separate high-saturation layer.

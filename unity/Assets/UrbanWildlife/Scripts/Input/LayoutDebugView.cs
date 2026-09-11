@@ -20,6 +20,7 @@ namespace UrbanWildlife.Input
 
         private readonly List<Material> generatedMaterials = new List<Material>();
         private readonly List<Mesh> generatedMeshes = new List<Mesh>();
+        private readonly List<Texture2D> generatedTextures = new List<Texture2D>();
         private LayoutPacketReader reader;
         private Transform generatedRoot;
 
@@ -120,35 +121,64 @@ namespace UrbanWildlife.Input
             GameObject pathObject = new GameObject("Planned Human Path");
             pathObject.transform.SetParent(generatedRoot, false);
 
-            LineRenderer shoulder = CreatePathLayer(
-                pathObject.transform,
-                "Asphalt dark shoulder",
-                path.points_norm.Length,
-                pathWidthUnits + 0.23f,
-                new Color(0.11f, 0.12f, 0.12f, 0.96f),
-                10);
-            LineRenderer edging = CreatePathLayer(
-                pathObject.transform,
-                "Concrete kerb",
-                path.points_norm.Length,
-                pathWidthUnits + 0.17f,
-                new Color(0.7f, 0.72f, 0.7f, 1f),
-                11);
-            LineRenderer surface = CreatePathLayer(
-                pathObject.transform,
-                "Asphalt surface",
-                path.points_norm.Length,
-                pathWidthUnits + 0.11f,
-                new Color(0.23f, 0.245f, 0.245f, 1f),
-                12);
             Vector3[] positions = new Vector3[path.points_norm.Length];
             for (int index = 0; index < path.points_norm.Length; index += 1)
             {
-                Vector3 position = NormalizedToLocal(
+                positions[index] = NormalizedToLocal(
                     path.points_norm[index][0],
                     path.points_norm[index][1],
                     0.095f);
-                positions[index] = position;
+            }
+
+            Texture2D shoulderTexture = CreateRoadTexture(
+                "Weathered soil shoulder texture",
+                new Color(0.050f, 0.054f, 0.040f, 0.94f),
+                new Color(0.11f, 0.095f, 0.060f, 0.88f),
+                true,
+                false);
+            Texture2D kerbTexture = CreateRoadTexture(
+                "Warm stone kerb texture",
+                new Color(0.27f, 0.245f, 0.19f, 1f),
+                new Color(0.39f, 0.35f, 0.25f, 0.92f),
+                false,
+                true);
+            Texture2D asphaltTexture = CreateRoadTexture(
+                "Hand-rendered asphalt texture",
+                new Color(0.082f, 0.088f, 0.073f, 0.99f),
+                new Color(0.18f, 0.17f, 0.13f, 0.78f),
+                true,
+                false);
+
+            LineRenderer shoulder = CreatePathLayer(
+                pathObject.transform,
+                "Weathered soil shoulder",
+                positions.Length,
+                pathWidthUnits + 0.23f,
+                Color.white,
+                10,
+                shoulderTexture,
+                2.4f);
+            LineRenderer edging = CreatePathLayer(
+                pathObject.transform,
+                "Warm stone kerb",
+                positions.Length,
+                pathWidthUnits + 0.17f,
+                Color.white,
+                11,
+                kerbTexture,
+                3.2f);
+            LineRenderer surface = CreatePathLayer(
+                pathObject.transform,
+                "Asphalt surface",
+                positions.Length,
+                pathWidthUnits + 0.11f,
+                Color.white,
+                12,
+                asphaltTexture,
+                4.5f);
+            for (int index = 0; index < positions.Length; index += 1)
+            {
+                Vector3 position = positions[index];
                 shoulder.SetPosition(index, position);
                 position.y = 0.102f;
                 edging.SetPosition(index, position);
@@ -165,16 +195,22 @@ namespace UrbanWildlife.Input
             int pointCount,
             float width,
             Color colour,
-            int sortingOrder)
+            int sortingOrder,
+            Texture2D texture,
+            float tileScale)
         {
             GameObject layer = new GameObject(name);
             layer.transform.SetParent(parent, false);
-            return ConfigurePathLine(layer, pointCount, width, colour, sortingOrder);
+            LineRenderer line = ConfigurePathLine(layer, pointCount, width, colour, sortingOrder);
+            line.textureMode = LineTextureMode.Tile;
+            line.sharedMaterial.mainTexture = texture;
+            line.sharedMaterial.mainTextureScale = new Vector2(tileScale, 1f);
+            return line;
         }
 
         private void CreateAsphaltDetails(Transform parent, Vector3[] positions)
         {
-            GameObject detailRoot = new GameObject("Asphalt aggregate details");
+            GameObject detailRoot = new GameObject("Weathered asphalt details");
             detailRoot.transform.SetParent(parent, false);
             int detailIndex = 0;
 
@@ -184,7 +220,7 @@ namespace UrbanWildlife.Input
                 Vector3 end = positions[segment + 1];
                 Vector3 delta = end - start;
                 float segmentLength = new Vector2(delta.x, delta.z).magnitude;
-                int sampleCount = Mathf.FloorToInt(segmentLength / 0.24f);
+                int sampleCount = Mathf.FloorToInt(segmentLength / 0.20f);
                 if (sampleCount < 1)
                 {
                     continue;
@@ -197,7 +233,7 @@ namespace UrbanWildlife.Input
                     float t = sample / (sampleCount + 1f);
                     Vector3 position = Vector3.Lerp(start, end, t);
                     float side = detailIndex % 2 == 0 ? 1f : -1f;
-                    position += perpendicular * side * (0.025f + (detailIndex % 3) * 0.011f);
+                    position += perpendicular * side * (0.023f + (detailIndex % 3) * 0.014f);
 
                     Transform pebble = CreateAnchor(
                         detailRoot.transform,
@@ -207,8 +243,8 @@ namespace UrbanWildlife.Input
                     float lengthScale = 0.72f + (detailIndex % 4) * 0.09f;
                     pebble.localScale = new Vector3(lengthScale, 1f, 0.52f);
                     Color colour = detailIndex % 3 == 0
-                        ? new Color(0.38f, 0.4f, 0.39f, 0.58f)
-                        : new Color(0.14f, 0.15f, 0.15f, 0.5f);
+                        ? new Color(0.55f, 0.52f, 0.42f, 0.52f)
+                        : new Color(0.16f, 0.16f, 0.13f, 0.48f);
                     CreatePolygon(
                         pebble,
                         "Fine aggregate",
@@ -216,9 +252,112 @@ namespace UrbanWildlife.Input
                         0.124f,
                         colour,
                         14);
+
+                    if (detailIndex % 4 == 0)
+                    {
+                        Transform crack = CreateAnchor(
+                            detailRoot.transform,
+                            $"Ink crack {detailIndex}",
+                            new Vector2(position.x, position.z));
+                        crack.localRotation = Quaternion.Euler(0f, heading + 18f, 0f);
+                        CreateOpenLine(
+                            crack,
+                            "Fine hand-drawn crack",
+                            new[]
+                            {
+                                new Vector2(-0.035f, 0.004f),
+                                new Vector2(-0.008f, -0.008f),
+                                new Vector2(0.012f, 0.006f),
+                                new Vector2(0.038f, -0.004f),
+                            },
+                            0.128f,
+                            0.007f,
+                            new Color(0.10f, 0.105f, 0.085f, 0.46f),
+                            15);
+                    }
+
+                    if (detailIndex % 5 == 0)
+                    {
+                        Vector3 leafPosition = position + perpendicular * side * 0.105f;
+                        Transform leaf = CreateAnchor(
+                            detailRoot.transform,
+                            $"Fallen leaf {detailIndex}",
+                            new Vector2(leafPosition.x, leafPosition.z));
+                        leaf.localRotation = Quaternion.Euler(0f, heading + detailIndex * 19f, 0f);
+                        leaf.localScale = new Vector3(1f, 1f, 0.58f);
+                        Color leafColour = detailIndex % 10 == 0
+                            ? new Color(0.68f, 0.31f, 0.10f, 0.78f)
+                            : new Color(0.70f, 0.52f, 0.13f, 0.74f);
+                        CreatePolygon(
+                            leaf,
+                            "Weathered leaf",
+                            new[]
+                            {
+                                new Vector2(-0.030f, 0f),
+                                new Vector2(-0.012f, 0.015f),
+                                new Vector2(0.020f, 0.012f),
+                                new Vector2(0.034f, 0f),
+                                new Vector2(0.014f, -0.014f),
+                                new Vector2(-0.014f, -0.012f),
+                            },
+                            0.132f,
+                            leafColour,
+                            16);
+                    }
                     detailIndex += 1;
                 }
             }
+        }
+
+        private Texture2D CreateRoadTexture(
+            string name,
+            Color baseColour,
+            Color fleckColour,
+            bool softenEdges,
+            bool kerbJoints)
+        {
+            const int width = 96;
+            const int height = 32;
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = name,
+                wrapMode = TextureWrapMode.Mirror,
+                filterMode = FilterMode.Bilinear,
+                anisoLevel = 2,
+            };
+            Color[] pixels = new Color[width * height];
+            for (int y = 0; y < height; y += 1)
+            {
+                float edgeDistance = Mathf.Min(y, height - 1 - y) / (height * 0.5f);
+                float edgeAlpha = softenEdges ? Mathf.SmoothStep(0f, 0.32f, edgeDistance) : 1f;
+                for (int x = 0; x < width; x += 1)
+                {
+                    uint hash = (uint)(x * 374761393 + y * 668265263);
+                    hash = (hash ^ (hash >> 13)) * 1274126177u;
+                    float grain = ((hash & 255u) / 255f - 0.5f) * 0.075f;
+                    float hatch = Mathf.Sin(x * 0.31f + y * 0.73f) * 0.018f;
+                    Color pixel = new Color(
+                        Mathf.Clamp01(baseColour.r + grain + hatch),
+                        Mathf.Clamp01(baseColour.g + grain + hatch),
+                        Mathf.Clamp01(baseColour.b + grain * 0.82f + hatch),
+                        baseColour.a * edgeAlpha);
+
+                    if ((hash >> 9) % 31u == 0u)
+                    {
+                        pixel = Color.Lerp(pixel, fleckColour, 0.72f);
+                        pixel.a *= edgeAlpha;
+                    }
+                    if (kerbJoints && (x % 24 == 0 || x % 24 == 1))
+                    {
+                        pixel = Color.Lerp(pixel, new Color(0.13f, 0.12f, 0.095f, 1f), 0.28f);
+                    }
+                    pixels[y * width + x] = pixel;
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+            generatedTextures.Add(texture);
+            return texture;
         }
 
         private LineRenderer ConfigurePathLine(
@@ -232,8 +371,8 @@ namespace UrbanWildlife.Input
             line.useWorldSpace = false;
             line.loop = false;
             line.widthMultiplier = width;
-            line.numCapVertices = 6;
-            line.numCornerVertices = 6;
+            line.numCapVertices = 12;
+            line.numCornerVertices = 12;
             line.positionCount = pointCount;
             line.material = CreateOverlayMaterial(colour);
             line.sortingOrder = sortingOrder;
@@ -785,6 +924,12 @@ namespace UrbanWildlife.Input
                 DestroyGeneratedObject(mesh);
             }
             generatedMeshes.Clear();
+
+            foreach (Texture2D texture in generatedTextures)
+            {
+                DestroyGeneratedObject(texture);
+            }
+            generatedTextures.Clear();
         }
 
         private static void DestroyGeneratedObject(Object target)

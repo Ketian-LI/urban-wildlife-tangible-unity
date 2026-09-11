@@ -92,7 +92,7 @@ namespace UrbanWildlife.Cycle
                     ? 730f
                     : cycle.Phase == P0Phase.Confirm
                         ? hasMemory ? 900f : 830f
-                        : hasMemory ? 695f : 555f;
+                        : hasMemory ? 900f : 555f;
             float height = Mathf.Min(requestedHeight * scale, Screen.height - 32f);
             Rect panel = new Rect(16f, 16f, width, height);
             GUI.DrawTexture(

@@ -136,6 +136,7 @@ Observed crossings, feeding, waiting and avoidance
 - Human connectivity 检查入口和必要活动目标之间是否存在连续路径。
 - Animal reachability 检查 Woodland 到 Food Hotspot 是否可达，并把人流密度转换为路径成本，而不是把人类路径视为绝对墙体。
 - Constraint Check 读取每局预算、最多改动次数和空间禁放条件；它不计算唯一正确答案或总分。
+- `P0CycleScore`在Run中另行计算规划表现分，不改变Constraint Check。它以成功个体数而非事件总数归一化：人类40分、三物种各20分，四项封顶后合计100。
 - Constraint Check UI 只返回 `human_connected`、`animal_reachable`、`food_hotspot_valid` 和 `changes_used / changes_allowed`。
 - Constraint Check 不返回预测动物路线、拥堵量或最终行为；这些信息只能由 Run 结果和 Trace 呈现。
 - Run开始时，Human Route Planner把确认后的单条路径转为三类路线：Walker直接通行，Dweller在中央广场停留，Visitor绕行至Food Hotspot后回到主路。
@@ -164,11 +165,12 @@ Observed crossings, feeding, waiting and avoidance
 - `P0CycleController` 实现阶段门控：约束失败返回Plan，成功后才可从Confirm进入Run；Run与Observe到时自动推进，第三周期后进入Complete。
 - `P0CycleMechanics`保存三轮情境与7/3/1、9/4/1、8/3/2的动物群体配置，并保存当前轮两项预测。预测未完成时`P0CycleController`即使约束已通过也拒绝进入Run。
 - `P0CycleMechanics`还保存每轮结束时的不可变结果快照；运行逻辑只读取最近一轮，完整列表保留到Reset Session。快照包含人类行程、分物种进食、回避、最常使用活动节点和松鼠平均熟悉度。
+- 结果快照同时冻结`P0CycleScore`分项与总分。Run界面从实时代理状态计算预览分，Observe和日志读取冻结分，避免阶段结束后的实例清除改变结果。
 - `P0ControlPanel` 提供大号阶段按钮、空格快捷键、约束反馈、预测和倒计时；它只调用控制器公开动作，不绕过布局、约束或预测门控。
 - 最小日志包含 `session_id`、`cycle_index`、时间戳、输入布局、约束结果、改动元素、动物状态变化、关键事件和 Trace 摘要。
 - 默认不记录参与者姓名；如后续保存视频或其他可识别资料，必须另行经过研究伦理和同意流程。
 - `P0ResearchLogger`订阅`LayoutAccepted`、`ConstraintsEvaluated`与`PhaseChanged`，将布局确认、约束检查和阶段变化追加到会话日志。
-- 每条记录包含UTC时间、会话/周期/情境/阶段、两项预测、布局时间戳、三项约束、改动预算、三种动物数量、人类完成行程、各物种进食次数、动物回避次数和实际读取的上一轮记忆字段；尚未实现的Trace摘要不伪造为空间数据。
+- 每条记录包含UTC时间、会话/周期/情境/阶段、两项预测、布局时间戳、三项约束、改动预算、三种动物数量、人类完成行程、各物种进食次数、动物回避次数、分项/总分和实际读取的上一轮记忆字段；尚未实现的Trace摘要不伪造为空间数据。
 - 输出位于被Git忽略的 `data/raw/research-logs/<session_id>/events.jsonl` 和 `events.csv`。JSONL保留机器可读结构，CSV用于快速检查与分析。
 
 ## 模块边界

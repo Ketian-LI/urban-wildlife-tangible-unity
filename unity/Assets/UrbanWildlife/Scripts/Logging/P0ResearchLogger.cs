@@ -155,6 +155,7 @@ namespace UrbanWildlife.Logging
         {
             LayoutPacket packet = reader.LatestPacket;
             P0CycleMemorySnapshot memory = cycle.Mechanics.LastMemory;
+            P0CycleScore score = memory?.Score;
             ResearchLogRecord record = new ResearchLogRecord
             {
                 timestamp_utc = DateTimeOffset.UtcNow.ToString("O"),
@@ -181,6 +182,12 @@ namespace UrbanWildlife.Logging
                 memory_caution_multiplier = memory == null
                     ? (float?)null
                     : P0CycleMechanics.MemoryCautionMultiplier(memory),
+                score_formula_version = score == null ? null : P0CycleScore.FormulaVersion,
+                score_total = score?.TotalScore,
+                score_human_access = score?.HumanAccessScore,
+                score_pigeon_feeding = score?.PigeonFeedingScore,
+                score_squirrel_feeding = score?.SquirrelFeedingScore,
+                score_fox_feeding = score?.FoxFeedingScore,
                 layout_timestamp_ms = packet?.timestamp_ms,
                 human_connected = result?.human_connected,
                 animal_reachable = result?.animal_reachable,

@@ -69,9 +69,9 @@ namespace UrbanWildlife.Cycle
             float width = Mathf.Min((running ? 390f : 440f) * scale, Screen.width - 32f);
             bool hasMemory = cycle.Mechanics.LastMemory != null;
             float requestedHeight = running
-                ? hasMemory ? 330f : 255f
+                ? hasMemory ? 390f : 320f
                 : observing
-                    ? 540f
+                    ? 610f
                     : cycle.Phase == P0Phase.Confirm
                         ? hasMemory ? 810f : 680f
                         : hasMemory ? 665f : 525f;
@@ -110,6 +110,7 @@ namespace UrbanWildlife.Cycle
             {
                 if (running)
                 {
+                    DrawScore(CurrentScore(), "LIVE PLANNING SCORE");
                     GUILayout.Space(6f);
                     GUILayout.Label($"PREDICTION  {cycle.Mechanics.PredictionSummary()}", bodyStyle);
                 }
@@ -253,6 +254,8 @@ namespace UrbanWildlife.Cycle
             }
 
             GUILayout.Space(8f);
+            DrawScore(cycle.Mechanics.LastMemory?.Score ?? CurrentScore(), "CYCLE PLANNING SCORE");
+            GUILayout.Space(5f);
             GUILayout.Label("WHAT HAPPENED", statusStyle);
             GUILayout.Label(
                 cycle.Mechanics.BuildObservationSummary(
@@ -276,6 +279,31 @@ namespace UrbanWildlife.Cycle
             GUILayout.Space(5f);
             GUILayout.Label("SAVED FOR THE NEXT CYCLE", statusStyle);
             GUILayout.Label(cycle.Mechanics.MemoryEffectSummary(), bodyStyle);
+        }
+
+        private P0CycleScore CurrentScore()
+        {
+            return P0CycleScore.Calculate(
+                humanSimulation?.SuccessfulAgentCount ?? 0,
+                humanSimulation?.AgentCount ?? 0,
+                animalSimulation?.FedPigeonCount ?? 0,
+                animalSimulation?.PigeonCount ?? 0,
+                animalSimulation?.FedSquirrelCount ?? 0,
+                animalSimulation?.SquirrelCount ?? 0,
+                animalSimulation?.FedFoxCount ?? 0,
+                animalSimulation?.FoxCount ?? 0);
+        }
+
+        private void DrawScore(P0CycleScore score, string heading)
+        {
+            if (score == null)
+            {
+                return;
+            }
+
+            GUILayout.Space(5f);
+            GUILayout.Label(heading, statusStyle);
+            GUILayout.Label(score.Summary(), bodyStyle);
         }
 
         private void DrawConstraintStatus()

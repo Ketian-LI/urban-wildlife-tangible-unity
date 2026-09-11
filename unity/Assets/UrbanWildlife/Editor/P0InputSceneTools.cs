@@ -299,6 +299,14 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("Three-cycle wildlife population profiles changed unexpectedly.");
             }
 
+            P0CycleScore partialScore = P0CycleScore.Calculate(3, 6, 7, 7, 1, 4, 0, 1);
+            P0CycleScore fullScore = P0CycleScore.Calculate(6, 6, 9, 9, 4, 4, 1, 1);
+            if (partialScore.HumanAccessScore != 20 || partialScore.PigeonFeedingScore != 20 ||
+                partialScore.SquirrelFeedingScore != 5 || partialScore.FoxFeedingScore != 0 ||
+                partialScore.TotalScore != 45 || fullScore.TotalScore != 100)
+            {
+                throw new InvalidOperationException("Normalized 40/20/20/20 planning score is incorrect.");
+            }
             P0CycleMemorySnapshot plannerMemory = new P0CycleMemorySnapshot(
                 0,
                 6,
@@ -309,7 +317,8 @@ namespace UrbanWildlife.EditorTools
                 12,
                 10,
                 11,
-                0.5f);
+                0.5f,
+                partialScore);
             AnimalSpawnPlan[] rememberedPlans = AnimalEnvironmentPlanner.CreatePlans(
                 humanDemo,
                 scenario,
@@ -764,6 +773,12 @@ namespace UrbanWildlife.EditorTools
                     remembered_fox_food_token_id = 11,
                     carried_squirrel_familiarity = 0.4f,
                     memory_caution_multiplier = 1.1f,
+                    score_formula_version = P0CycleScore.FormulaVersion,
+                    score_total = 45,
+                    score_human_access = 20,
+                    score_pigeon_feeding = 20,
+                    score_squirrel_feeding = 5,
+                    score_fox_feeding = 0,
                     layout_timestamp_ms = humanDemo.timestamp_ms,
                     human_connected = true,
                     animal_reachable = true,
@@ -790,9 +805,11 @@ namespace UrbanWildlife.EditorTools
                 if (parsedLog == null || parsedLog.event_type != logRecord.event_type ||
                     parsedLog.cycle_scenario_id != "S001-C1" || parsedLog.pigeon_count != 7 ||
                     parsedLog.remembered_squirrel_food_token_id != 10 ||
+                    parsedLog.score_total != 45 || parsedLog.score_human_access != 20 ||
                     csvLines.Length != 2 || !csvLines[1].Contains("\"comma, quote \"\"checked\"\"\"") ||
                     !ResearchLogFormatter.CsvHeader.Contains("predicted_top_feeder") ||
                     !ResearchLogFormatter.CsvHeader.Contains("memory_source_cycle_index") ||
+                    !ResearchLogFormatter.CsvHeader.Contains("score_total") ||
                     ResearchLogFormatter.CsvHeader.Contains("participant") || jsonLines[0].Contains("participant"))
                 {
                     throw new InvalidOperationException("Research logger JSONL/CSV or privacy smoke check failed.");
@@ -860,7 +877,8 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("Prediction and observation mechanics are not internally consistent.");
             }
             if (!mechanics.RecordOutcome(plannerMemory) || mechanics.MemoryCount != 1 ||
-                !mechanics.MemorySummary().Contains("Remembered nodes"))
+                !mechanics.MemorySummary().Contains("Remembered nodes") ||
+                !mechanics.MemorySummary().Contains("45/100"))
             {
                 throw new InvalidOperationException("Completed outcomes were not saved as cross-cycle memory.");
             }
@@ -880,6 +898,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CYCLE_MEMORY_SMOKE_OK revisit_share>=0.5 squirrel_carry=0.8 " +
                 "caution_cap=1.25 visible_summary=True reset_session=True");
+            Debug.Log(
+                "UNITY_SCORE_SMOKE_OK total=100 weights=40/20/20/20 " +
+                "normalized_by_successful_agents=True repeated_events_capped=True");
 
             GameObject uiObject = new GameObject("P0 UI Smoke");
             uiObject.AddComponent<LayoutPacketReader>();

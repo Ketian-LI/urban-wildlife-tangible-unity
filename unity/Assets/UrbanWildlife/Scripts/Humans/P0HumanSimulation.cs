@@ -85,6 +85,7 @@ namespace UrbanWildlife.Humans
         public int DwellerCount => humans.Count(item => item.model.Archetype == HumanArchetype.Dweller);
         public int VisitorCount => humans.Count(item => item.model.Archetype == HumanArchetype.Visitor);
         public int CompletedTrips => humans.Sum(item => item.completedTrips);
+        public int SuccessfulAgentCount => humans.Count(item => item.completedTrips > 0);
 
         public bool TryGetNearestActiveHuman(Vector2 localPosition, out float distance)
         {

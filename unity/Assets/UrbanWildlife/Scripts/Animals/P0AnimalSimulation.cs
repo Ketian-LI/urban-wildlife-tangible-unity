@@ -93,6 +93,12 @@ namespace UrbanWildlife.Animals
         public int FoxFeedEvents => animals
             .Where(item => item.model.Species == AnimalSpecies.Fox)
             .Sum(item => item.model.FeedEvents);
+        public int FedPigeonCount => animals.Count(
+            item => item.model.Species == AnimalSpecies.Pigeon && item.model.FeedEvents > 0);
+        public int FedSquirrelCount => animals.Count(
+            item => item.model.Species == AnimalSpecies.Squirrel && item.model.FeedEvents > 0);
+        public int FedFoxCount => animals.Count(
+            item => item.model.Species == AnimalSpecies.Fox && item.model.FeedEvents > 0);
         public int AvoidanceEvents => animals.Sum(item => item.model.AvoidanceEvents);
         public float AverageSquirrelFamiliarity => animals
             .Where(item => item.model.Species == AnimalSpecies.Squirrel)
@@ -259,6 +265,15 @@ namespace UrbanWildlife.Animals
 
         private void RecordCycleMemory()
         {
+            P0CycleScore score = P0CycleScore.Calculate(
+                humans?.SuccessfulAgentCount ?? 0,
+                humans?.AgentCount ?? 0,
+                FedPigeonCount,
+                PigeonCount,
+                FedSquirrelCount,
+                SquirrelCount,
+                FedFoxCount,
+                FoxCount);
             P0CycleMemorySnapshot snapshot = new P0CycleMemorySnapshot(
                 cycle.CycleIndex,
                 humans?.CompletedTrips ?? 0,
@@ -269,7 +284,8 @@ namespace UrbanWildlife.Animals
                 PreferredFoodTokenId(AnimalSpecies.Pigeon),
                 PreferredFoodTokenId(AnimalSpecies.Squirrel),
                 PreferredFoodTokenId(AnimalSpecies.Fox),
-                AverageSquirrelFamiliarity);
+                AverageSquirrelFamiliarity,
+                score);
             if (!cycle.Mechanics.RecordOutcome(snapshot))
             {
                 Debug.LogWarning("Could not record the current animal outcome as cross-cycle memory.", this);

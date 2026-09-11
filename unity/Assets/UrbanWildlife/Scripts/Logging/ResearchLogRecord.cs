@@ -26,6 +26,12 @@ namespace UrbanWildlife.Logging
         public int? remembered_fox_food_token_id;
         public float? carried_squirrel_familiarity;
         public float? memory_caution_multiplier;
+        public string score_formula_version;
+        public int? score_total;
+        public int? score_human_access;
+        public int? score_pigeon_feeding;
+        public int? score_squirrel_feeding;
+        public int? score_fox_feeding;
         public long? layout_timestamp_ms;
         public bool? human_connected;
         public bool? animal_reachable;
@@ -51,6 +57,8 @@ namespace UrbanWildlife.Logging
             "memory_source_cycle_index,remembered_human_trips,remembered_avoidance_events," +
             "remembered_pigeon_food_token_id,remembered_squirrel_food_token_id," +
             "remembered_fox_food_token_id,carried_squirrel_familiarity,memory_caution_multiplier," +
+            "score_formula_version,score_total,score_human_access,score_pigeon_feeding," +
+            "score_squirrel_feeding,score_fox_feeding," +
             "human_connected,animal_reachable,food_hotspot_valid,changes_used,changes_allowed," +
             "human_trips,pigeon_count,squirrel_count,fox_count," +
             "pigeon_feed_events,squirrel_feed_events,fox_feed_events," +
@@ -78,6 +86,12 @@ namespace UrbanWildlife.Logging
                 record.remembered_fox_food_token_id,
                 record.carried_squirrel_familiarity,
                 record.memory_caution_multiplier,
+                record.score_formula_version,
+                record.score_total,
+                record.score_human_access,
+                record.score_pigeon_feeding,
+                record.score_squirrel_feeding,
+                record.score_fox_feeding,
                 record.human_connected,
                 record.animal_reachable,
                 record.food_hotspot_valid,

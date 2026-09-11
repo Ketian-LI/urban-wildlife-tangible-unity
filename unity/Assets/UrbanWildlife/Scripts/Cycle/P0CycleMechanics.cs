@@ -46,6 +46,67 @@ namespace UrbanWildlife.Cycle
         public int AnimalCount => PigeonCount + SquirrelCount + FoxCount;
     }
 
+    public sealed class P0CycleScore
+    {
+        private P0CycleScore(
+            int humanAccessScore,
+            int pigeonFeedingScore,
+            int squirrelFeedingScore,
+            int foxFeedingScore)
+        {
+            HumanAccessScore = humanAccessScore;
+            PigeonFeedingScore = pigeonFeedingScore;
+            SquirrelFeedingScore = squirrelFeedingScore;
+            FoxFeedingScore = foxFeedingScore;
+        }
+
+        public const string FormulaVersion = "P0_SCORE_V0.1";
+        public const int HumanAccessMaximum = 40;
+        public const int SpeciesFeedingMaximum = 20;
+
+        public int HumanAccessScore { get; }
+        public int PigeonFeedingScore { get; }
+        public int SquirrelFeedingScore { get; }
+        public int FoxFeedingScore { get; }
+        public int TotalScore =>
+            HumanAccessScore + PigeonFeedingScore + SquirrelFeedingScore + FoxFeedingScore;
+
+        public static P0CycleScore Calculate(
+            int successfulHumans,
+            int humanCount,
+            int fedPigeons,
+            int pigeonCount,
+            int fedSquirrels,
+            int squirrelCount,
+            int fedFoxes,
+            int foxCount)
+        {
+            return new P0CycleScore(
+                ProportionalScore(successfulHumans, humanCount, HumanAccessMaximum),
+                ProportionalScore(fedPigeons, pigeonCount, SpeciesFeedingMaximum),
+                ProportionalScore(fedSquirrels, squirrelCount, SpeciesFeedingMaximum),
+                ProportionalScore(fedFoxes, foxCount, SpeciesFeedingMaximum));
+        }
+
+        public string Summary()
+        {
+            return
+                $"TOTAL {TotalScore}/100 · Human access {HumanAccessScore}/40 · " +
+                $"Pigeon {PigeonFeedingScore}/20 · Squirrel {SquirrelFeedingScore}/20 · Fox {FoxFeedingScore}/20";
+        }
+
+        private static int ProportionalScore(int successfulAgents, int agentCount, int maximum)
+        {
+            if (agentCount <= 0)
+            {
+                return 0;
+            }
+
+            float ratio = Math.Min(Math.Max(0, successfulAgents), agentCount) / (float)agentCount;
+            return (int)Math.Round(maximum * ratio, MidpointRounding.AwayFromZero);
+        }
+    }
+
     public sealed class P0CycleMemorySnapshot
     {
         public P0CycleMemorySnapshot(
@@ -58,7 +119,8 @@ namespace UrbanWildlife.Cycle
             int pigeonPreferredFoodTokenId,
             int squirrelPreferredFoodTokenId,
             int foxPreferredFoodTokenId,
-            float squirrelFamiliarity)
+            float squirrelFamiliarity,
+            P0CycleScore score = null)
         {
             SourceCycleIndex = sourceCycleIndex;
             HumanTrips = Math.Max(0, humanTrips);
@@ -70,6 +132,7 @@ namespace UrbanWildlife.Cycle
             SquirrelPreferredFoodTokenId = squirrelPreferredFoodTokenId;
             FoxPreferredFoodTokenId = foxPreferredFoodTokenId;
             SquirrelFamiliarity = Math.Max(0f, squirrelFamiliarity);
+            Score = score;
         }
 
         public int SourceCycleIndex { get; }
@@ -82,6 +145,7 @@ namespace UrbanWildlife.Cycle
         public int SquirrelPreferredFoodTokenId { get; }
         public int FoxPreferredFoodTokenId { get; }
         public float SquirrelFamiliarity { get; }
+        public P0CycleScore Score { get; }
     }
 
     public sealed class P0CycleMechanics
@@ -208,13 +272,16 @@ namespace UrbanWildlife.Cycle
                 return "No previous-cycle memory";
             }
 
+            string scoreText = memory.Score == null
+                ? string.Empty
+                : $" Planning score {memory.Score.TotalScore}/100.";
             return
                 $"Cycle {memory.SourceCycleIndex + 1}: people completed {memory.HumanTrips} trips; " +
                 $"feeds P{memory.PigeonFeedEvents}/S{memory.SquirrelFeedEvents}/F{memory.FoxFeedEvents}; " +
                 $"avoidance {memory.AvoidanceEvents}. Remembered nodes: " +
                 $"P{TokenLabel(memory.PigeonPreferredFoodTokenId)}, " +
                 $"S{TokenLabel(memory.SquirrelPreferredFoodTokenId)}, " +
-                $"F{TokenLabel(memory.FoxPreferredFoodTokenId)}.";
+                $"F{TokenLabel(memory.FoxPreferredFoodTokenId)}.{scoreText}";
         }
 
         public string MemoryEffectSummary()

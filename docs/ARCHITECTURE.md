@@ -164,13 +164,13 @@ Observed crossings, feeding, waiting and avoidance
 - 预测试默认 Plan 不倒计时、Run 60 秒、Observe 约 30 秒，每个 Session 3 个周期；正式研究参数可在预测试后调整并记录版本。
 - `P0CycleController` 实现阶段门控：约束失败返回Plan，成功后才可从Confirm进入Run；Run与Observe到时自动推进，第三周期后进入Complete。
 - `P0CycleMechanics`保存三轮情境与7/3/1、9/4/1、8/3/2的动物群体配置，并保存当前轮两项预测。预测未完成时`P0CycleController`即使约束已通过也拒绝进入Run。
-- `P0CycleMechanics`还保存每轮结束时的不可变结果快照；运行逻辑只读取最近一轮，完整列表保留到Reset Session。快照包含人类行程、分物种进食、回避、最常使用活动节点和松鼠平均熟悉度。
+- `P0CycleMechanics`还保存每轮结束时的不可变结果快照；运行逻辑只读取最近一轮，完整列表保留到Reset Session。快照包含人类行程、分物种进食、回避、最常使用活动节点、松鼠平均熟悉度以及Human/Animal累计轨迹距离。
 - 结果快照同时冻结`P0CycleScore`分项与总分。Run界面从实时代理状态计算预览分，Observe和日志读取冻结分，避免阶段结束后的实例清除改变结果。
 - `P0ControlPanel` 提供大号阶段按钮、空格快捷键、约束反馈、预测和倒计时；它只调用控制器公开动作，不绕过布局、约束或预测门控。
 - 最小日志包含 `session_id`、`cycle_index`、时间戳、输入布局、约束结果、改动元素、动物状态变化、关键事件和 Trace 摘要。
 - 默认不记录参与者姓名；如后续保存视频或其他可识别资料，必须另行经过研究伦理和同意流程。
 - `P0ResearchLogger`订阅`LayoutAccepted`、`ConstraintsEvaluated`与`PhaseChanged`，将布局确认、约束检查和阶段变化追加到会话日志。
-- 每条记录包含UTC时间、会话/周期/情境/阶段、两项预测、布局时间戳、三项约束、改动预算、三种动物数量、人类完成行程、各物种进食次数、动物回避次数、分项/总分和实际读取的上一轮记忆字段；尚未实现的Trace摘要不伪造为空间数据。
+- 每条记录包含UTC时间、会话/周期/情境/阶段、两项预测、布局时间戳、三项约束、改动预算、三种动物数量、人类完成行程、各物种进食次数、动物回避次数、分项/总分、轨迹采样点数、Human/Animal累计距离和实际读取的上一轮记忆字段。
 - 输出位于被Git忽略的 `data/raw/research-logs/<session_id>/events.jsonl` 和 `events.csv`。JSONL保留机器可读结构，CSV用于快速检查与分析。
 
 ## 模块边界
@@ -184,6 +184,7 @@ Observed crossings, feeding, waiting and avoidance
 - `HumanRoutePlanner` 只从已确认布局和S001参数生成路线，`HumanAgentStateMachine` 负责确定性移动/停留，`P0HumanSimulation` 负责Run阶段的Unity实例与可视化。
 - `AnimalEnvironmentPlanner`负责布局到群体动物资源关系的确定性映射，`AnimalAgentStateMachine`不依赖Unity场景对象，`P0AnimalSimulation`按当前轮配置生成11–14个实例并只负责运行期感知、实例和可视化。
 - Run进入Observe时，`P0AnimalSimulation`在实例被清除前汇总最常使用的活动节点和松鼠熟悉度并写入`P0CycleMechanics`。下一轮Planner将存在节点记忆的前半数代理分配回同一Token ID，并把熟悉度保留与回避产生的谨慎系数写入新代理配置。
+- `P0TraceSeries`按0.08 Unity单位的最小间距采样位置并累积距离；Human与Animal Simulation各自维护LineRenderer。人物每次从入口重新开始时新建轨迹段，Run/Observe保留当前轨迹，下一轮将最近一轮复制为低透明度历史层。显示开关只影响渲染，不改变状态机、距离统计或日志。
 - 动物显示层与行为状态机保持分离：`P0AnimalSimulation`从`Resources/UrbanWildlife/Animals`加载透明俯视Sprite，并只根据状态机结果处理平滑转向、待机摆动、进食脉动与状态色；替换美术不会改变生态规则或研究日志。
 - V0.2松鼠和狐狸通过透明轮廓顶点的宽高比进行显示层回归检查：松鼠使用宽圆C形侧尾，狐狸使用细长直尾、黑腿和白色尾尖；检查只保护地图尺寸下的物种可辨性，不参与行为判定。
 - 动物位置仍完全由状态机决定；表现层以8 FPS采样共用待机、转身、行走、进食、坐下和起身节奏。鸽子、松鼠和狐狸的Walking与Feeding各使用6张独立Sprite；行走帧直接绘制两腿或四肢的交替步态，启用时关闭整只动物的程序缩放和抬升，不改变生态逻辑。

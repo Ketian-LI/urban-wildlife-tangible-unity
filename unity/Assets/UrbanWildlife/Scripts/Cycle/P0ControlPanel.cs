@@ -9,6 +9,13 @@ namespace UrbanWildlife.Cycle
     [RequireComponent(typeof(P0CycleController), typeof(P0ConstraintManager), typeof(LayoutPacketReader))]
     public sealed class P0ControlPanel : MonoBehaviour
     {
+        private enum TraceDisplayMode
+        {
+            Human,
+            Animal,
+            Combined,
+        }
+
         private P0CycleController cycle;
         private P0ConstraintManager constraints;
         private LayoutPacketReader reader;
@@ -24,6 +31,7 @@ namespace UrbanWildlife.Cycle
         private GUIStyle fixStyle;
         private GUIStyle panelStyle;
         private Texture2D panelTexture;
+        private TraceDisplayMode traceDisplayMode = TraceDisplayMode.Combined;
 
         private void Awake()
         {
@@ -66,12 +74,12 @@ namespace UrbanWildlife.Cycle
             bool running = cycle.Phase == P0Phase.Run;
             bool observing = cycle.Phase == P0Phase.Observe;
             bool compact = running || observing;
-            float width = Mathf.Min((running ? 390f : 440f) * scale, Screen.width - 32f);
+            float width = Mathf.Min((running ? 430f : 440f) * scale, Screen.width - 32f);
             bool hasMemory = cycle.Mechanics.LastMemory != null;
             float requestedHeight = running
-                ? hasMemory ? 390f : 320f
+                ? hasMemory ? 475f : 405f
                 : observing
-                    ? 610f
+                    ? 700f
                     : cycle.Phase == P0Phase.Confirm
                         ? hasMemory ? 810f : 680f
                         : hasMemory ? 665f : 525f;
@@ -108,6 +116,7 @@ namespace UrbanWildlife.Cycle
             DrawAgentSummary();
             if (compact)
             {
+                DrawTraceControls();
                 if (running)
                 {
                     DrawScore(CurrentScore(), "LIVE PLANNING SCORE");
@@ -274,11 +283,42 @@ namespace UrbanWildlife.Cycle
                     animalSimulation.AvoidanceEvents),
                 bodyStyle);
             GUILayout.Label(
-                "The predicted pressure area is recorded now; spatial verification will be added with Trace.",
+                "Compare the cool human trace with the warm animal trace to inspect the predicted pressure area.",
                 bodyStyle);
             GUILayout.Space(5f);
             GUILayout.Label("SAVED FOR THE NEXT CYCLE", statusStyle);
             GUILayout.Label(cycle.Mechanics.MemoryEffectSummary(), bodyStyle);
+        }
+
+        private void DrawTraceControls()
+        {
+            GUILayout.Space(6f);
+            GUILayout.Label("TRACE VIEW", statusStyle);
+            GUILayout.BeginHorizontal();
+            DrawTraceButton("Human", TraceDisplayMode.Human);
+            DrawTraceButton("Animal", TraceDisplayMode.Animal);
+            DrawTraceButton("Combined", TraceDisplayMode.Combined);
+            GUILayout.EndHorizontal();
+            GUILayout.Label(
+                $"Cool human {humanSimulation?.TraceDistanceCm ?? 0f:0} cm · " +
+                $"Warm animal {animalSimulation?.TraceDistanceCm ?? 0f:0} cm",
+                bodyStyle);
+        }
+
+        private void DrawTraceButton(string label, TraceDisplayMode mode)
+        {
+            Color previous = GUI.backgroundColor;
+            if (traceDisplayMode == mode)
+            {
+                GUI.backgroundColor = new Color(0.48f, 0.82f, 0.58f, 1f);
+            }
+            if (GUILayout.Button(label, GUILayout.Height(32f)))
+            {
+                traceDisplayMode = mode;
+                humanSimulation?.SetTraceVisible(mode != TraceDisplayMode.Animal);
+                animalSimulation?.SetTraceVisible(mode != TraceDisplayMode.Human);
+            }
+            GUI.backgroundColor = previous;
         }
 
         private P0CycleScore CurrentScore()

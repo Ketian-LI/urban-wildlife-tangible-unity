@@ -307,6 +307,19 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("Normalized 40/20/20/20 planning score is incorrect.");
             }
+
+            P0TraceSeries traceSeries = new P0TraceSeries(0.1f, 4);
+            bool acceptedFirstTracePoint = traceSeries.TryAppend(Vector2.zero);
+            bool rejectedNearTracePoint = !traceSeries.TryAppend(new Vector2(0.05f, 0f));
+            traceSeries.TryAppend(new Vector2(0.2f, 0f));
+            traceSeries.TryAppend(new Vector2(0.5f, 0f));
+            traceSeries.TryAppend(new Vector2(1f, 0f));
+            bool rejectedOverflowTracePoint = !traceSeries.TryAppend(new Vector2(2f, 0f));
+            if (!acceptedFirstTracePoint || !rejectedNearTracePoint || !rejectedOverflowTracePoint ||
+                traceSeries.PointCount != 4 || Math.Abs(traceSeries.DistanceUnits - 1f) > 0.001f)
+            {
+                throw new InvalidOperationException("Trace sampling or distance accumulation is incorrect.");
+            }
             P0CycleMemorySnapshot plannerMemory = new P0CycleMemorySnapshot(
                 0,
                 6,
@@ -318,7 +331,9 @@ namespace UrbanWildlife.EditorTools
                 10,
                 11,
                 0.5f,
-                partialScore);
+                partialScore,
+                12.5f,
+                9.2f);
             AnimalSpawnPlan[] rememberedPlans = AnimalEnvironmentPlanner.CreatePlans(
                 humanDemo,
                 scenario,
@@ -773,6 +788,8 @@ namespace UrbanWildlife.EditorTools
                     remembered_fox_food_token_id = 11,
                     carried_squirrel_familiarity = 0.4f,
                     memory_caution_multiplier = 1.1f,
+                    remembered_human_trace_distance_units = 12.5f,
+                    remembered_animal_trace_distance_units = 9.25f,
                     score_formula_version = P0CycleScore.FormulaVersion,
                     score_total = 45,
                     score_human_access = 20,
@@ -786,6 +803,10 @@ namespace UrbanWildlife.EditorTools
                     changes_used = 2,
                     changes_allowed = 2,
                     human_trips = 6,
+                    human_trace_points = 90,
+                    animal_trace_points = 120,
+                    human_trace_distance_units = 12.5f,
+                    animal_trace_distance_units = 9.25f,
                     pigeon_count = 7,
                     squirrel_count = 3,
                     fox_count = 1,
@@ -805,10 +826,13 @@ namespace UrbanWildlife.EditorTools
                 if (parsedLog == null || parsedLog.event_type != logRecord.event_type ||
                     parsedLog.cycle_scenario_id != "S001-C1" || parsedLog.pigeon_count != 7 ||
                     parsedLog.remembered_squirrel_food_token_id != 10 ||
+                    parsedLog.human_trace_points != 90 || parsedLog.animal_trace_points != 120 ||
                     parsedLog.score_total != 45 || parsedLog.score_human_access != 20 ||
                     csvLines.Length != 2 || !csvLines[1].Contains("\"comma, quote \"\"checked\"\"\"") ||
                     !ResearchLogFormatter.CsvHeader.Contains("predicted_top_feeder") ||
                     !ResearchLogFormatter.CsvHeader.Contains("memory_source_cycle_index") ||
+                    !ResearchLogFormatter.CsvHeader.Contains("human_trace_points") ||
+                    !ResearchLogFormatter.CsvHeader.Contains("animal_trace_distance_units") ||
                     !ResearchLogFormatter.CsvHeader.Contains("score_total") ||
                     ResearchLogFormatter.CsvHeader.Contains("participant") || jsonLines[0].Contains("participant"))
                 {
@@ -878,7 +902,9 @@ namespace UrbanWildlife.EditorTools
             }
             if (!mechanics.RecordOutcome(plannerMemory) || mechanics.MemoryCount != 1 ||
                 !mechanics.MemorySummary().Contains("Remembered nodes") ||
-                !mechanics.MemorySummary().Contains("45/100"))
+                !mechanics.MemorySummary().Contains("45/100") ||
+                !mechanics.MemorySummary().Contains("human 125 cm") ||
+                !mechanics.MemorySummary().Contains("animal 92 cm"))
             {
                 throw new InvalidOperationException("Completed outcomes were not saved as cross-cycle memory.");
             }
@@ -901,6 +927,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_SCORE_SMOKE_OK total=100 weights=40/20/20/20 " +
                 "normalized_by_successful_agents=True repeated_events_capped=True");
+            Debug.Log(
+                "UNITY_TRACE_SMOKE_OK live=True previous_cycle=True modes=Human/Animal/Combined " +
+                "sampling=True distances_logged=True");
 
             GameObject uiObject = new GameObject("P0 UI Smoke");
             uiObject.AddComponent<LayoutPacketReader>();
@@ -912,7 +941,9 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("P0 control panel dependencies were not created.");
             }
             UnityEngine.Object.DestroyImmediate(uiObject);
-            Debug.Log("UNITY_UI_SMOKE_OK phase=Plan predictions_required=2 space_actions=Confirm/StartRun");
+            Debug.Log(
+                "UNITY_UI_SMOKE_OK phase=Plan predictions_required=2 space_actions=Confirm/StartRun " +
+                "trace_modes=3");
         }
 
         private static float TightSpriteAspect(Sprite sprite)

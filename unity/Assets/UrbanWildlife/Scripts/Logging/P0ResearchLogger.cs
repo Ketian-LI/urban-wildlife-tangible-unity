@@ -182,6 +182,8 @@ namespace UrbanWildlife.Logging
                 memory_caution_multiplier = memory == null
                     ? (float?)null
                     : P0CycleMechanics.MemoryCautionMultiplier(memory),
+                remembered_human_trace_distance_units = memory?.HumanTraceDistanceUnits,
+                remembered_animal_trace_distance_units = memory?.AnimalTraceDistanceUnits,
                 score_formula_version = score == null ? null : P0CycleScore.FormulaVersion,
                 score_total = score?.TotalScore,
                 score_human_access = score?.HumanAccessScore,
@@ -195,6 +197,10 @@ namespace UrbanWildlife.Logging
                 changes_used = result?.changes_used,
                 changes_allowed = result?.changes_allowed,
                 human_trips = humans?.CompletedTrips ?? 0,
+                human_trace_points = humans?.TracePointCount ?? 0,
+                animal_trace_points = animals?.TracePointCount ?? 0,
+                human_trace_distance_units = humans?.TraceDistanceUnits ?? 0f,
+                animal_trace_distance_units = animals?.TraceDistanceUnits ?? 0f,
                 pigeon_count = animals?.PigeonCount ?? 0,
                 squirrel_count = animals?.SquirrelCount ?? 0,
                 fox_count = animals?.FoxCount ?? 0,

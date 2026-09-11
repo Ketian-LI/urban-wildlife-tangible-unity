@@ -2,7 +2,7 @@
 
 这是可直接由 Unity Hub 打开的Unity 6工程，项目路径为仓库中的 `unity/`，编辑器版本固定为 `6000.3.4f1`。
 
-当前主场景为 `Assets/Scenes/P0_InputSpike.unity`。场景包含布局输入、约束、回合控制、基础人类代理、三种动物状态机和最小研究日志；Trace 会在技术闭环稳定后继续加入。
+当前主场景为 `Assets/Scenes/P0_InputSpike.unity`。场景包含布局输入、约束、回合控制、基础人类代理、三种动物状态机、实时Human/Animal/Combined Trace和最小研究日志。
 
 不要提交 `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 或本机构建输出。
 
@@ -23,10 +23,10 @@
    如需立刻查看完整行为，无需手动复制文件：在Play后的Plan阶段按 `D`，或点击 **LOAD ELECTRONIC DEMO**。系统会从脱敏样例生成当前周期的新数据包，因此连续3轮不会被旧时间戳拦截。
 4. 点击Play，使用左上控制面板的大号 **CONFIRM LAYOUT** 按钮，或按一次空格键。
 5. 识别数据有效时会生成S001城市公园地图、由确认Polyline实时生成的写实砂砾步道、3个柔和六边形Food与2个叶片式Woodland规划标记，并在面板显示Constraint Check。底图用红砖街区、铺装、黑色围栏与路灯明确城市语境；实体路径仍使用洋红罗纹带完成HSV识别，Unity步道只属于显示层。广场和池塘由底图中的铺装、岸线与植被表达，不再叠加突兀的黄圈或蓝圈；规划规则继续读取场景JSON中的精确坐标。所有约束通过后点击 **START RUN** 或再按一次空格；未通过则自动回到Plan。
-6. 约束通过后，先预测“哪一物种进食最多”和“压力最可能位于主路、活动节点或林带边缘”；两项都选择后 **START RUN** 才会启用。Run显示60秒倒计时和实时规划表现分，随后自动进入30秒Observe；Observe冻结本轮分数、对比分物种进食与回避结果，说明将保存到下一轮的记忆效果，并给出下一轮可检验的调整提示。三个周期结束后可用 **RESET SESSION** 重新开始，Reset会清空跨周期记忆。
+6. 约束通过后，先预测“哪一物种进食最多”和“压力最可能位于主路、活动节点或林带边缘”；两项都选择后 **START RUN** 才会启用。Run显示60秒倒计时、实时规划表现分和实时轨迹；控制面板可切换Human、Animal、Combined三种轨迹视图。随后自动进入30秒Observe并保留本轮轨迹，方便以冷色人类线和暖色动物线人工核对压力区域。下一轮保留低透明度的上一轮轨迹作为对照；Reset会清空跨周期记忆和历史轨迹。
    Run中会出现2个Walker、2个Dweller和2个Visitor：三类人物在完整道路移动状态中以4 FPS连续播放4个经人工核对的关键姿态，顺序是一侧接触/过渡、另一侧接触/过渡，完整步态约1秒。源素材仍保留每类6张独立Sprite，但不再直接信任生成图的格子顺序；所选行走帧均按同一人物高度和脚底基线归一化，因此不会忽大忽小或上下闪动。Dweller在广场停留，以4张独立Sprite坐下并反向播放起身；Visitor绕行至Food Hotspot并播放6张独立喂食Sprite。其他人物动作继续使用共用8 FPS离散采样：3帧待机、3帧转身、6帧喂食、4帧坐下和4帧起身。Run与Observe期间控制面板自动收起为紧凑信息卡，减少对地图的遮挡。
 7. 三轮依次生成鸽子/松鼠/狐狸7/3/1、9/4/1和8/3/2只。三者使用透明背景的手绘侧视Sprite，并按接近真实的相对体长显示；移动折返时先播放3帧转身，行走使用各自6张独立Sprite。鸽子的两腿、松鼠与狐狸的前后肢均按左右/对角步态前后交替。三种动物的Feeding状态也使用各自6张独立Sprite。上一轮成功使用最多的活动节点会吸引下一轮至少一半同物种代理回访；松鼠保留80%熟悉度，松鼠与狐狸还会依据上一轮回避次数形成最高25%的谨慎距离增幅。
-8. 规划表现分满分100：至少完成一次通行的人类比例占40分，至少进食一次的鸽子、松鼠、狐狸比例各占20分；重复事件不刷分，回避不直接扣分。会话事件写入 `data/raw/research-logs/<session_id>/events.jsonl` 与 `events.csv`，包含分项、总分及公式版本；该目录不会提交Git，也不含参与者姓名。
+8. 规划表现分满分100：至少完成一次通行的人类比例占40分，至少进食一次的鸽子、松鼠、狐狸比例各占20分；重复事件不刷分，回避不直接扣分。会话事件写入 `data/raw/research-logs/<session_id>/events.jsonl` 与 `events.csv`，包含分项、总分、公式版本、Human/Animal轨迹采样点数和累计移动距离；该目录不会提交Git，也不含参与者姓名。
 9. 版本错误、旧时间戳、未通过稳定门控、越界坐标、路径不连续、Token缺失或重复都会保留上一份有效布局并输出原因。
 
 轮廓版无隐私输入样例位于 `docs/images/vision/layout-packet-contour-v02-validation/latest_layout.json`。编辑器批处理验证命令为：
@@ -38,7 +38,7 @@
   -quit -logFile ".\data\raw\unity-smoke.log"
 ```
 
-成功日志包含输入、约束、人类、动物、研究日志、回合和UI标记。其中关键标记为 `UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11`、`UNITY_PREDICTION_SMOKE_OK`、`UNITY_CYCLE_MEMORY_SMOKE_OK`、`UNITY_SCORE_SMOKE_OK` 与 `UNITY_RESEARCH_LOG_SMOKE_OK`。
+成功日志包含输入、约束、人类、动物、研究日志、回合、轨迹和UI标记。其中关键标记为 `UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11`、`UNITY_PREDICTION_SMOKE_OK`、`UNITY_CYCLE_MEMORY_SMOKE_OK`、`UNITY_SCORE_SMOKE_OK`、`UNITY_TRACE_SMOKE_OK` 与 `UNITY_RESEARCH_LOG_SMOKE_OK`。
 
 ## 已实现组件
 
@@ -55,6 +55,7 @@
 - `HumanRoutePlanner.cs`：把确认路径、中央广场与Food Hotspot组合为Walker、Dweller和Visitor路线。
 - `HumanAgentStateMachine.cs`：以确定性状态管理进入、移动、广场停留、Hotspot访问和路线完成。
 - `SteppedCharacterAnimation.cs`：定义人类与动物共用的8 FPS离散动画采样器，以及待机、转身、行走、喂食/进食、坐下和起身六类动作的关键帧数量与姿态。
+- `P0TraceSeries.cs`：以固定最小距离采样连续位置，累积移动距离，并用LineRenderer生成当前及上一轮的可切换轨迹。
 - `P0HumanSimulation.cs`：在Run阶段生成并更新6个人类Sprite代理，把完整道路移动状态映射为连续6 FPS行走，并处理逐帧转身、坐下、喂食和起身；Observe保留最后状态，Plan清除上一轮实例。
 - `AnimalEnvironmentPlanner.cs`：把3个活动节点与2个Woodland映射为群体鸽子、松鼠和狐狸的起点、资源点及庇护点；读取上一轮节点偏好、松鼠熟悉度和谨慎系数，并给同群个体小范围确定性偏移。
 - `AnimalAgentStateMachine.cs`：实现觅食、停留、回避人类、退回庇护地及松鼠熟悉度等确定性状态。
@@ -66,7 +67,7 @@
 
 ## 当前边界
 
-- Unity已完成可测试的逐帧动画节奏样板与角色标志性动作：三类人物在完整道路移动状态中以4 FPS播放4个经人工核对、严格左右交替的行走姿态，三种动物各有6帧独立行走与进食，Dweller有4帧坐下并可反向起身，Visitor有6帧喂食。待机与转身仍使用共用离散关键帧；拥堵寻路和Trace尚未实现。
+- Unity已完成可测试的逐帧动画节奏样板、角色标志性动作和实时Trace。三类人物在完整道路移动状态中以4 FPS播放4个经人工核对、严格左右交替的行走姿态，三种动物各有6帧独立行走与进食，Dweller有4帧坐下并可反向起身，Visitor有6帧喂食。待机与转身仍使用共用离散关键帧；拥堵寻路和压力区域自动分类尚未实现。
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。

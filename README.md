@@ -71,6 +71,7 @@ urban-wildlife-tangible-unity/
 - [x] 接入Run前双项预测、Observe因果回顾以及包含预测和群体数量的研究日志
 - [x] 接入跨周期滚动记忆：活动节点回访、松鼠熟悉度保留、谨慎度变化与可见日志
 - [x] 接入按成功个体比例计算的100分规划表现分，并在Run实时更新、Observe冻结记录
+- [x] 接入实时Human/Animal/Combined Trace、上一轮淡化叠加以及轨迹距离日志
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 
 工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)、[`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md) 和 [`docs/devlog/2026-09-11.md`](docs/devlog/2026-09-11.md)。

@@ -38,6 +38,11 @@ namespace UrbanWildlife.Animals
         public const float FoxPresentationSaturation = 0.66f;
         public const float PresentationBrightness = 0.92f;
         public const float PresentationAmbientBlend = 0.18f;
+        public const float TraceSampleDistance = 0.08f;
+        public const float TraceWidth = 0.035f;
+
+        private static readonly Color AnimalTraceColour = new Color(0.88f, 0.43f, 0.18f, 0.60f);
+        private static readonly Color PreviousAnimalTraceColour = new Color(0.88f, 0.43f, 0.18f, 0.15f);
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -68,6 +73,7 @@ namespace UrbanWildlife.Animals
             public float turnStartedAt;
             public float turnEndsAt;
             public float riseEndsAt;
+            public P0TraceLine trace;
         }
 
         private readonly List<RuntimeAnimal> animals = new List<RuntimeAnimal>();
@@ -77,6 +83,10 @@ namespace UrbanWildlife.Animals
         private P0Scenario scenario;
         private LayoutPacket confirmedPacket;
         private Transform generatedRoot;
+        private Transform previousTraceRoot;
+        private Material animalTraceMaterial;
+        private Material previousAnimalTraceMaterial;
+        private bool traceVisible = true;
 
         public event Action<P0CycleMemorySnapshot> CycleMemoryRecorded;
         public int AgentCount => animals.Count;
@@ -105,6 +115,22 @@ namespace UrbanWildlife.Animals
             .Select(item => item.model.Familiarity)
             .DefaultIfEmpty(0f)
             .Average();
+        public int TracePointCount => animals.Sum(item => item.trace?.Series.PointCount ?? 0);
+        public float TraceDistanceUnits => animals.Sum(item => item.trace?.Series.DistanceUnits ?? 0f);
+        public float TraceDistanceCm => TraceDistanceUnits * 10f;
+
+        public void SetTraceVisible(bool visible)
+        {
+            traceVisible = visible;
+            foreach (RuntimeAnimal animal in animals)
+            {
+                animal.trace?.SetVisible(visible);
+            }
+            if (previousTraceRoot != null)
+            {
+                previousTraceRoot.gameObject.SetActive(visible);
+            }
+        }
 
         private void Awake()
         {
@@ -165,6 +191,7 @@ namespace UrbanWildlife.Animals
                 Vector2 previous = animal.model.Position;
                 animal.model.Tick(Time.deltaTime, perception);
                 Vector2 current = animal.model.Position;
+                animal.trace?.TryAppend(current);
                 animal.visual.localPosition = new Vector3(current.x, 0.28f, current.y);
                 Vector2 movement = current - previous;
                 bool moving = movement.sqrMagnitude > 0.000001f;
@@ -205,6 +232,14 @@ namespace UrbanWildlife.Animals
             }
             else if (phase == P0Phase.Plan)
             {
+                if (cycle.CycleIndex > 0)
+                {
+                    ArchiveCurrentTrace();
+                }
+                else
+                {
+                    ClearPreviousTrace();
+                }
                 ClearAnimals();
             }
             else
@@ -233,6 +268,7 @@ namespace UrbanWildlife.Animals
             GameObject root = new GameObject("Runtime Animals");
             root.transform.SetParent(transform, false);
             generatedRoot = root.transform;
+            animalTraceMaterial = CreateTraceMaterial();
             for (int index = 0; index < plans.Length; index += 1)
             {
                 AnimalAgentStateMachine model = new AnimalAgentStateMachine(plans[index]);
@@ -253,6 +289,16 @@ namespace UrbanWildlife.Animals
                     actionStartedAt = Time.time,
                 };
                 CreateArtwork(runtime);
+                runtime.trace = new P0TraceLine(
+                    generatedRoot,
+                    $"Animal Trace {index + 1:00}",
+                    animalTraceMaterial,
+                    AnimalTraceColour,
+                    TraceWidth,
+                    0.12f,
+                    TraceSampleDistance);
+                runtime.trace.TryAppend(model.Position);
+                runtime.trace.SetVisible(traceVisible);
                 ApplyColour(runtime);
                 animals.Add(runtime);
             }
@@ -285,7 +331,9 @@ namespace UrbanWildlife.Animals
                 PreferredFoodTokenId(AnimalSpecies.Squirrel),
                 PreferredFoodTokenId(AnimalSpecies.Fox),
                 AverageSquirrelFamiliarity,
-                score);
+                score,
+                humans?.TraceDistanceUnits ?? 0f,
+                TraceDistanceUnits);
             if (!cycle.Mechanics.RecordOutcome(snapshot))
             {
                 Debug.LogWarning("Could not record the current animal outcome as cross-cycle memory.", this);
@@ -336,6 +384,8 @@ namespace UrbanWildlife.Animals
                 }
             }
             animals.Clear();
+            DestroyObject(animalTraceMaterial);
+            animalTraceMaterial = null;
             if (generatedRoot == null)
             {
                 Transform existing = transform.Find("Runtime Animals");
@@ -358,6 +408,63 @@ namespace UrbanWildlife.Animals
                 DestroyImmediate(generatedRoot.gameObject);
             }
             generatedRoot = null;
+        }
+
+        private void ArchiveCurrentTrace()
+        {
+            ClearPreviousTrace();
+            if (TracePointCount == 0)
+            {
+                return;
+            }
+
+            GameObject root = new GameObject("Previous Animal Trace");
+            root.transform.SetParent(transform, false);
+            previousTraceRoot = root.transform;
+            previousAnimalTraceMaterial = CreateTraceMaterial();
+            int index = 0;
+            foreach (RuntimeAnimal animal in animals)
+            {
+                animal.trace?.CopyTo(
+                    previousTraceRoot,
+                    $"Previous Animal Trace {++index:00}",
+                    previousAnimalTraceMaterial,
+                    PreviousAnimalTraceColour,
+                    TraceWidth * 0.72f);
+            }
+            previousTraceRoot.gameObject.SetActive(traceVisible);
+        }
+
+        private void ClearPreviousTrace()
+        {
+            DestroyObject(previousTraceRoot == null ? null : previousTraceRoot.gameObject);
+            previousTraceRoot = null;
+            DestroyObject(previousAnimalTraceMaterial);
+            previousAnimalTraceMaterial = null;
+        }
+
+        private static Material CreateTraceMaterial()
+        {
+            Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard");
+            Material material = new Material(shader);
+            material.color = Color.white;
+            return material;
+        }
+
+        private static void DestroyObject(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
         }
 
         private static void CreateArtwork(RuntimeAnimal animal)

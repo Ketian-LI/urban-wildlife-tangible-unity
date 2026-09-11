@@ -120,7 +120,9 @@ namespace UrbanWildlife.Cycle
             int squirrelPreferredFoodTokenId,
             int foxPreferredFoodTokenId,
             float squirrelFamiliarity,
-            P0CycleScore score = null)
+            P0CycleScore score = null,
+            float humanTraceDistanceUnits = 0f,
+            float animalTraceDistanceUnits = 0f)
         {
             SourceCycleIndex = sourceCycleIndex;
             HumanTrips = Math.Max(0, humanTrips);
@@ -133,6 +135,8 @@ namespace UrbanWildlife.Cycle
             FoxPreferredFoodTokenId = foxPreferredFoodTokenId;
             SquirrelFamiliarity = Math.Max(0f, squirrelFamiliarity);
             Score = score;
+            HumanTraceDistanceUnits = Math.Max(0f, humanTraceDistanceUnits);
+            AnimalTraceDistanceUnits = Math.Max(0f, animalTraceDistanceUnits);
         }
 
         public int SourceCycleIndex { get; }
@@ -146,6 +150,8 @@ namespace UrbanWildlife.Cycle
         public int FoxPreferredFoodTokenId { get; }
         public float SquirrelFamiliarity { get; }
         public P0CycleScore Score { get; }
+        public float HumanTraceDistanceUnits { get; }
+        public float AnimalTraceDistanceUnits { get; }
     }
 
     public sealed class P0CycleMechanics
@@ -275,13 +281,16 @@ namespace UrbanWildlife.Cycle
             string scoreText = memory.Score == null
                 ? string.Empty
                 : $" Planning score {memory.Score.TotalScore}/100.";
+            string traceText =
+                $" Traces: human {memory.HumanTraceDistanceUnits * 10f:0} cm, " +
+                $"animal {memory.AnimalTraceDistanceUnits * 10f:0} cm.";
             return
                 $"Cycle {memory.SourceCycleIndex + 1}: people completed {memory.HumanTrips} trips; " +
                 $"feeds P{memory.PigeonFeedEvents}/S{memory.SquirrelFeedEvents}/F{memory.FoxFeedEvents}; " +
                 $"avoidance {memory.AvoidanceEvents}. Remembered nodes: " +
                 $"P{TokenLabel(memory.PigeonPreferredFoodTokenId)}, " +
                 $"S{TokenLabel(memory.SquirrelPreferredFoodTokenId)}, " +
-                $"F{TokenLabel(memory.FoxPreferredFoodTokenId)}.{scoreText}";
+                $"F{TokenLabel(memory.FoxPreferredFoodTokenId)}.{scoreText}{traceText}";
         }
 
         public string MemoryEffectSummary()

@@ -9,8 +9,8 @@
 1. 用Unity `6000.3.4f1` 打开仓库中的 `unity/`，进入 `Assets/Scenes/P0_InputSpike.unity` 并点击Play。
 2. 在Plan阶段按 `D`，或点击 **LOAD ELECTRONIC DEMO**。面板应提示当前周期的电子布局已经准备好。
 3. 按空格或点击 **CONFIRM LAYOUT**。三项约束和改动预算应全部显示 `PASS`。
-4. 再按空格或点击 **START RUN**。观察6个人类和3只动物在60秒Run中的移动、停留、进食和回避。
-5. Run结束后进入30秒Observe；此时代理保持最后位置，方便观察结果。
+4. 选择“进食最多的物种”和“压力区域”两项预测，再按空格或点击 **START RUN**。观察6个人类和当前轮11–14只动物在60秒Run中的移动、停留、进食、回避与实时轨迹。
+5. Run结束后进入30秒Observe；此时代理和本轮轨迹保持最后状态。依次点击Human、Animal、Combined，确认显示切换正确。
 6. 回到下一轮Plan后重新按 `D` 生成带新时间戳和正确周期号的布局，再重复步骤3至5。
 7. 完成3轮后，阶段应进入Complete；如需新会话，点击 **RESET SESSION**。
 
@@ -21,8 +21,9 @@
 | 布局 | 黑色90 × 60比例板面、单条洋红路径、3个Food和2个Woodland均出现 |
 | 约束 | Human route、Animal route、Food hotspots和Changes全部为`PASS` |
 | 人类 | `W 2 / D 2 / V 2`；可看到通行、广场停留和Food访问 |
-| 动物 | `P 1 / S 1 / F 1`；三种动物至少能进入觅食状态 |
+| 动物 | 三轮依次为`P/S/F 7/3/1`、`9/4/1`、`8/3/2`；三种动物至少能进入觅食状态 |
 | 差异 | 附近有人时，松鼠/狐狸可回避；鸽子不使用同一回避规则 |
+| Trace | Run实时增长；Human冷色、Animal暖色；Combined同时显示；下一轮可见较淡的上一轮 |
 | 时序 | Plan→Confirm→Run 60秒→Observe 30秒，3轮后Complete |
 | 日志 | 会话目录同时出现可读取的`events.jsonl`与`events.csv` |
 
@@ -35,7 +36,7 @@ data/raw/research-logs/<electronic-demo-session>/events.jsonl
 data/raw/research-logs/<electronic-demo-session>/events.csv
 ```
 
-至少应包含 `layout_confirmed`、`constraint_evaluated` 和 `phase_changed`。检查记录中的`cycle_index`依次为0、1、2，并确认人类行程、三物种进食和动物回避汇总会随Run更新。`data/raw/`被Git忽略，不上传原始会话数据。
+至少应包含 `layout_confirmed`、`constraint_evaluated`、`phase_changed` 和 `cycle_memory_recorded`。检查记录中的`cycle_index`依次为0、1、2，并确认人类行程、三物种进食、动物回避、轨迹点数和Human/Animal距离会随Run更新。`data/raw/`被Git忽略，不上传原始会话数据。
 
 ## 建议保留的非隐私证据
 

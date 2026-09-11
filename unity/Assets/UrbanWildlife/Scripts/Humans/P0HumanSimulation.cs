@@ -35,6 +35,11 @@ namespace UrbanWildlife.Humans
         public const float PresentationSaturation = 0.72f;
         public const float PresentationBrightness = 0.91f;
         public const float PresentationAmbientBlend = 0.16f;
+        public const float TraceSampleDistance = 0.08f;
+        public const float TraceWidth = 0.035f;
+
+        private static readonly Color HumanTraceColour = new Color(0.18f, 0.62f, 0.70f, 0.62f);
+        private static readonly Color PreviousHumanTraceColour = new Color(0.18f, 0.62f, 0.70f, 0.16f);
 
         private static readonly int[] WalkerWalkArtworkOrder = { 0, 4, 1, 5 };
         private static readonly int[] ActivityRoleWalkArtworkOrder = { 0, 2, 3, 5 };
@@ -71,6 +76,8 @@ namespace UrbanWildlife.Humans
             public float turnEndsAt;
             public float riseEndsAt;
             public int completedTrips;
+            public readonly List<P0TraceLine> traceLines = new List<P0TraceLine>();
+            public P0TraceLine activeTrace;
         }
 
         private readonly List<RuntimeHuman> humans = new List<RuntimeHuman>();
@@ -79,6 +86,10 @@ namespace UrbanWildlife.Humans
         private P0Scenario scenario;
         private LayoutPacket confirmedPacket;
         private Transform generatedRoot;
+        private Transform previousTraceRoot;
+        private Material humanTraceMaterial;
+        private Material previousHumanTraceMaterial;
+        private bool traceVisible = true;
 
         public int AgentCount => humans.Count;
         public int WalkerCount => humans.Count(item => item.model.Archetype == HumanArchetype.Walker);
@@ -86,6 +97,27 @@ namespace UrbanWildlife.Humans
         public int VisitorCount => humans.Count(item => item.model.Archetype == HumanArchetype.Visitor);
         public int CompletedTrips => humans.Sum(item => item.completedTrips);
         public int SuccessfulAgentCount => humans.Count(item => item.completedTrips > 0);
+        public int TracePointCount => humans.Sum(
+            item => item.traceLines.Sum(trace => trace.Series.PointCount));
+        public float TraceDistanceUnits => humans.Sum(
+            item => item.traceLines.Sum(trace => trace.Series.DistanceUnits));
+        public float TraceDistanceCm => TraceDistanceUnits * 10f;
+
+        public void SetTraceVisible(bool visible)
+        {
+            traceVisible = visible;
+            foreach (RuntimeHuman human in humans)
+            {
+                foreach (P0TraceLine trace in human.traceLines)
+                {
+                    trace.SetVisible(visible);
+                }
+            }
+            if (previousTraceRoot != null)
+            {
+                previousTraceRoot.gameObject.SetActive(visible);
+            }
+        }
 
         public bool TryGetNearestActiveHuman(Vector2 localPosition, out float distance)
         {
@@ -162,6 +194,11 @@ namespace UrbanWildlife.Humans
                     human.model = new HumanAgentStateMachine(human.plan);
                     current = human.model.Position;
                     repeated = true;
+                    StartTraceSegment(human, current);
+                }
+                else
+                {
+                    human.activeTrace?.TryAppend(current);
                 }
 
                 human.visual.localPosition = new Vector3(current.x, 0.32f, current.y);
@@ -200,6 +237,14 @@ namespace UrbanWildlife.Humans
             }
             else if (phase == P0Phase.Plan)
             {
+                if (cycle.CycleIndex > 0)
+                {
+                    ArchiveCurrentTrace();
+                }
+                else
+                {
+                    ClearPreviousTrace();
+                }
                 ClearHumans();
             }
             else
@@ -224,6 +269,7 @@ namespace UrbanWildlife.Humans
             GameObject root = new GameObject("Runtime Humans");
             root.transform.SetParent(transform, false);
             generatedRoot = root.transform;
+            humanTraceMaterial = CreateTraceMaterial();
             for (int index = 0; index < plans.Length; index += 1)
             {
                 HumanAgentStateMachine model = new HumanAgentStateMachine(plans[index]);
@@ -243,6 +289,7 @@ namespace UrbanWildlife.Humans
                     actionStartedAt = Time.time,
                 };
                 CreateArtwork(runtime);
+                StartTraceSegment(runtime, model.Position);
                 ApplyColour(runtime);
                 ApplyMotion(runtime, false);
                 humans.Add(runtime);
@@ -271,6 +318,9 @@ namespace UrbanWildlife.Humans
             }
             humans.Clear();
 
+            DestroyObject(humanTraceMaterial);
+            humanTraceMaterial = null;
+
             if (generatedRoot == null)
             {
                 Transform existing = transform.Find("Runtime Humans");
@@ -293,6 +343,89 @@ namespace UrbanWildlife.Humans
                 DestroyImmediate(generatedRoot.gameObject);
             }
             generatedRoot = null;
+        }
+
+        private void StartTraceSegment(RuntimeHuman human, Vector2 position)
+        {
+            if (generatedRoot == null)
+            {
+                return;
+            }
+
+            int agentNumber = humans.IndexOf(human);
+            agentNumber = agentNumber >= 0 ? agentNumber + 1 : humans.Count + 1;
+            P0TraceLine trace = new P0TraceLine(
+                generatedRoot,
+                $"Human Trace {agentNumber:00}-{human.traceLines.Count + 1:00}",
+                humanTraceMaterial,
+                HumanTraceColour,
+                TraceWidth,
+                0.13f,
+                TraceSampleDistance);
+            trace.TryAppend(position);
+            trace.SetVisible(traceVisible);
+            human.traceLines.Add(trace);
+            human.activeTrace = trace;
+        }
+
+        private void ArchiveCurrentTrace()
+        {
+            ClearPreviousTrace();
+            if (TracePointCount == 0)
+            {
+                return;
+            }
+
+            GameObject root = new GameObject("Previous Human Trace");
+            root.transform.SetParent(transform, false);
+            previousTraceRoot = root.transform;
+            previousHumanTraceMaterial = CreateTraceMaterial();
+            int index = 0;
+            foreach (RuntimeHuman human in humans)
+            {
+                foreach (P0TraceLine trace in human.traceLines)
+                {
+                    trace.CopyTo(
+                        previousTraceRoot,
+                        $"Previous Human Trace {++index:00}",
+                        previousHumanTraceMaterial,
+                        PreviousHumanTraceColour,
+                        TraceWidth * 0.72f);
+                }
+            }
+            previousTraceRoot.gameObject.SetActive(traceVisible);
+        }
+
+        private void ClearPreviousTrace()
+        {
+            DestroyObject(previousTraceRoot == null ? null : previousTraceRoot.gameObject);
+            previousTraceRoot = null;
+            DestroyObject(previousHumanTraceMaterial);
+            previousHumanTraceMaterial = null;
+        }
+
+        private static Material CreateTraceMaterial()
+        {
+            Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard");
+            Material material = new Material(shader);
+            material.color = Color.white;
+            return material;
+        }
+
+        private static void DestroyObject(Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
         }
 
         private static void CreateArtwork(RuntimeHuman human)

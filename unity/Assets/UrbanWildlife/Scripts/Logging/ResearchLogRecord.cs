@@ -26,6 +26,8 @@ namespace UrbanWildlife.Logging
         public int? remembered_fox_food_token_id;
         public float? carried_squirrel_familiarity;
         public float? memory_caution_multiplier;
+        public float? remembered_human_trace_distance_units;
+        public float? remembered_animal_trace_distance_units;
         public string score_formula_version;
         public int? score_total;
         public int? score_human_access;
@@ -39,6 +41,10 @@ namespace UrbanWildlife.Logging
         public int? changes_used;
         public int? changes_allowed;
         public int human_trips;
+        public int human_trace_points;
+        public int animal_trace_points;
+        public float human_trace_distance_units;
+        public float animal_trace_distance_units;
         public int pigeon_count;
         public int squirrel_count;
         public int fox_count;
@@ -57,10 +63,13 @@ namespace UrbanWildlife.Logging
             "memory_source_cycle_index,remembered_human_trips,remembered_avoidance_events," +
             "remembered_pigeon_food_token_id,remembered_squirrel_food_token_id," +
             "remembered_fox_food_token_id,carried_squirrel_familiarity,memory_caution_multiplier," +
+            "remembered_human_trace_distance_units,remembered_animal_trace_distance_units," +
             "score_formula_version,score_total,score_human_access,score_pigeon_feeding," +
             "score_squirrel_feeding,score_fox_feeding," +
             "human_connected,animal_reachable,food_hotspot_valid,changes_used,changes_allowed," +
-            "human_trips,pigeon_count,squirrel_count,fox_count," +
+            "human_trips,human_trace_points,animal_trace_points," +
+            "human_trace_distance_units,animal_trace_distance_units," +
+            "pigeon_count,squirrel_count,fox_count," +
             "pigeon_feed_events,squirrel_feed_events,fox_feed_events," +
             "animal_avoidance_events,note";
 
@@ -86,6 +95,8 @@ namespace UrbanWildlife.Logging
                 record.remembered_fox_food_token_id,
                 record.carried_squirrel_familiarity,
                 record.memory_caution_multiplier,
+                record.remembered_human_trace_distance_units,
+                record.remembered_animal_trace_distance_units,
                 record.score_formula_version,
                 record.score_total,
                 record.score_human_access,
@@ -98,6 +109,10 @@ namespace UrbanWildlife.Logging
                 record.changes_used,
                 record.changes_allowed,
                 record.human_trips,
+                record.human_trace_points,
+                record.animal_trace_points,
+                record.human_trace_distance_units,
+                record.animal_trace_distance_units,
                 record.pigeon_count,
                 record.squirrel_count,
                 record.fox_count,

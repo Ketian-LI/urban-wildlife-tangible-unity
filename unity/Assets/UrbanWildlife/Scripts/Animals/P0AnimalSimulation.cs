@@ -39,10 +39,10 @@ namespace UrbanWildlife.Animals
         public const float PresentationBrightness = 0.92f;
         public const float PresentationAmbientBlend = 0.18f;
         public const float TraceSampleDistance = 0.08f;
-        public const float TraceWidth = 0.02f;
+        public const float TraceWidth = 0.11f;
 
-        private static readonly Color AnimalTraceColour = new Color(0.88f, 0.43f, 0.18f, 0.54f);
-        private static readonly Color PreviousAnimalTraceColour = new Color(0.88f, 0.43f, 0.18f, 0.13f);
+        private static readonly Color AnimalTraceColour = new Color(0.74f, 0.38f, 0.12f, 0.5f);
+        private static readonly Color PreviousAnimalTraceColour = new Color(0.74f, 0.38f, 0.12f, 0.12f);
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -293,9 +293,10 @@ namespace UrbanWildlife.Animals
                     generatedRoot,
                     $"Animal Trace {index + 1:00}",
                     animalTraceMaterial,
-                    TraceWidth,
+                    TraceMarkSizeFor(model.Species),
                     0.12f,
-                    TraceSampleDistance);
+                    TraceSampleDistance,
+                    markStyle: TraceMarkStyleFor(model.Species));
                 runtime.trace.TryAppend(model.Position);
                 runtime.trace.SetVisible(traceVisible);
                 ApplyColour(runtime);
@@ -428,7 +429,7 @@ namespace UrbanWildlife.Animals
                     previousTraceRoot,
                     $"Previous Animal Trace {++index:00}",
                     previousAnimalTraceMaterial,
-                    TraceWidth * 0.72f);
+                    TraceMarkSizeFor(animal.model.Species) * 0.74f);
             }
             previousTraceRoot.gameObject.SetActive(traceVisible);
         }
@@ -447,6 +448,32 @@ namespace UrbanWildlife.Animals
             Material material = new Material(shader);
             material.color = colour;
             return material;
+        }
+
+        private static float TraceMarkSizeFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return TraceWidth * 0.82f;
+                case AnimalSpecies.Fox:
+                    return TraceWidth * 1.4f;
+                default:
+                    return TraceWidth;
+            }
+        }
+
+        private static P0TraceMarkStyle TraceMarkStyleFor(AnimalSpecies species)
+        {
+            switch (species)
+            {
+                case AnimalSpecies.Pigeon:
+                    return P0TraceMarkStyle.BirdTrack;
+                case AnimalSpecies.Fox:
+                    return P0TraceMarkStyle.FoxPaw;
+                default:
+                    return P0TraceMarkStyle.SmallPaw;
+            }
         }
 
         private static void DestroyObject(UnityEngine.Object target)

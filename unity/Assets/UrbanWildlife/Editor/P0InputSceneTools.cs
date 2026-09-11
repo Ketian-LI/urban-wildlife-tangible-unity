@@ -927,9 +927,22 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_SCORE_SMOKE_OK total=100 weights=40/20/20/20 " +
                 "normalized_by_successful_agents=True repeated_events_capped=True");
+
+            P0TraceSeries markSeries = new P0TraceSeries(0.08f, 12, 0.75f);
+            markSeries.TryAppend(Vector2.zero);
+            markSeries.TryAppend(new Vector2(0.1f, 0f));
+            markSeries.TryAppend(new Vector2(2f, 0f));
+            if (Enum.GetValues(typeof(P0TraceMarkStyle)).Length != 4 ||
+                !markSeries.IsConnectedFromPrevious(1) ||
+                markSeries.IsConnectedFromPrevious(2) ||
+                !Mathf.Approximately(markSeries.DistanceUnits, 0.1f))
+            {
+                throw new InvalidOperationException(
+                    "Footprint trace styles or discontinuity handling are not configured correctly.");
+            }
             Debug.Log(
-                "UNITY_TRACE_SMOKE_OK live=True previous_cycle=True modes=Human/Animal/Combined " +
-                "sampling=True distances_logged=True");
+                "UNITY_TRACE_SMOKE_OK live=True previous_cycle=True modes=People/Wildlife/AllTracks " +
+                "marks=Footprint/BirdTrack/SmallPaw/FoxPaw sampling=True jump_breaks=True distances_logged=True");
 
             GameObject uiObject = new GameObject("P0 UI Smoke");
             uiObject.AddComponent<LayoutPacketReader>();
@@ -943,7 +956,7 @@ namespace UrbanWildlife.EditorTools
             UnityEngine.Object.DestroyImmediate(uiObject);
             Debug.Log(
                 "UNITY_UI_SMOKE_OK phase=Plan predictions_required=2 space_actions=Confirm/StartRun " +
-                "trace_modes=3");
+                "trace_modes=3 park_notice_style=True");
         }
 
         private static float TightSpriteAspect(Sprite sprite)

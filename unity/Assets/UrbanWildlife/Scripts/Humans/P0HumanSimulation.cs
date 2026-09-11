@@ -36,10 +36,10 @@ namespace UrbanWildlife.Humans
         public const float PresentationBrightness = 0.91f;
         public const float PresentationAmbientBlend = 0.16f;
         public const float TraceSampleDistance = 0.08f;
-        public const float TraceWidth = 0.03f;
+        public const float TraceWidth = 0.13f;
 
-        private static readonly Color HumanTraceColour = new Color(0.18f, 0.62f, 0.70f, 0.66f);
-        private static readonly Color PreviousHumanTraceColour = new Color(0.18f, 0.62f, 0.70f, 0.16f);
+        private static readonly Color HumanTraceColour = new Color(0.12f, 0.48f, 0.52f, 0.58f);
+        private static readonly Color PreviousHumanTraceColour = new Color(0.12f, 0.48f, 0.52f, 0.14f);
 
         private static readonly int[] WalkerWalkArtworkOrder = { 0, 4, 1, 5 };
         private static readonly int[] ActivityRoleWalkArtworkOrder = { 0, 2, 3, 5 };
@@ -360,7 +360,8 @@ namespace UrbanWildlife.Humans
                 humanTraceMaterial,
                 TraceWidth,
                 0.13f,
-                TraceSampleDistance);
+                TraceSampleDistance,
+                markStyle: P0TraceMarkStyle.HumanFootprint);
             trace.TryAppend(position);
             trace.SetVisible(traceVisible);
             human.traceLines.Add(trace);

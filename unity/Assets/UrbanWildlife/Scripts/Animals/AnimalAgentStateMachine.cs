@@ -46,12 +46,33 @@ namespace UrbanWildlife.Animals
             bool hasShelter,
             Vector2 shelterPosition,
             float nearestHumanDistance)
+            : this(
+                hasFood,
+                foodPosition,
+                hasShelter,
+                shelterPosition,
+                nearestHumanDistance,
+                Array.Empty<AnimalMovementObstacle>(),
+                Vector2.zero)
+        {
+        }
+
+        public AnimalPerception(
+            bool hasFood,
+            Vector2 foodPosition,
+            bool hasShelter,
+            Vector2 shelterPosition,
+            float nearestHumanDistance,
+            AnimalMovementObstacle[] movementObstacles,
+            Vector2 boardHalfExtents)
         {
             HasFood = hasFood;
             FoodPosition = foodPosition;
             HasShelter = hasShelter;
             ShelterPosition = shelterPosition;
             NearestHumanDistance = nearestHumanDistance;
+            MovementObstacles = movementObstacles ?? Array.Empty<AnimalMovementObstacle>();
+            BoardHalfExtents = boardHalfExtents;
         }
 
         public bool HasFood { get; }
@@ -59,6 +80,8 @@ namespace UrbanWildlife.Animals
         public bool HasShelter { get; }
         public Vector2 ShelterPosition { get; }
         public float NearestHumanDistance { get; }
+        public AnimalMovementObstacle[] MovementObstacles { get; }
+        public Vector2 BoardHalfExtents { get; }
     }
 
     public sealed class AnimalSpawnPlan
@@ -91,6 +114,10 @@ namespace UrbanWildlife.Animals
     {
         private readonly AnimalAgentConfig config;
         private float stateTimer;
+        private Vector2 navigationTarget;
+        private Vector2 navigationWaypoint;
+        private bool hasNavigationTarget;
+        private bool hasNavigationWaypoint;
 
         public AnimalAgentStateMachine(AnimalSpawnPlan plan)
         {
@@ -168,7 +195,7 @@ namespace UrbanWildlife.Animals
                     {
                         ReturnToSearch();
                     }
-                    else if (MoveTowards(perception.FoodPosition, deltaSeconds))
+                    else if (MoveTowards(perception.FoodPosition, deltaSeconds, perception))
                     {
                         SetState(AnimalActivityState.Feeding, config.FeedSeconds);
                     }
@@ -204,7 +231,7 @@ namespace UrbanWildlife.Animals
                     }
                     break;
                 case AnimalActivityState.Retreating:
-                    if (!perception.HasShelter || MoveTowards(perception.ShelterPosition, deltaSeconds))
+                    if (!perception.HasShelter || MoveTowards(perception.ShelterPosition, deltaSeconds, perception))
                     {
                         SetState(AnimalActivityState.Resting, config.RestSeconds);
                     }
@@ -227,10 +254,40 @@ namespace UrbanWildlife.Animals
             return perception.NearestHumanDistance < effectiveRadius;
         }
 
-        private bool MoveTowards(Vector2 target, float deltaSeconds)
+        private bool MoveTowards(Vector2 target, float deltaSeconds, AnimalPerception perception)
         {
-            Position = Vector2.MoveTowards(Position, target, config.SpeedUnitsPerSecond * deltaSeconds);
-            return Vector2.Distance(Position, target) <= 0.001f;
+            float clearance = AnimalObstacleAvoidance.ClearanceFor(Species);
+            Vector2 accessibleTarget = AnimalObstacleAvoidance.ResolveAccessibleTarget(
+                Position,
+                target,
+                perception.MovementObstacles,
+                clearance,
+                perception.BoardHalfExtents);
+            if (!hasNavigationTarget || Vector2.Distance(navigationTarget, accessibleTarget) > 0.02f)
+            {
+                navigationTarget = accessibleTarget;
+                hasNavigationTarget = true;
+                hasNavigationWaypoint = false;
+            }
+
+            if (!hasNavigationWaypoint || Vector2.Distance(Position, navigationWaypoint) <= 0.015f)
+            {
+                navigationWaypoint = AnimalObstacleAvoidance.NextWaypoint(
+                    Position,
+                    navigationTarget,
+                    perception.MovementObstacles,
+                    clearance,
+                    perception.BoardHalfExtents);
+                hasNavigationWaypoint = Vector2.Distance(navigationWaypoint, navigationTarget) > 0.015f;
+            }
+
+            Vector2 stepTarget = hasNavigationWaypoint ? navigationWaypoint : navigationTarget;
+            Position = Vector2.MoveTowards(Position, stepTarget, config.SpeedUnitsPerSecond * deltaSeconds);
+            if (hasNavigationWaypoint && Vector2.Distance(Position, navigationWaypoint) <= 0.001f)
+            {
+                hasNavigationWaypoint = false;
+            }
+            return !hasNavigationWaypoint && Vector2.Distance(Position, navigationTarget) <= 0.001f;
         }
 
         private bool ConsumeTimer(float deltaSeconds)
@@ -251,6 +308,11 @@ namespace UrbanWildlife.Animals
         {
             State = state;
             stateTimer = Mathf.Max(0f, timer);
+            if (state != AnimalActivityState.ApproachingFood && state != AnimalActivityState.Retreating)
+            {
+                hasNavigationTarget = false;
+                hasNavigationWaypoint = false;
+            }
         }
     }
 }

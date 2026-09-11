@@ -86,6 +86,8 @@ namespace UrbanWildlife.Animals
         private Transform previousTraceRoot;
         private Material animalTraceMaterial;
         private Material previousAnimalTraceMaterial;
+        private AnimalMovementObstacle[] movementObstacles = Array.Empty<AnimalMovementObstacle>();
+        private Vector2 animalBoardHalfExtents;
         private bool traceVisible = true;
 
         public event Action<P0CycleMemorySnapshot> CycleMemoryRecorded;
@@ -187,7 +189,9 @@ namespace UrbanWildlife.Animals
                     animal.plan.FoodPosition,
                     true,
                     animal.plan.ShelterPosition,
-                    nearestHumanDistance);
+                    nearestHumanDistance,
+                    movementObstacles,
+                    animalBoardHalfExtents);
                 Vector2 previous = animal.model.Position;
                 animal.model.Tick(Time.deltaTime, perception);
                 Vector2 current = animal.model.Position;
@@ -258,6 +262,11 @@ namespace UrbanWildlife.Animals
             }
 
             P0CycleProfile profile = cycle.CurrentProfile;
+            movementObstacles = AnimalObstacleAvoidance.BuildObstacles(confirmedPacket, scenario);
+            float environmentScale = scenario.animal_simulation.unity_units_per_cm;
+            animalBoardHalfExtents = new Vector2(
+                scenario.board.width_cm * environmentScale * 0.5f - 0.28f,
+                scenario.board.height_cm * environmentScale * 0.5f - 0.28f);
             AnimalSpawnPlan[] plans = AnimalEnvironmentPlanner.CreatePlans(
                 confirmedPacket,
                 scenario,

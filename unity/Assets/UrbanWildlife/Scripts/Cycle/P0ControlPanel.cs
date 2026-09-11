@@ -34,6 +34,7 @@ namespace UrbanWildlife.Cycle
         private GUIStyle fixStyle;
         private GUIStyle panelStyle;
         private Texture2D panelTexture;
+        private Texture2D sidebarBackdropTexture;
         private Texture2D panelShadowTexture;
         private Texture2D brassTexture;
         private Texture2D innerBorderTexture;
@@ -41,6 +42,11 @@ namespace UrbanWildlife.Cycle
         private Texture2D buttonHoverTexture;
         private Texture2D selectedButtonTexture;
         private Texture2D boltTexture;
+        private Camera mapCamera;
+        private Renderer boardRenderer;
+        private Vector3 mapCameraRestingPosition;
+        private float mapCameraRestingOrthographicSize;
+        private bool mapCameraLayoutInitialised;
         private TraceDisplayMode traceDisplayMode = TraceDisplayMode.Combined;
 
         private void Awake()
@@ -51,6 +57,7 @@ namespace UrbanWildlife.Cycle
             humanSimulation = GetComponent<P0HumanSimulation>();
             animalSimulation = GetComponent<P0AnimalSimulation>();
             electronicDemoInput = GetComponent<P0ElectronicDemoInput>();
+            InitialiseMapCameraLayout();
         }
 
         private void Update()
@@ -77,14 +84,20 @@ namespace UrbanWildlife.Cycle
             }
         }
 
+        private void LateUpdate()
+        {
+            ApplySplitScreenLayout();
+        }
+
         private void OnGUI()
         {
             EnsureStyles();
             float scale = Mathf.Clamp(Screen.height / 900f, 0.75f, 1.35f);
+            float sidebarWidth = CalculateSidebarWidth(Screen.width, Screen.height);
             bool running = cycle.Phase == P0Phase.Run;
             bool observing = cycle.Phase == P0Phase.Observe;
             bool compact = running || observing;
-            float width = Mathf.Min((running ? 430f : 440f) * scale, Screen.width - 32f);
+            float width = Mathf.Max(1f, sidebarWidth - 32f);
             bool hasMemory = cycle.Mechanics.LastMemory != null;
             float requestedHeight = running
                 ? hasMemory ? 655f : 555f
@@ -95,6 +108,8 @@ namespace UrbanWildlife.Cycle
                         : hasMemory ? 900f : 555f;
             float height = Mathf.Min(requestedHeight * scale, Screen.height - 32f);
             Rect panel = new Rect(16f, 16f, width, height);
+            GUI.DrawTexture(new Rect(0f, 0f, sidebarWidth, Screen.height), sidebarBackdropTexture);
+            GUI.DrawTexture(new Rect(sidebarWidth - 3f * scale, 0f, 3f * scale, Screen.height), brassTexture);
             GUI.DrawTexture(
                 new Rect(panel.x + 7f * scale, panel.y + 8f * scale, panel.width, panel.height),
                 panelShadowTexture);
@@ -160,6 +175,85 @@ namespace UrbanWildlife.Cycle
             GUILayout.FlexibleSpace();
             DrawActionButton();
             GUILayout.EndArea();
+        }
+
+        public static float CalculateSidebarWidth(int screenWidth, int screenHeight)
+        {
+            float scale = Mathf.Clamp(screenHeight / 900f, 0.75f, 1.35f);
+            float desiredWidth = 440f * scale + 32f;
+            float maximumWidth = Mathf.Max(1f, screenWidth * 0.42f);
+            float minimumWidth = Mathf.Min(340f, maximumWidth);
+            return Mathf.Clamp(desiredWidth, minimumWidth, maximumWidth);
+        }
+
+        public static Rect CalculateMapViewport(int screenWidth, int screenHeight)
+        {
+            float safeScreenWidth = Mathf.Max(1f, screenWidth);
+            float sidebarFraction = CalculateSidebarWidth(screenWidth, screenHeight) / safeScreenWidth;
+            return new Rect(sidebarFraction, 0f, Mathf.Max(0.01f, 1f - sidebarFraction), 1f);
+        }
+
+        public static float CalculateMapOrthographicSize(Vector2 mapSize, float viewportAspect, float padding)
+        {
+            float safeAspect = Mathf.Max(0.01f, viewportAspect);
+            float verticalFit = Mathf.Max(0.01f, mapSize.y * 0.5f);
+            float horizontalFit = Mathf.Max(0.01f, mapSize.x * 0.5f) / safeAspect;
+            return Mathf.Max(verticalFit, horizontalFit) * Mathf.Max(1f, padding);
+        }
+
+        private void InitialiseMapCameraLayout()
+        {
+            mapCamera = Camera.main;
+            if (mapCamera == null || !mapCamera.orthographic)
+            {
+                return;
+            }
+
+            float fullScreenAspect = Mathf.Max(0.01f, Screen.width / (float)Mathf.Max(1, Screen.height));
+            float currentAspect = Mathf.Max(0.01f, mapCamera.aspect);
+            float currentHalfWidth = mapCamera.orthographicSize * currentAspect;
+            mapCameraRestingOrthographicSize = Mathf.Min(
+                mapCamera.orthographicSize,
+                currentHalfWidth / fullScreenAspect);
+            mapCameraRestingPosition = mapCamera.transform.position;
+            mapCameraLayoutInitialised = true;
+        }
+
+        private void ApplySplitScreenLayout()
+        {
+            if (!mapCameraLayoutInitialised || mapCamera == null)
+            {
+                InitialiseMapCameraLayout();
+            }
+            if (!mapCameraLayoutInitialised || mapCamera == null)
+            {
+                return;
+            }
+
+            Rect viewport = CalculateMapViewport(Screen.width, Screen.height);
+            mapCamera.rect = viewport;
+
+            Vector2 mapSize = new Vector2(9.16f, 6.16f);
+            Vector3 mapCentre = Vector3.zero;
+            if (boardRenderer == null)
+            {
+                GameObject board = GameObject.Find("Dark board edge");
+                boardRenderer = board == null ? null : board.GetComponent<Renderer>();
+            }
+            if (boardRenderer != null)
+            {
+                Bounds bounds = boardRenderer.bounds;
+                mapSize = new Vector2(bounds.size.x, bounds.size.z);
+                mapCentre = bounds.center;
+            }
+
+            float viewportPixelWidth = Mathf.Max(1f, Screen.width * viewport.width);
+            float viewportAspect = viewportPixelWidth / Mathf.Max(1f, Screen.height);
+            mapCamera.orthographicSize = CalculateMapOrthographicSize(mapSize, viewportAspect, 1.035f);
+            mapCamera.transform.position = new Vector3(
+                mapCentre.x,
+                mapCameraRestingPosition.y,
+                mapCentre.z);
         }
 
         private void DrawScenarioBrief()
@@ -450,7 +544,8 @@ namespace UrbanWildlife.Cycle
 
         private void EnsureStyles()
         {
-            if (titleStyle != null && panelTexture != null && panelShadowTexture != null &&
+            if (titleStyle != null && panelTexture != null && sidebarBackdropTexture != null &&
+                panelShadowTexture != null &&
                 brassTexture != null && innerBorderTexture != null && buttonTexture != null &&
                 buttonHoverTexture != null && selectedButtonTexture != null && boltTexture != null)
             {
@@ -465,6 +560,7 @@ namespace UrbanWildlife.Cycle
             Color paleInk = new Color(0.83f, 0.86f, 0.76f, 1f);
 
             panelTexture = CreateGrainTexture("Park notice green", parkGreen);
+            sidebarBackdropTexture = CreateSolidTexture("Park notice sidebar", deepGreen);
             panelShadowTexture = CreateSolidTexture("Park notice shadow", new Color(0f, 0f, 0f, 0.42f));
             brassTexture = CreateSolidTexture("Park notice brass", brass);
             innerBorderTexture = CreateSolidTexture("Park notice inner border", new Color(0.82f, 0.77f, 0.58f, 0.72f));
@@ -640,6 +736,7 @@ namespace UrbanWildlife.Cycle
             Texture2D[] textures =
             {
                 panelTexture,
+                sidebarBackdropTexture,
                 panelShadowTexture,
                 brassTexture,
                 innerBorderTexture,
@@ -654,6 +751,13 @@ namespace UrbanWildlife.Cycle
                 {
                     Destroy(texture);
                 }
+            }
+
+            if (mapCameraLayoutInitialised && mapCamera != null)
+            {
+                mapCamera.rect = new Rect(0f, 0f, 1f, 1f);
+                mapCamera.orthographicSize = mapCameraRestingOrthographicSize;
+                mapCamera.transform.position = mapCameraRestingPosition;
             }
         }
     }

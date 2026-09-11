@@ -366,6 +366,13 @@ namespace UrbanWildlife.EditorTools
             bool pigeonFed = false;
             bool squirrelFed = false;
             bool foxFed = false;
+            bool crossedEnvironmentObstacle = false;
+            string obstacleViolation = string.Empty;
+            AnimalMovementObstacle[] environmentObstacles = AnimalObstacleAvoidance.BuildObstacles(humanDemo, scenario);
+            float animalLayoutScale = scenario.animal_simulation.unity_units_per_cm;
+            Vector2 animalBoardHalfExtents = new Vector2(
+                scenario.board.width_cm * animalLayoutScale * 0.5f - 0.28f,
+                scenario.board.height_cm * animalLayoutScale * 0.5f - 0.28f);
             foreach (AnimalSpawnPlan plan in animalPlans)
             {
                 AnimalAgentStateMachine animal = new AnimalAgentStateMachine(plan);
@@ -374,10 +381,27 @@ namespace UrbanWildlife.EditorTools
                     plan.FoodPosition,
                     true,
                     plan.ShelterPosition,
-                    float.PositiveInfinity);
+                    float.PositiveInfinity,
+                    environmentObstacles,
+                    animalBoardHalfExtents);
                 for (int step = 0; step < 1200 && animal.FeedEvents == 0; step += 1)
                 {
                     animal.Tick(0.1f, quietEnvironment);
+                    float clearance = AnimalObstacleAvoidance.ClearanceFor(plan.Config.Species);
+                    AnimalMovementObstacle crossedObstacle = Array.Find(
+                        environmentObstacles,
+                        obstacle => obstacle.Contains(animal.Position, clearance));
+                    if (crossedObstacle.HalfExtents.sqrMagnitude > 0f)
+                    {
+                        crossedEnvironmentObstacle = true;
+                        if (string.IsNullOrEmpty(obstacleViolation))
+                        {
+                            obstacleViolation =
+                                $"{plan.Config.Species}@{animal.Position} step={step} state={animal.State} " +
+                                $"start={plan.StartPosition} food={plan.FoodPosition} " +
+                                $"crossed {crossedObstacle.Kind}@{crossedObstacle.Centre}";
+                        }
+                    }
                 }
                 if (animal.FeedEvents > 0)
                 {
@@ -387,9 +411,55 @@ namespace UrbanWildlife.EditorTools
                     foxFed |= plan.Config.Species == AnimalSpecies.Fox;
                 }
             }
-            if (feedingAgents != animalPlans.Length || !pigeonFed || !squirrelFed || !foxFed)
+            if (feedingAgents != animalPlans.Length || !pigeonFed || !squirrelFed || !foxFed ||
+                crossedEnvironmentObstacle)
             {
-                throw new InvalidOperationException("Every P0 animal must reach and feed at its assigned hotspot.");
+                throw new InvalidOperationException(
+                    $"Animal routing failed: feeding={feedingAgents}/{animalPlans.Length}, " +
+                    $"pigeon={pigeonFed}, squirrel={squirrelFed}, fox={foxFed}, " +
+                    $"crossed_obstacle={crossedEnvironmentObstacle}, detail={obstacleViolation}.");
+            }
+
+            AnimalMovementObstacle testPond = new AnimalMovementObstacle(
+                AnimalMovementObstacleKind.Pond,
+                new Vector2(0f, -1.2f),
+                new Vector2(1.2f, 0.8f));
+            AnimalAgentConfig routingConfig = new AnimalAgentConfig
+            {
+                Species = AnimalSpecies.Pigeon,
+                SpeedUnitsPerSecond = 1f,
+                DetectionRadiusUnits = 12f,
+                FeedSeconds = 0.2f,
+                PostFeedStaySeconds = 0.2f,
+            };
+            AnimalSpawnPlan routingPlan = new AnimalSpawnPlan(
+                routingConfig,
+                new Vector2(-3f, -1.2f),
+                new Vector2(3f, -1.2f),
+                new Vector2(-3f, -1.2f),
+                10,
+                -1);
+            AnimalAgentStateMachine routedAnimal = new AnimalAgentStateMachine(routingPlan);
+            AnimalMovementObstacle[] routingObstacles = { testPond };
+            AnimalPerception routedPerception = new AnimalPerception(
+                true,
+                routingPlan.FoodPosition,
+                true,
+                routingPlan.ShelterPosition,
+                float.PositiveInfinity,
+                routingObstacles,
+                new Vector2(4.2f, 2.7f));
+            bool crossedPond = false;
+            for (int step = 0; step < 1200 && routedAnimal.FeedEvents == 0; step += 1)
+            {
+                routedAnimal.Tick(0.1f, routedPerception);
+                crossedPond |= testPond.Contains(
+                    routedAnimal.Position,
+                    AnimalObstacleAvoidance.ClearanceFor(AnimalSpecies.Pigeon));
+            }
+            if (crossedPond || routedAnimal.FeedEvents == 0 || environmentObstacles.Length != 3)
+            {
+                throw new InvalidOperationException("Animal obstacle routing did not avoid pond and woodland geometry.");
             }
 
             AnimalSpawnPlan squirrelPlan = Array.Find(
@@ -419,7 +489,9 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("Species-specific human disturbance responses are incorrect.");
             }
-            Debug.Log("UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11");
+            Debug.Log(
+                "UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11 " +
+                "pond_avoidance=True woodland_avoidance=True shelter_edge_spawn=True");
             Debug.Log(
                 $"UNITY_ANIMAL_STATE_SMOKE_OK pigeon_avoid={tolerantPigeon.AvoidanceEvents} " +
                 $"squirrel_avoid={cautiousSquirrel.AvoidanceEvents} fox_avoid={cautiousFox.AvoidanceEvents}");
@@ -953,10 +1025,22 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("P0 control panel dependencies were not created.");
             }
+            float sidebarWidth = P0ControlPanel.CalculateSidebarWidth(1920, 1080);
+            Rect mapViewport = P0ControlPanel.CalculateMapViewport(1920, 1080);
+            float mapSize = P0ControlPanel.CalculateMapOrthographicSize(
+                new Vector2(9.16f, 6.16f),
+                mapViewport.width * 1920f / 1080f,
+                1.035f);
+            if (sidebarWidth < 500f || sidebarWidth > 600f ||
+                mapViewport.x <= 0.25f || mapViewport.width < 0.65f ||
+                !Mathf.Approximately(mapViewport.xMax, 1f) || mapSize < 3.5f)
+            {
+                throw new InvalidOperationException("Split-screen sidebar or map viewport layout is invalid.");
+            }
             UnityEngine.Object.DestroyImmediate(uiObject);
             Debug.Log(
                 "UNITY_UI_SMOKE_OK phase=Plan predictions_required=2 space_actions=Confirm/StartRun " +
-                "trace_modes=3 park_notice_style=True");
+                "trace_modes=3 park_notice_style=True split_screen=True map_unobscured=True");
         }
 
         private static float TightSpriteAspect(Sprite sprite)

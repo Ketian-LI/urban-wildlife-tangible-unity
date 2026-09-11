@@ -62,6 +62,10 @@ namespace UrbanWildlife.Animals
             }
 
             ScenarioAnimalSimulation settings = scenario.animal_simulation;
+            AnimalMovementObstacle[] obstacles = AnimalObstacleAvoidance.BuildObstacles(packet, scenario);
+            Vector2 boardHalfExtents = new Vector2(
+                scenario.board.width_cm * settings.unity_units_per_cm * 0.5f - 0.28f,
+                scenario.board.height_cm * settings.unity_units_per_cm * 0.5f - 0.28f);
             Vector2 pigeonStart = new Vector2(
                 0f,
                 scenario.board.height_cm * settings.unity_units_per_cm * 0.42f);
@@ -93,12 +97,18 @@ namespace UrbanWildlife.Animals
                     squirrelCount,
                     1,
                     memory?.SquirrelPreferredFoodTokenId ?? -1);
-                Vector2 shelter = ToLocal(woodland, scenario, settings.unity_units_per_cm) +
-                    ScatterOffset(index, squirrelCount, 0.08f);
+                Vector2 foodPosition = ToLocal(food, scenario, settings.unity_units_per_cm);
+                Vector2 woodlandCentre = ToLocal(woodland, scenario, settings.unity_units_per_cm);
+                Vector2 shelter = AnimalObstacleAvoidance.HabitatAccessPoint(
+                    woodlandCentre,
+                    foodPosition + ScatterOffset(index, squirrelCount, 0.08f),
+                    AnimalSpecies.Squirrel,
+                    obstacles,
+                    boardHalfExtents);
                 plans.Add(new AnimalSpawnPlan(
                     CreateConfig(AnimalSpecies.Squirrel, settings, memory),
                     shelter,
-                    ToLocal(food, scenario, settings.unity_units_per_cm),
+                    foodPosition,
                     shelter,
                     food.id,
                     woodland.id));
@@ -113,12 +123,18 @@ namespace UrbanWildlife.Animals
                     foxCount,
                     2,
                     memory?.FoxPreferredFoodTokenId ?? -1);
-                Vector2 shelter = ToLocal(woodland, scenario, settings.unity_units_per_cm) +
-                    ScatterOffset(index, foxCount, 0.12f);
+                Vector2 foodPosition = ToLocal(food, scenario, settings.unity_units_per_cm);
+                Vector2 woodlandCentre = ToLocal(woodland, scenario, settings.unity_units_per_cm);
+                Vector2 shelter = AnimalObstacleAvoidance.HabitatAccessPoint(
+                    woodlandCentre,
+                    foodPosition + ScatterOffset(index, foxCount, 0.12f),
+                    AnimalSpecies.Fox,
+                    obstacles,
+                    boardHalfExtents);
                 plans.Add(new AnimalSpawnPlan(
                     CreateConfig(AnimalSpecies.Fox, settings, memory),
                     shelter,
-                    ToLocal(food, scenario, settings.unity_units_per_cm),
+                    foodPosition,
                     shelter,
                     food.id,
                     woodland.id));

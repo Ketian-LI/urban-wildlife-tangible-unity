@@ -7,13 +7,19 @@ namespace UrbanWildlife.Presentation
     public sealed class P0TraceSeries
     {
         private readonly List<Vector2> points = new List<Vector2>();
+        private readonly List<bool> connectsFromPrevious = new List<bool>();
         private readonly float minimumSampleDistance;
+        private readonly float maximumSegmentDistance;
         private readonly int maximumPointCount;
 
-        public P0TraceSeries(float minimumSampleDistance = 0.08f, int maximumPointCount = 1200)
+        public P0TraceSeries(
+            float minimumSampleDistance = 0.08f,
+            int maximumPointCount = 1200,
+            float maximumSegmentDistance = 0.75f)
         {
             this.minimumSampleDistance = Mathf.Max(0.001f, minimumSampleDistance);
             this.maximumPointCount = Mathf.Max(2, maximumPointCount);
+            this.maximumSegmentDistance = Mathf.Max(this.minimumSampleDistance, maximumSegmentDistance);
         }
 
         public IReadOnlyList<Vector2> Points => points;
@@ -30,6 +36,7 @@ namespace UrbanWildlife.Presentation
             if (points.Count == 0)
             {
                 points.Add(point);
+                connectsFromPrevious.Add(false);
                 return true;
             }
 
@@ -39,9 +46,20 @@ namespace UrbanWildlife.Presentation
                 return false;
             }
 
+            bool isContinuous = distance <= maximumSegmentDistance;
             points.Add(point);
-            DistanceUnits += distance;
+            connectsFromPrevious.Add(isContinuous);
+            if (isContinuous)
+            {
+                DistanceUnits += distance;
+            }
             return true;
+        }
+
+        public bool IsConnectedFromPrevious(int pointIndex)
+        {
+            return pointIndex > 0 && pointIndex < connectsFromPrevious.Count &&
+                connectsFromPrevious[pointIndex];
         }
 
         private static bool IsFinite(Vector2 point)
@@ -138,22 +156,28 @@ namespace UrbanWildlife.Presentation
             }
 
             Vector3[] vertices = new Vector3[pointCount * 2];
-            int[] triangles = new int[(pointCount - 1) * 6];
+            List<int> triangles = new List<int>((pointCount - 1) * 6);
             float halfWidth = width * 0.5f;
             for (int index = 0; index < pointCount; index += 1)
             {
+                bool previousConnected = Series.IsConnectedFromPrevious(index);
+                bool nextConnected = index < pointCount - 1 && Series.IsConnectedFromPrevious(index + 1);
                 Vector2 tangent;
-                if (index == 0)
+                if (previousConnected && nextConnected)
                 {
-                    tangent = Series.Points[1] - Series.Points[0];
+                    tangent = Series.Points[index + 1] - Series.Points[index - 1];
                 }
-                else if (index == pointCount - 1)
+                else if (nextConnected)
+                {
+                    tangent = Series.Points[index + 1] - Series.Points[index];
+                }
+                else if (previousConnected)
                 {
                     tangent = Series.Points[index] - Series.Points[index - 1];
                 }
                 else
                 {
-                    tangent = Series.Points[index + 1] - Series.Points[index - 1];
+                    tangent = Vector2.right;
                 }
 
                 if (tangent.sqrMagnitude < 0.000001f)
@@ -169,18 +193,22 @@ namespace UrbanWildlife.Presentation
 
             for (int segment = 0; segment < pointCount - 1; segment += 1)
             {
+                if (!Series.IsConnectedFromPrevious(segment + 1))
+                {
+                    continue;
+                }
+
                 int vertex = segment * 2;
-                int triangle = segment * 6;
-                triangles[triangle] = vertex;
-                triangles[triangle + 1] = vertex + 2;
-                triangles[triangle + 2] = vertex + 1;
-                triangles[triangle + 3] = vertex + 1;
-                triangles[triangle + 4] = vertex + 2;
-                triangles[triangle + 5] = vertex + 3;
+                triangles.Add(vertex);
+                triangles.Add(vertex + 2);
+                triangles.Add(vertex + 1);
+                triangles.Add(vertex + 1);
+                triangles.Add(vertex + 2);
+                triangles.Add(vertex + 3);
             }
 
             mesh.vertices = vertices;
-            mesh.triangles = triangles;
+            mesh.triangles = triangles.ToArray();
             mesh.RecalculateBounds();
         }
     }

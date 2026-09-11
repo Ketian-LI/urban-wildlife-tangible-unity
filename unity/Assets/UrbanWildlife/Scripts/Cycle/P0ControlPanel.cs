@@ -113,10 +113,10 @@ namespace UrbanWildlife.Cycle
                     bodyStyle);
             }
 
-            DrawAgentSummary();
             if (compact)
             {
                 DrawTraceControls();
+                DrawAgentSummary();
                 if (running)
                 {
                     DrawScore(CurrentScore(), "LIVE PLANNING SCORE");
@@ -130,6 +130,8 @@ namespace UrbanWildlife.Cycle
                 GUILayout.EndArea();
                 return;
             }
+
+            DrawAgentSummary();
 
             GUILayout.Space(10f);
             DrawConstraintStatus();

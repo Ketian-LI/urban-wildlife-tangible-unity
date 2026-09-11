@@ -53,14 +53,15 @@ namespace UrbanWildlife.Presentation
 
     public sealed class P0TraceLine
     {
-        private readonly LineRenderer renderer;
+        private readonly Mesh mesh;
+        private readonly MeshRenderer renderer;
+        private readonly float width;
         private readonly float surfaceHeight;
 
         public P0TraceLine(
             Transform parent,
             string name,
             Material material,
-            Color colour,
             float width,
             float surfaceHeight = 0.12f,
             float minimumSampleDistance = 0.08f,
@@ -68,18 +69,14 @@ namespace UrbanWildlife.Presentation
         {
             GameObject traceObject = new GameObject(name);
             traceObject.transform.SetParent(parent, false);
-            renderer = traceObject.AddComponent<LineRenderer>();
-            renderer.useWorldSpace = false;
-            renderer.loop = false;
-            renderer.alignment = LineAlignment.View;
-            renderer.textureMode = LineTextureMode.Stretch;
-            renderer.numCapVertices = 2;
-            renderer.numCornerVertices = 2;
-            renderer.widthMultiplier = width;
-            renderer.startColor = colour;
-            renderer.endColor = colour;
+            MeshFilter filter = traceObject.AddComponent<MeshFilter>();
+            renderer = traceObject.AddComponent<MeshRenderer>();
+            mesh = new Mesh { name = $"{name} Ribbon" };
+            mesh.MarkDynamic();
+            filter.sharedMesh = mesh;
             renderer.sharedMaterial = material;
-            renderer.sortingOrder = 12;
+            renderer.sortingOrder = 35;
+            this.width = Mathf.Max(0.001f, width);
             this.surfaceHeight = surfaceHeight;
             Series = new P0TraceSeries(minimumSampleDistance, maximumPointCount);
         }
@@ -93,8 +90,7 @@ namespace UrbanWildlife.Presentation
                 return false;
             }
 
-            renderer.positionCount = Series.PointCount;
-            renderer.SetPosition(Series.PointCount - 1, ToWorldPoint(point));
+            RebuildRibbon();
             return true;
         }
 
@@ -110,14 +106,12 @@ namespace UrbanWildlife.Presentation
             Transform parent,
             string name,
             Material material,
-            Color colour,
             float width)
         {
             P0TraceLine copy = new P0TraceLine(
                 parent,
                 name,
                 material,
-                colour,
                 width,
                 surfaceHeight,
                 0.001f,
@@ -132,6 +126,62 @@ namespace UrbanWildlife.Presentation
         private Vector3 ToWorldPoint(Vector2 point)
         {
             return new Vector3(point.x, surfaceHeight, point.y);
+        }
+
+        private void RebuildRibbon()
+        {
+            int pointCount = Series.PointCount;
+            mesh.Clear();
+            if (pointCount < 2)
+            {
+                return;
+            }
+
+            Vector3[] vertices = new Vector3[pointCount * 2];
+            int[] triangles = new int[(pointCount - 1) * 6];
+            float halfWidth = width * 0.5f;
+            for (int index = 0; index < pointCount; index += 1)
+            {
+                Vector2 tangent;
+                if (index == 0)
+                {
+                    tangent = Series.Points[1] - Series.Points[0];
+                }
+                else if (index == pointCount - 1)
+                {
+                    tangent = Series.Points[index] - Series.Points[index - 1];
+                }
+                else
+                {
+                    tangent = Series.Points[index + 1] - Series.Points[index - 1];
+                }
+
+                if (tangent.sqrMagnitude < 0.000001f)
+                {
+                    tangent = Vector2.right;
+                }
+                tangent.Normalize();
+                Vector2 normal = new Vector2(-tangent.y, tangent.x) * halfWidth;
+                Vector2 point = Series.Points[index];
+                vertices[index * 2] = ToWorldPoint(point + normal);
+                vertices[index * 2 + 1] = ToWorldPoint(point - normal);
+            }
+
+            for (int segment = 0; segment < pointCount - 1; segment += 1)
+            {
+                int vertex = segment * 2;
+                int triangle = segment * 6;
+                triangles[triangle] = vertex;
+                triangles[triangle + 1] = vertex + 2;
+                triangles[triangle + 2] = vertex + 1;
+                triangles[triangle + 3] = vertex + 1;
+                triangles[triangle + 4] = vertex + 2;
+                triangles[triangle + 5] = vertex + 3;
+            }
+
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
         }
     }
 }

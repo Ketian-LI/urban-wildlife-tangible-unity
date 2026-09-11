@@ -36,9 +36,9 @@ namespace UrbanWildlife.Humans
         public const float PresentationBrightness = 0.91f;
         public const float PresentationAmbientBlend = 0.16f;
         public const float TraceSampleDistance = 0.08f;
-        public const float TraceWidth = 0.035f;
+        public const float TraceWidth = 0.03f;
 
-        private static readonly Color HumanTraceColour = new Color(0.18f, 0.62f, 0.70f, 0.62f);
+        private static readonly Color HumanTraceColour = new Color(0.18f, 0.62f, 0.70f, 0.66f);
         private static readonly Color PreviousHumanTraceColour = new Color(0.18f, 0.62f, 0.70f, 0.16f);
 
         private static readonly int[] WalkerWalkArtworkOrder = { 0, 4, 1, 5 };
@@ -269,7 +269,7 @@ namespace UrbanWildlife.Humans
             GameObject root = new GameObject("Runtime Humans");
             root.transform.SetParent(transform, false);
             generatedRoot = root.transform;
-            humanTraceMaterial = CreateTraceMaterial();
+            humanTraceMaterial = CreateTraceMaterial(HumanTraceColour);
             for (int index = 0; index < plans.Length; index += 1)
             {
                 HumanAgentStateMachine model = new HumanAgentStateMachine(plans[index]);
@@ -358,7 +358,6 @@ namespace UrbanWildlife.Humans
                 generatedRoot,
                 $"Human Trace {agentNumber:00}-{human.traceLines.Count + 1:00}",
                 humanTraceMaterial,
-                HumanTraceColour,
                 TraceWidth,
                 0.13f,
                 TraceSampleDistance);
@@ -379,7 +378,7 @@ namespace UrbanWildlife.Humans
             GameObject root = new GameObject("Previous Human Trace");
             root.transform.SetParent(transform, false);
             previousTraceRoot = root.transform;
-            previousHumanTraceMaterial = CreateTraceMaterial();
+            previousHumanTraceMaterial = CreateTraceMaterial(PreviousHumanTraceColour);
             int index = 0;
             foreach (RuntimeHuman human in humans)
             {
@@ -389,7 +388,6 @@ namespace UrbanWildlife.Humans
                         previousTraceRoot,
                         $"Previous Human Trace {++index:00}",
                         previousHumanTraceMaterial,
-                        PreviousHumanTraceColour,
                         TraceWidth * 0.72f);
                 }
             }
@@ -404,11 +402,11 @@ namespace UrbanWildlife.Humans
             previousHumanTraceMaterial = null;
         }
 
-        private static Material CreateTraceMaterial()
+        private static Material CreateTraceMaterial(Color colour)
         {
             Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard");
             Material material = new Material(shader);
-            material.color = Color.white;
+            material.color = colour;
             return material;
         }
 

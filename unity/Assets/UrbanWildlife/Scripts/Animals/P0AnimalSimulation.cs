@@ -39,10 +39,10 @@ namespace UrbanWildlife.Animals
         public const float PresentationBrightness = 0.92f;
         public const float PresentationAmbientBlend = 0.18f;
         public const float TraceSampleDistance = 0.08f;
-        public const float TraceWidth = 0.035f;
+        public const float TraceWidth = 0.02f;
 
-        private static readonly Color AnimalTraceColour = new Color(0.88f, 0.43f, 0.18f, 0.60f);
-        private static readonly Color PreviousAnimalTraceColour = new Color(0.88f, 0.43f, 0.18f, 0.15f);
+        private static readonly Color AnimalTraceColour = new Color(0.88f, 0.43f, 0.18f, 0.54f);
+        private static readonly Color PreviousAnimalTraceColour = new Color(0.88f, 0.43f, 0.18f, 0.13f);
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -268,7 +268,7 @@ namespace UrbanWildlife.Animals
             GameObject root = new GameObject("Runtime Animals");
             root.transform.SetParent(transform, false);
             generatedRoot = root.transform;
-            animalTraceMaterial = CreateTraceMaterial();
+            animalTraceMaterial = CreateTraceMaterial(AnimalTraceColour);
             for (int index = 0; index < plans.Length; index += 1)
             {
                 AnimalAgentStateMachine model = new AnimalAgentStateMachine(plans[index]);
@@ -293,7 +293,6 @@ namespace UrbanWildlife.Animals
                     generatedRoot,
                     $"Animal Trace {index + 1:00}",
                     animalTraceMaterial,
-                    AnimalTraceColour,
                     TraceWidth,
                     0.12f,
                     TraceSampleDistance);
@@ -421,7 +420,7 @@ namespace UrbanWildlife.Animals
             GameObject root = new GameObject("Previous Animal Trace");
             root.transform.SetParent(transform, false);
             previousTraceRoot = root.transform;
-            previousAnimalTraceMaterial = CreateTraceMaterial();
+            previousAnimalTraceMaterial = CreateTraceMaterial(PreviousAnimalTraceColour);
             int index = 0;
             foreach (RuntimeAnimal animal in animals)
             {
@@ -429,7 +428,6 @@ namespace UrbanWildlife.Animals
                     previousTraceRoot,
                     $"Previous Animal Trace {++index:00}",
                     previousAnimalTraceMaterial,
-                    PreviousAnimalTraceColour,
                     TraceWidth * 0.72f);
             }
             previousTraceRoot.gameObject.SetActive(traceVisible);
@@ -443,11 +441,11 @@ namespace UrbanWildlife.Animals
             previousAnimalTraceMaterial = null;
         }
 
-        private static Material CreateTraceMaterial()
+        private static Material CreateTraceMaterial(Color colour)
         {
             Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard");
             Material material = new Material(shader);
-            material.color = Color.white;
+            material.color = colour;
             return material;
         }
 

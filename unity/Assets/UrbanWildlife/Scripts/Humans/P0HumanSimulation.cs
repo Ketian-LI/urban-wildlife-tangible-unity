@@ -24,16 +24,21 @@ namespace UrbanWildlife.Humans
         public const int WalkerWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
         public const int DwellerWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
         public const int VisitorWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
+        public const int WalkPlaybackFrameCount = 4;
         public const int VisitorFeedArtworkFrameCount = 6;
         public const int SitFrameCount = SteppedCharacterAnimation.SitFrameCount;
         public const int DwellerSitArtworkFrameCount = 4;
         public const int RiseFrameCount = SteppedCharacterAnimation.RiseFrameCount;
-        public const float WalkFramesPerSecond = 6f;
+        public const float WalkFramesPerSecond = 4f;
         public const float WalkSwayMultiplier = 2f;
         public const float IdleSwaySeconds = 6.8f;
         public const float PresentationSaturation = 0.72f;
         public const float PresentationBrightness = 0.91f;
         public const float PresentationAmbientBlend = 0.16f;
+
+        private static readonly int[] WalkerWalkArtworkOrder = { 0, 4, 1, 5 };
+        private static readonly int[] ActivityRoleWalkArtworkOrder = { 0, 2, 3, 5 };
+        private static readonly float[] WalkSwayDegrees = { -0.7f, 0f, 0.7f, 0f };
 
         [SerializeField]
         [Tooltip("Path relative to the Unity Assets folder, or an absolute path.")]
@@ -397,7 +402,13 @@ namespace UrbanWildlife.Humans
                 {
                     if (hasWalkingArtwork)
                     {
-                        selectedSprite = human.walkingSprites[pose.FrameIndex];
+                        int playbackFrame = Mathf.Max(
+                            0,
+                            Mathf.FloorToInt(elapsed * WalkFramesPerSecond)) %
+                            WalkPlaybackFrameCount;
+                        selectedSprite = human.walkingSprites[WalkArtworkIndexFor(
+                            human.model.Archetype,
+                            playbackFrame)];
                     }
                     else if (hasFeedingArtwork)
                     {
@@ -427,7 +438,7 @@ namespace UrbanWildlife.Humans
             }
 
             float swayDegrees = hasWalkingArtwork
-                ? pose.SwayDegrees * WalkSwayMultiplier
+                ? WalkSwayDegreesFor(elapsed) * WalkSwayMultiplier
                 : pose.SwayDegrees;
             human.visual.localRotation = Quaternion.Euler(
                 0f,
@@ -471,6 +482,27 @@ namespace UrbanWildlife.Humans
             return moving
                 ? CharacterAnimationAction.Walking
                 : CharacterAnimationAction.Idle;
+        }
+
+        public static int WalkArtworkIndexFor(
+            HumanArchetype archetype,
+            int playbackFrame)
+        {
+            int frame = ((playbackFrame % WalkPlaybackFrameCount) + WalkPlaybackFrameCount) %
+                WalkPlaybackFrameCount;
+            if (archetype == HumanArchetype.Walker)
+            {
+                return WalkerWalkArtworkOrder[frame];
+            }
+
+            return ActivityRoleWalkArtworkOrder[frame];
+        }
+
+        private static float WalkSwayDegreesFor(float elapsed)
+        {
+            int frame = Mathf.Max(0, Mathf.FloorToInt(elapsed * WalkFramesPerSecond)) %
+                WalkPlaybackFrameCount;
+            return WalkSwayDegrees[frame];
         }
 
         private static void UpdateHeading(RuntimeHuman human, Vector2 movement)

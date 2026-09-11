@@ -550,14 +550,30 @@ namespace UrbanWildlife.EditorTools
                 P0HumanSimulation.WalkerWalkArtworkFrameCount != 6 ||
                 P0HumanSimulation.DwellerWalkArtworkFrameCount != 6 ||
                 P0HumanSimulation.VisitorWalkArtworkFrameCount != 6 ||
+                P0HumanSimulation.WalkPlaybackFrameCount != 4 ||
                 P0HumanSimulation.VisitorFeedArtworkFrameCount != 6 ||
                 P0HumanSimulation.SitFrameCount != 4 ||
                 P0HumanSimulation.DwellerSitArtworkFrameCount != 4 ||
                 P0HumanSimulation.RiseFrameCount != 4 ||
-                !Mathf.Approximately(P0HumanSimulation.WalkFramesPerSecond, 6f) ||
+                !Mathf.Approximately(P0HumanSimulation.WalkFramesPerSecond, 4f) ||
                 !Mathf.Approximately(P0HumanSimulation.WalkSwayMultiplier, 2f))
             {
                 throw new InvalidOperationException("P0 human stepped-animation timing is incorrect.");
+            }
+            int[] walkerWalkOrder = Enumerable.Range(0, P0HumanSimulation.WalkPlaybackFrameCount)
+                .Select(index => P0HumanSimulation.WalkArtworkIndexFor(HumanArchetype.Walker, index))
+                .ToArray();
+            int[] dwellerWalkOrder = Enumerable.Range(0, P0HumanSimulation.WalkPlaybackFrameCount)
+                .Select(index => P0HumanSimulation.WalkArtworkIndexFor(HumanArchetype.Dweller, index))
+                .ToArray();
+            int[] visitorWalkOrder = Enumerable.Range(0, P0HumanSimulation.WalkPlaybackFrameCount)
+                .Select(index => P0HumanSimulation.WalkArtworkIndexFor(HumanArchetype.Visitor, index))
+                .ToArray();
+            if (!walkerWalkOrder.SequenceEqual(new[] { 0, 4, 1, 5 }) ||
+                !dwellerWalkOrder.SequenceEqual(new[] { 0, 2, 3, 5 }) ||
+                !visitorWalkOrder.SequenceEqual(new[] { 0, 2, 3, 5 }))
+            {
+                throw new InvalidOperationException("P0 human walk artwork is not in a valid alternating order.");
             }
             CharacterPose turnMiddle = SteppedCharacterAnimation.Sample(
                 CharacterAnimationAction.Turning,
@@ -585,7 +601,8 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_HUMAN_WALK_ARTWORK_SMOKE_OK roles=3 frames_per_role=6 " +
                 "normalized_height=True fixed_baseline=True procedural_deformation=False " +
-                "continuous_road_state=True fps=6 sway_multiplier=2");
+                "continuous_road_state=True playback_frames=4 fps=4 strict_leg_alternation=True " +
+                "sway_multiplier=2");
             Debug.Log(
                 "UNITY_VISITOR_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
                 "sequence=stand/reach/extend/release/withdraw/stand procedural_fallback=True");

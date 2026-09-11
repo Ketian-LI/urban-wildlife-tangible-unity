@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UrbanWildlife.Cycle;
 using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
 
@@ -20,6 +21,23 @@ namespace UrbanWildlife.Animals
             int pigeonCount,
             int squirrelCount,
             int foxCount)
+        {
+            return CreatePlans(
+                packet,
+                scenario,
+                pigeonCount,
+                squirrelCount,
+                foxCount,
+                null);
+        }
+
+        public static AnimalSpawnPlan[] CreatePlans(
+            LayoutPacket packet,
+            P0Scenario scenario,
+            int pigeonCount,
+            int squirrelCount,
+            int foxCount,
+            P0CycleMemorySnapshot memory)
         {
             if (packet?.tokens == null || scenario?.animal_simulation == null || scenario.board == null)
             {
@@ -50,10 +68,15 @@ namespace UrbanWildlife.Animals
             List<AnimalSpawnPlan> plans = new List<AnimalSpawnPlan>();
             for (int index = 0; index < pigeonCount; index += 1)
             {
-                LayoutToken food = foods[index % foods.Length];
+                LayoutToken food = SelectFood(
+                    foods,
+                    index,
+                    pigeonCount,
+                    0,
+                    memory?.PigeonPreferredFoodTokenId ?? -1);
                 Vector2 offset = ScatterOffset(index, pigeonCount, 0.10f);
                 plans.Add(new AnimalSpawnPlan(
-                    CreateConfig(AnimalSpecies.Pigeon, settings),
+                    CreateConfig(AnimalSpecies.Pigeon, settings, memory),
                     pigeonStart + offset,
                     ToLocal(food, scenario, settings.unity_units_per_cm),
                     pigeonStart + offset,
@@ -64,11 +87,16 @@ namespace UrbanWildlife.Animals
             for (int index = 0; index < squirrelCount; index += 1)
             {
                 LayoutToken woodland = woodlands[index % woodlands.Length];
-                LayoutToken food = foods[(index + 1) % foods.Length];
+                LayoutToken food = SelectFood(
+                    foods,
+                    index,
+                    squirrelCount,
+                    1,
+                    memory?.SquirrelPreferredFoodTokenId ?? -1);
                 Vector2 shelter = ToLocal(woodland, scenario, settings.unity_units_per_cm) +
                     ScatterOffset(index, squirrelCount, 0.08f);
                 plans.Add(new AnimalSpawnPlan(
-                    CreateConfig(AnimalSpecies.Squirrel, settings),
+                    CreateConfig(AnimalSpecies.Squirrel, settings, memory),
                     shelter,
                     ToLocal(food, scenario, settings.unity_units_per_cm),
                     shelter,
@@ -79,11 +107,16 @@ namespace UrbanWildlife.Animals
             for (int index = 0; index < foxCount; index += 1)
             {
                 LayoutToken woodland = woodlands[(index + 1) % woodlands.Length];
-                LayoutToken food = foods[(index + 2) % foods.Length];
+                LayoutToken food = SelectFood(
+                    foods,
+                    index,
+                    foxCount,
+                    2,
+                    memory?.FoxPreferredFoodTokenId ?? -1);
                 Vector2 shelter = ToLocal(woodland, scenario, settings.unity_units_per_cm) +
                     ScatterOffset(index, foxCount, 0.12f);
                 plans.Add(new AnimalSpawnPlan(
-                    CreateConfig(AnimalSpecies.Fox, settings),
+                    CreateConfig(AnimalSpecies.Fox, settings, memory),
                     shelter,
                     ToLocal(food, scenario, settings.unity_units_per_cm),
                     shelter,
@@ -105,11 +138,30 @@ namespace UrbanWildlife.Animals
             return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
         }
 
+        private static LayoutToken SelectFood(
+            LayoutToken[] foods,
+            int index,
+            int speciesCount,
+            int defaultOffset,
+            int preferredFoodTokenId)
+        {
+            LayoutToken preferred = Array.Find(foods, food => food.id == preferredFoodTokenId);
+            int returningCount = (speciesCount + 1) / 2;
+            if (preferred != null && index < returningCount)
+            {
+                return preferred;
+            }
+
+            return foods[(index + defaultOffset) % foods.Length];
+        }
+
         private static AnimalAgentConfig CreateConfig(
             AnimalSpecies species,
-            ScenarioAnimalSimulation settings)
+            ScenarioAnimalSimulation settings,
+            P0CycleMemorySnapshot memory)
         {
             float scale = settings.unity_units_per_cm;
+            float cautionMultiplier = P0CycleMechanics.MemoryCautionMultiplier(memory);
             switch (species)
             {
                 case AnimalSpecies.Pigeon:
@@ -130,11 +182,16 @@ namespace UrbanWildlife.Animals
                         Species = species,
                         SpeedUnitsPerSecond = settings.squirrel_speed_cm_per_second * scale,
                         DetectionRadiusUnits = settings.squirrel_food_detection_cm * scale,
-                        DisturbanceRadiusUnits = settings.squirrel_disturbance_cm * scale,
+                        DisturbanceRadiusUnits = settings.squirrel_disturbance_cm * scale * cautionMultiplier,
                         FeedSeconds = settings.squirrel_feed_seconds,
                         RestSeconds = settings.squirrel_rest_seconds,
                         AvoidsHumans = true,
-                        InitialFamiliarity = settings.squirrel_initial_familiarity,
+                        InitialFamiliarity = Mathf.Clamp(
+                            Mathf.Max(
+                                settings.squirrel_initial_familiarity,
+                                P0CycleMechanics.CarriedSquirrelFamiliarity(memory)),
+                            0f,
+                            settings.squirrel_maximum_familiarity),
                         FamiliarityGainPerFeed = settings.squirrel_familiarity_gain_per_feed,
                         MaximumFamiliarity = settings.squirrel_maximum_familiarity,
                     };
@@ -144,7 +201,7 @@ namespace UrbanWildlife.Animals
                         Species = species,
                         SpeedUnitsPerSecond = settings.fox_speed_cm_per_second * scale,
                         DetectionRadiusUnits = settings.fox_food_detection_cm * scale,
-                        DisturbanceRadiusUnits = settings.fox_disturbance_cm * scale,
+                        DisturbanceRadiusUnits = settings.fox_disturbance_cm * scale * cautionMultiplier,
                         FeedSeconds = settings.fox_feed_seconds,
                         RestSeconds = settings.fox_rest_seconds,
                         AvoidsHumans = true,

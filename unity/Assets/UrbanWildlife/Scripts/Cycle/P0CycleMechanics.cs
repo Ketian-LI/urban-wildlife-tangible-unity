@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace UrbanWildlife.Cycle
 {
@@ -45,8 +46,49 @@ namespace UrbanWildlife.Cycle
         public int AnimalCount => PigeonCount + SquirrelCount + FoxCount;
     }
 
+    public sealed class P0CycleMemorySnapshot
+    {
+        public P0CycleMemorySnapshot(
+            int sourceCycleIndex,
+            int humanTrips,
+            int pigeonFeedEvents,
+            int squirrelFeedEvents,
+            int foxFeedEvents,
+            int avoidanceEvents,
+            int pigeonPreferredFoodTokenId,
+            int squirrelPreferredFoodTokenId,
+            int foxPreferredFoodTokenId,
+            float squirrelFamiliarity)
+        {
+            SourceCycleIndex = sourceCycleIndex;
+            HumanTrips = Math.Max(0, humanTrips);
+            PigeonFeedEvents = Math.Max(0, pigeonFeedEvents);
+            SquirrelFeedEvents = Math.Max(0, squirrelFeedEvents);
+            FoxFeedEvents = Math.Max(0, foxFeedEvents);
+            AvoidanceEvents = Math.Max(0, avoidanceEvents);
+            PigeonPreferredFoodTokenId = pigeonPreferredFoodTokenId;
+            SquirrelPreferredFoodTokenId = squirrelPreferredFoodTokenId;
+            FoxPreferredFoodTokenId = foxPreferredFoodTokenId;
+            SquirrelFamiliarity = Math.Max(0f, squirrelFamiliarity);
+        }
+
+        public int SourceCycleIndex { get; }
+        public int HumanTrips { get; }
+        public int PigeonFeedEvents { get; }
+        public int SquirrelFeedEvents { get; }
+        public int FoxFeedEvents { get; }
+        public int AvoidanceEvents { get; }
+        public int PigeonPreferredFoodTokenId { get; }
+        public int SquirrelPreferredFoodTokenId { get; }
+        public int FoxPreferredFoodTokenId { get; }
+        public float SquirrelFamiliarity { get; }
+    }
+
     public sealed class P0CycleMechanics
     {
+        private readonly List<P0CycleMemorySnapshot> memoryHistory =
+            new List<P0CycleMemorySnapshot>();
+
         public P0CycleMechanics()
         {
             BeginCycle(0);
@@ -59,6 +101,9 @@ namespace UrbanWildlife.Cycle
         public bool PredictionReady =>
             PredictedFeeder != P0PredictedFeeder.None &&
             PredictedConflictArea != P0PredictedConflictArea.None;
+        public P0CycleMemorySnapshot LastMemory =>
+            memoryHistory.Count == 0 ? null : memoryHistory[memoryHistory.Count - 1];
+        public int MemoryCount => memoryHistory.Count;
 
         public static P0CycleProfile ProfileForCycle(int cycleIndex)
         {
@@ -99,6 +144,30 @@ namespace UrbanWildlife.Cycle
             PredictedConflictArea = P0PredictedConflictArea.None;
         }
 
+        public void ResetSession()
+        {
+            memoryHistory.Clear();
+            BeginCycle(0);
+        }
+
+        public bool RecordOutcome(P0CycleMemorySnapshot snapshot)
+        {
+            if (snapshot == null || snapshot.SourceCycleIndex != CycleIndex)
+            {
+                return false;
+            }
+
+            if (LastMemory != null && LastMemory.SourceCycleIndex == snapshot.SourceCycleIndex)
+            {
+                memoryHistory[memoryHistory.Count - 1] = snapshot;
+            }
+            else
+            {
+                memoryHistory.Add(snapshot);
+            }
+            return true;
+        }
+
         public bool SetPredictedFeeder(P0PredictedFeeder prediction)
         {
             if (prediction == P0PredictedFeeder.None)
@@ -129,6 +198,49 @@ namespace UrbanWildlife.Cycle
             }
 
             return $"Most feeding: {FeederLabel(PredictedFeeder)} · Most pressure: {ConflictAreaLabel(PredictedConflictArea)}";
+        }
+
+        public string MemorySummary()
+        {
+            P0CycleMemorySnapshot memory = LastMemory;
+            if (memory == null)
+            {
+                return "No previous-cycle memory";
+            }
+
+            return
+                $"Cycle {memory.SourceCycleIndex + 1}: people completed {memory.HumanTrips} trips; " +
+                $"feeds P{memory.PigeonFeedEvents}/S{memory.SquirrelFeedEvents}/F{memory.FoxFeedEvents}; " +
+                $"avoidance {memory.AvoidanceEvents}. Remembered nodes: " +
+                $"P{TokenLabel(memory.PigeonPreferredFoodTokenId)}, " +
+                $"S{TokenLabel(memory.SquirrelPreferredFoodTokenId)}, " +
+                $"F{TokenLabel(memory.FoxPreferredFoodTokenId)}.";
+        }
+
+        public string MemoryEffectSummary()
+        {
+            P0CycleMemorySnapshot memory = LastMemory;
+            if (memory == null)
+            {
+                return "The first cycle starts without learned site preference.";
+            }
+
+            int cautionPercent = MemoryCautionPercent(memory.AvoidanceEvents);
+            return
+                "At least half of each returning species will revisit its remembered activity node when one exists. " +
+                $"Squirrel familiarity carries forward at 80%; cautious-species response distance is +{cautionPercent}%.";
+        }
+
+        public static float CarriedSquirrelFamiliarity(P0CycleMemorySnapshot memory)
+        {
+            return memory == null ? 0f : memory.SquirrelFamiliarity * 0.8f;
+        }
+
+        public static float MemoryCautionMultiplier(P0CycleMemorySnapshot memory)
+        {
+            return memory == null
+                ? 1f
+                : 1f + MemoryCautionPercent(memory.AvoidanceEvents) / 100f;
         }
 
         public string BuildObservationSummary(
@@ -210,6 +322,16 @@ namespace UrbanWildlife.Cycle
                 return "Pigeon";
             }
             return squirrel == maximum ? "Squirrel" : "Fox";
+        }
+
+        private static int MemoryCautionPercent(int avoidanceEvents)
+        {
+            return Math.Min(25, Math.Max(0, avoidanceEvents) * 2);
+        }
+
+        private static string TokenLabel(int tokenId)
+        {
+            return tokenId < 0 ? "—" : tokenId.ToString();
         }
     }
 }

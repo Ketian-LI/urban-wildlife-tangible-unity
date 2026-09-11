@@ -99,7 +99,7 @@ namespace UrbanWildlife.Cycle
         public void ResetSession()
         {
             state.ResetSession();
-            mechanics.BeginCycle(0);
+            mechanics.ResetSession();
         }
 
         public bool SetPredictedFeeder(P0PredictedFeeder prediction)

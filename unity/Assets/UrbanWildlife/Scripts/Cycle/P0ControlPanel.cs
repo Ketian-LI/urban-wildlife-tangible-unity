@@ -67,7 +67,14 @@ namespace UrbanWildlife.Cycle
             bool observing = cycle.Phase == P0Phase.Observe;
             bool compact = running || observing;
             float width = Mathf.Min((running ? 390f : 440f) * scale, Screen.width - 32f);
-            float requestedHeight = running ? 255f : observing ? 420f : cycle.Phase == P0Phase.Confirm ? 680f : 525f;
+            bool hasMemory = cycle.Mechanics.LastMemory != null;
+            float requestedHeight = running
+                ? hasMemory ? 330f : 255f
+                : observing
+                    ? 540f
+                    : cycle.Phase == P0Phase.Confirm
+                        ? hasMemory ? 810f : 680f
+                        : hasMemory ? 665f : 525f;
             float height = Mathf.Min(requestedHeight * scale, Screen.height - 32f);
             Rect panel = new Rect(16f, 16f, width, height);
             GUI.Box(panel, GUIContent.none, panelStyle);
@@ -80,6 +87,10 @@ namespace UrbanWildlife.Cycle
             GUILayout.Label("URBAN WILDLIFE PLANNER", titleStyle);
             GUILayout.Label(PhaseLine(), phaseStyle);
             DrawScenarioBrief();
+            if (cycle.Phase != P0Phase.Observe)
+            {
+                DrawMemoryContext(running);
+            }
 
             if (cycle.Phase == P0Phase.Run || cycle.Phase == P0Phase.Observe)
             {
@@ -130,6 +141,22 @@ namespace UrbanWildlife.Cycle
             GUILayout.Label(
                 $"This run: {profile.PigeonCount} pigeons · {profile.SquirrelCount} squirrels · {profile.FoxCount} foxes",
                 bodyStyle);
+        }
+
+        private void DrawMemoryContext(bool compact)
+        {
+            if (cycle.Mechanics.LastMemory == null)
+            {
+                return;
+            }
+
+            GUILayout.Space(5f);
+            GUILayout.Label("MEMORY FROM LAST RUN", statusStyle);
+            GUILayout.Label(cycle.Mechanics.MemorySummary(), bodyStyle);
+            if (!compact)
+            {
+                GUILayout.Label(cycle.Mechanics.MemoryEffectSummary(), bodyStyle);
+            }
         }
 
         private void DrawAgentSummary()
@@ -246,6 +273,9 @@ namespace UrbanWildlife.Cycle
             GUILayout.Label(
                 "The predicted pressure area is recorded now; spatial verification will be added with Trace.",
                 bodyStyle);
+            GUILayout.Space(5f);
+            GUILayout.Label("SAVED FOR THE NEXT CYCLE", statusStyle);
+            GUILayout.Label(cycle.Mechanics.MemoryEffectSummary(), bodyStyle);
         }
 
         private void DrawConstraintStatus()

@@ -50,10 +50,22 @@ namespace UrbanWildlife.Logging
             {
                 cycle = GetComponent<P0CycleController>();
             }
+            if (humans == null)
+            {
+                humans = GetComponent<P0HumanSimulation>();
+            }
+            if (animals == null)
+            {
+                animals = GetComponent<P0AnimalSimulation>();
+            }
 
             reader.LayoutAccepted += OnLayoutAccepted;
             constraints.ConstraintsEvaluated += OnConstraintsEvaluated;
             cycle.PhaseChanged += OnPhaseChanged;
+            if (animals != null)
+            {
+                animals.CycleMemoryRecorded += OnCycleMemoryRecorded;
+            }
         }
 
         private void OnDisable()
@@ -70,6 +82,24 @@ namespace UrbanWildlife.Logging
             {
                 cycle.PhaseChanged -= OnPhaseChanged;
             }
+            if (animals != null)
+            {
+                animals.CycleMemoryRecorded -= OnCycleMemoryRecorded;
+            }
+        }
+
+        private void OnCycleMemoryRecorded(P0CycleMemorySnapshot snapshot)
+        {
+            if (reader.LatestPacket == null)
+            {
+                return;
+            }
+
+            EnsureWriter(reader.LatestPacket.session_id);
+            WriteRecord(
+                "cycle_memory_recorded",
+                cycle.Mechanics.MemoryEffectSummary(),
+                constraints.LatestResult);
         }
 
         private void OnConstraintsEvaluated(P0ConstraintResult result)
@@ -124,6 +154,7 @@ namespace UrbanWildlife.Logging
         private void WriteRecord(string eventType, string note, P0ConstraintResult result)
         {
             LayoutPacket packet = reader.LatestPacket;
+            P0CycleMemorySnapshot memory = cycle.Mechanics.LastMemory;
             ResearchLogRecord record = new ResearchLogRecord
             {
                 timestamp_utc = DateTimeOffset.UtcNow.ToString("O"),
@@ -135,6 +166,21 @@ namespace UrbanWildlife.Logging
                 phase = cycle.Phase.ToString(),
                 predicted_top_feeder = P0CycleMechanics.FeederLabel(cycle.Mechanics.PredictedFeeder),
                 predicted_conflict_area = P0CycleMechanics.ConflictAreaLabel(cycle.Mechanics.PredictedConflictArea),
+                memory_source_cycle_index = memory?.SourceCycleIndex,
+                remembered_human_trips = memory?.HumanTrips,
+                remembered_avoidance_events = memory?.AvoidanceEvents,
+                remembered_pigeon_food_token_id = RememberedTokenId(
+                    memory?.PigeonPreferredFoodTokenId),
+                remembered_squirrel_food_token_id = RememberedTokenId(
+                    memory?.SquirrelPreferredFoodTokenId),
+                remembered_fox_food_token_id = RememberedTokenId(
+                    memory?.FoxPreferredFoodTokenId),
+                carried_squirrel_familiarity = memory == null
+                    ? (float?)null
+                    : P0CycleMechanics.CarriedSquirrelFamiliarity(memory),
+                memory_caution_multiplier = memory == null
+                    ? (float?)null
+                    : P0CycleMechanics.MemoryCautionMultiplier(memory),
                 layout_timestamp_ms = packet?.timestamp_ms,
                 human_connected = result?.human_connected,
                 animal_reachable = result?.animal_reachable,
@@ -170,6 +216,11 @@ namespace UrbanWildlife.Logging
             return Path.IsPathRooted(configuredPath)
                 ? Path.GetFullPath(configuredPath)
                 : Path.GetFullPath(Path.Combine(Application.dataPath, configuredPath));
+        }
+
+        private static int? RememberedTokenId(int? tokenId)
+        {
+            return tokenId.HasValue && tokenId.Value >= 0 ? tokenId : null;
         }
     }
 }

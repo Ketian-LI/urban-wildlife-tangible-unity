@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -77,6 +78,7 @@ namespace UrbanWildlife.Animals
         private LayoutPacket confirmedPacket;
         private Transform generatedRoot;
 
+        public event Action<P0CycleMemorySnapshot> CycleMemoryRecorded;
         public int AgentCount => animals.Count;
         public int PigeonCount => animals.Count(item => item.model.Species == AnimalSpecies.Pigeon);
         public int SquirrelCount => animals.Count(item => item.model.Species == AnimalSpecies.Squirrel);
@@ -92,6 +94,11 @@ namespace UrbanWildlife.Animals
             .Where(item => item.model.Species == AnimalSpecies.Fox)
             .Sum(item => item.model.FeedEvents);
         public int AvoidanceEvents => animals.Sum(item => item.model.AvoidanceEvents);
+        public float AverageSquirrelFamiliarity => animals
+            .Where(item => item.model.Species == AnimalSpecies.Squirrel)
+            .Select(item => item.model.Familiarity)
+            .DefaultIfEmpty(0f)
+            .Average();
 
         private void Awake()
         {
@@ -185,16 +192,18 @@ namespace UrbanWildlife.Animals
             {
                 BeginRun();
             }
+            else if (phase == P0Phase.Observe)
+            {
+                RecordCycleMemory();
+                StopAnimalMotion();
+            }
             else if (phase == P0Phase.Plan)
             {
                 ClearAnimals();
             }
             else
             {
-                foreach (RuntimeAnimal animal in animals)
-                {
-                    ApplyMotion(animal, false);
-                }
+                StopAnimalMotion();
             }
         }
 
@@ -213,7 +222,8 @@ namespace UrbanWildlife.Animals
                 scenario,
                 profile.PigeonCount,
                 profile.SquirrelCount,
-                profile.FoxCount);
+                profile.FoxCount,
+                cycle.Mechanics.LastMemory);
             GameObject root = new GameObject("Runtime Animals");
             root.transform.SetParent(transform, false);
             generatedRoot = root.transform;
@@ -245,6 +255,52 @@ namespace UrbanWildlife.Animals
                 $"Animal run started: pigeon={PigeonCount}, squirrel={SquirrelCount}, fox={FoxCount}; " +
                 $"scenario={profile.ScenarioId}.",
                 this);
+        }
+
+        private void RecordCycleMemory()
+        {
+            P0CycleMemorySnapshot snapshot = new P0CycleMemorySnapshot(
+                cycle.CycleIndex,
+                humans?.CompletedTrips ?? 0,
+                PigeonFeedEvents,
+                SquirrelFeedEvents,
+                FoxFeedEvents,
+                AvoidanceEvents,
+                PreferredFoodTokenId(AnimalSpecies.Pigeon),
+                PreferredFoodTokenId(AnimalSpecies.Squirrel),
+                PreferredFoodTokenId(AnimalSpecies.Fox),
+                AverageSquirrelFamiliarity);
+            if (!cycle.Mechanics.RecordOutcome(snapshot))
+            {
+                Debug.LogWarning("Could not record the current animal outcome as cross-cycle memory.", this);
+                return;
+            }
+            CycleMemoryRecorded?.Invoke(snapshot);
+        }
+
+        private int PreferredFoodTokenId(AnimalSpecies species)
+        {
+            return animals
+                .Where(item => item.model.Species == species && item.model.FeedEvents > 0)
+                .GroupBy(item => item.plan.FoodTokenId)
+                .Select(group => new
+                {
+                    TokenId = group.Key,
+                    FeedEvents = group.Sum(item => item.model.FeedEvents),
+                })
+                .OrderByDescending(item => item.FeedEvents)
+                .ThenBy(item => item.TokenId)
+                .Select(item => item.TokenId)
+                .DefaultIfEmpty(-1)
+                .First();
+        }
+
+        private void StopAnimalMotion()
+        {
+            foreach (RuntimeAnimal animal in animals)
+            {
+                ApplyMotion(animal, false);
+            }
         }
 
         private void ClearAnimals()

@@ -299,6 +299,45 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("Three-cycle wildlife population profiles changed unexpectedly.");
             }
 
+            P0CycleMemorySnapshot plannerMemory = new P0CycleMemorySnapshot(
+                0,
+                6,
+                7,
+                3,
+                1,
+                5,
+                12,
+                10,
+                11,
+                0.5f);
+            AnimalSpawnPlan[] rememberedPlans = AnimalEnvironmentPlanner.CreatePlans(
+                humanDemo,
+                scenario,
+                cycleTwoProfile.PigeonCount,
+                cycleTwoProfile.SquirrelCount,
+                cycleTwoProfile.FoxCount,
+                plannerMemory);
+            int returningPigeons = Array.FindAll(
+                rememberedPlans,
+                plan => plan.Config.Species == AnimalSpecies.Pigeon && plan.FoodTokenId == 12).Length;
+            int returningSquirrels = Array.FindAll(
+                rememberedPlans,
+                plan => plan.Config.Species == AnimalSpecies.Squirrel && plan.FoodTokenId == 10).Length;
+            int returningFoxes = Array.FindAll(
+                rememberedPlans,
+                plan => plan.Config.Species == AnimalSpecies.Fox && plan.FoodTokenId == 11).Length;
+            AnimalSpawnPlan rememberedSquirrel = Array.Find(
+                rememberedPlans,
+                plan => plan.Config.Species == AnimalSpecies.Squirrel);
+            float baseSquirrelDisturbance = scenario.animal_simulation.squirrel_disturbance_cm *
+                scenario.animal_simulation.unity_units_per_cm;
+            if (returningPigeons < 5 || returningSquirrels < 2 || returningFoxes < 1 ||
+                rememberedSquirrel.Config.InitialFamiliarity <= scenario.animal_simulation.squirrel_initial_familiarity ||
+                rememberedSquirrel.Config.DisturbanceRadiusUnits <= baseSquirrelDisturbance)
+            {
+                throw new InvalidOperationException("Previous-cycle memory did not affect return visits, familiarity and caution.");
+            }
+
             int feedingAgents = 0;
             bool pigeonFed = false;
             bool squirrelFed = false;
@@ -717,6 +756,14 @@ namespace UrbanWildlife.EditorTools
                     phase = "Confirm",
                     predicted_top_feeder = "Pigeon",
                     predicted_conflict_area = "Woodland edge",
+                    memory_source_cycle_index = 0,
+                    remembered_human_trips = 6,
+                    remembered_avoidance_events = 5,
+                    remembered_pigeon_food_token_id = 12,
+                    remembered_squirrel_food_token_id = 10,
+                    remembered_fox_food_token_id = 11,
+                    carried_squirrel_familiarity = 0.4f,
+                    memory_caution_multiplier = 1.1f,
                     layout_timestamp_ms = humanDemo.timestamp_ms,
                     human_connected = true,
                     animal_reachable = true,
@@ -742,8 +789,10 @@ namespace UrbanWildlife.EditorTools
                     : null;
                 if (parsedLog == null || parsedLog.event_type != logRecord.event_type ||
                     parsedLog.cycle_scenario_id != "S001-C1" || parsedLog.pigeon_count != 7 ||
+                    parsedLog.remembered_squirrel_food_token_id != 10 ||
                     csvLines.Length != 2 || !csvLines[1].Contains("\"comma, quote \"\"checked\"\"\"") ||
                     !ResearchLogFormatter.CsvHeader.Contains("predicted_top_feeder") ||
+                    !ResearchLogFormatter.CsvHeader.Contains("memory_source_cycle_index") ||
                     ResearchLogFormatter.CsvHeader.Contains("participant") || jsonLines[0].Contains("participant"))
                 {
                     throw new InvalidOperationException("Research logger JSONL/CSV or privacy smoke check failed.");
@@ -810,12 +859,27 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("Prediction and observation mechanics are not internally consistent.");
             }
-            mechanics.BeginCycle(1);
-            if (mechanics.PredictionReady || mechanics.CurrentProfile.ScenarioId != "S001-C2")
+            if (!mechanics.RecordOutcome(plannerMemory) || mechanics.MemoryCount != 1 ||
+                !mechanics.MemorySummary().Contains("Remembered nodes"))
             {
-                throw new InvalidOperationException("Prediction must reset when the next planning cycle begins.");
+                throw new InvalidOperationException("Completed outcomes were not saved as cross-cycle memory.");
+            }
+            mechanics.BeginCycle(1);
+            if (mechanics.PredictionReady || mechanics.CurrentProfile.ScenarioId != "S001-C2" ||
+                mechanics.LastMemory == null || mechanics.LastMemory.SourceCycleIndex != 0 ||
+                !mechanics.MemoryEffectSummary().Contains("revisit"))
+            {
+                throw new InvalidOperationException("Prediction must reset while memory persists into the next planning cycle.");
+            }
+            mechanics.ResetSession();
+            if (mechanics.MemoryCount != 0 || mechanics.LastMemory != null)
+            {
+                throw new InvalidOperationException("Reset Session must clear cross-cycle memory.");
             }
             Debug.Log("UNITY_PREDICTION_SMOKE_OK required=2 reset_between_cycles=True observation_feedback=True");
+            Debug.Log(
+                "UNITY_CYCLE_MEMORY_SMOKE_OK revisit_share>=0.5 squirrel_carry=0.8 " +
+                "caution_cap=1.25 visible_summary=True reset_session=True");
 
             GameObject uiObject = new GameObject("P0 UI Smoke");
             uiObject.AddComponent<LayoutPacketReader>();

@@ -18,6 +18,14 @@ namespace UrbanWildlife.Logging
         public string phase;
         public string predicted_top_feeder;
         public string predicted_conflict_area;
+        public int? memory_source_cycle_index;
+        public int? remembered_human_trips;
+        public int? remembered_avoidance_events;
+        public int? remembered_pigeon_food_token_id;
+        public int? remembered_squirrel_food_token_id;
+        public int? remembered_fox_food_token_id;
+        public float? carried_squirrel_familiarity;
+        public float? memory_caution_multiplier;
         public long? layout_timestamp_ms;
         public bool? human_connected;
         public bool? animal_reachable;
@@ -40,6 +48,9 @@ namespace UrbanWildlife.Logging
         public const string CsvHeader =
             "timestamp_utc,session_id,cycle_index,event_type,phase,layout_timestamp_ms," +
             "cycle_scenario_id,cycle_title,predicted_top_feeder,predicted_conflict_area," +
+            "memory_source_cycle_index,remembered_human_trips,remembered_avoidance_events," +
+            "remembered_pigeon_food_token_id,remembered_squirrel_food_token_id," +
+            "remembered_fox_food_token_id,carried_squirrel_familiarity,memory_caution_multiplier," +
             "human_connected,animal_reachable,food_hotspot_valid,changes_used,changes_allowed," +
             "human_trips,pigeon_count,squirrel_count,fox_count," +
             "pigeon_feed_events,squirrel_feed_events,fox_feed_events," +
@@ -59,6 +70,14 @@ namespace UrbanWildlife.Logging
                 record.cycle_title,
                 record.predicted_top_feeder,
                 record.predicted_conflict_area,
+                record.memory_source_cycle_index,
+                record.remembered_human_trips,
+                record.remembered_avoidance_events,
+                record.remembered_pigeon_food_token_id,
+                record.remembered_squirrel_food_token_id,
+                record.remembered_fox_food_token_id,
+                record.carried_squirrel_familiarity,
+                record.memory_caution_multiplier,
                 record.human_connected,
                 record.animal_reachable,
                 record.food_hotspot_valid,

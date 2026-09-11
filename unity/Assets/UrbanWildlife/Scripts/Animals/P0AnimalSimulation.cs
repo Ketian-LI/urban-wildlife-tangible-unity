@@ -207,7 +207,13 @@ namespace UrbanWildlife.Animals
                 return;
             }
 
-            AnimalSpawnPlan[] plans = AnimalEnvironmentPlanner.CreatePlans(confirmedPacket, scenario);
+            P0CycleProfile profile = cycle.CurrentProfile;
+            AnimalSpawnPlan[] plans = AnimalEnvironmentPlanner.CreatePlans(
+                confirmedPacket,
+                scenario,
+                profile.PigeonCount,
+                profile.SquirrelCount,
+                profile.FoxCount);
             GameObject root = new GameObject("Runtime Animals");
             root.transform.SetParent(transform, false);
             generatedRoot = root.transform;
@@ -215,7 +221,7 @@ namespace UrbanWildlife.Animals
             {
                 AnimalAgentStateMachine model = new AnimalAgentStateMachine(plans[index]);
                 GameObject visual = new GameObject(model.Species.ToString());
-                visual.name = model.Species.ToString();
+                visual.name = $"{model.Species} {index + 1:00}";
                 visual.transform.SetParent(generatedRoot, false);
                 visual.transform.localPosition = new Vector3(model.Position.x, 0.28f, model.Position.y);
                 RuntimeAnimal runtime = new RuntimeAnimal
@@ -235,7 +241,10 @@ namespace UrbanWildlife.Animals
                 animals.Add(runtime);
             }
 
-            Debug.Log("Animal run started: pigeon=1, squirrel=1, fox=1.", this);
+            Debug.Log(
+                $"Animal run started: pigeon={PigeonCount}, squirrel={SquirrelCount}, fox={FoxCount}; " +
+                $"scenario={profile.ScenarioId}.",
+                this);
         }
 
         private void ClearAnimals()

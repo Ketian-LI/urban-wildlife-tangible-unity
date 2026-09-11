@@ -63,9 +63,12 @@ namespace UrbanWildlife.Cycle
         {
             EnsureStyles();
             float scale = Mathf.Clamp(Screen.height / 900f, 0.75f, 1.35f);
-            bool compact = cycle.Phase == P0Phase.Run || cycle.Phase == P0Phase.Observe;
-            float width = Mathf.Min((compact ? 360f : 420f) * scale, Screen.width - 32f);
-            float height = Mathf.Min((compact ? 205f : 470f) * scale, Screen.height - 32f);
+            bool running = cycle.Phase == P0Phase.Run;
+            bool observing = cycle.Phase == P0Phase.Observe;
+            bool compact = running || observing;
+            float width = Mathf.Min((running ? 390f : 440f) * scale, Screen.width - 32f);
+            float requestedHeight = running ? 255f : observing ? 420f : cycle.Phase == P0Phase.Confirm ? 680f : 525f;
+            float height = Mathf.Min(requestedHeight * scale, Screen.height - 32f);
             Rect panel = new Rect(16f, 16f, width, height);
             GUI.Box(panel, GUIContent.none, panelStyle);
             Color previousColour = GUI.color;
@@ -76,6 +79,7 @@ namespace UrbanWildlife.Cycle
             GUILayout.BeginArea(new Rect(panel.x + 22f, panel.y + 18f, panel.width - 44f, panel.height - 36f));
             GUILayout.Label("URBAN WILDLIFE PLANNER", titleStyle);
             GUILayout.Label(PhaseLine(), phaseStyle);
+            DrawScenarioBrief();
 
             if (cycle.Phase == P0Phase.Run || cycle.Phase == P0Phase.Observe)
             {
@@ -93,16 +97,39 @@ namespace UrbanWildlife.Cycle
             DrawAgentSummary();
             if (compact)
             {
+                if (running)
+                {
+                    GUILayout.Space(6f);
+                    GUILayout.Label($"PREDICTION  {cycle.Mechanics.PredictionSummary()}", bodyStyle);
+                }
+                else
+                {
+                    DrawObservation();
+                }
                 GUILayout.EndArea();
                 return;
             }
 
             GUILayout.Space(10f);
             DrawConstraintStatus();
+            if (cycle.Phase == P0Phase.Confirm)
+            {
+                DrawPredictionControls();
+            }
             DrawElectronicDemoControl();
             GUILayout.FlexibleSpace();
             DrawActionButton();
             GUILayout.EndArea();
+        }
+
+        private void DrawScenarioBrief()
+        {
+            P0CycleProfile profile = cycle.CurrentProfile;
+            GUILayout.Label(profile.Title.ToUpperInvariant(), statusStyle);
+            GUILayout.Label(profile.Brief, bodyStyle);
+            GUILayout.Label(
+                $"This run: {profile.PigeonCount} pigeons · {profile.SquirrelCount} squirrels · {profile.FoxCount} foxes",
+                bodyStyle);
         }
 
         private void DrawAgentSummary()
@@ -142,6 +169,85 @@ namespace UrbanWildlife.Cycle
             }
         }
 
+        private void DrawPredictionControls()
+        {
+            GUILayout.Space(10f);
+            GUILayout.Label("BEFORE RUN: MAKE A PREDICTION", statusStyle);
+            GUILayout.Label("1. Which species will record the most feeding?", bodyStyle);
+            GUILayout.BeginHorizontal();
+            DrawFeederButton("Pigeon", P0PredictedFeeder.Pigeon);
+            DrawFeederButton("Squirrel", P0PredictedFeeder.Squirrel);
+            DrawFeederButton("Fox", P0PredictedFeeder.Fox);
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label("2. Where will human–wildlife pressure be most likely?", bodyStyle);
+            GUILayout.BeginHorizontal();
+            DrawConflictButton("Main route", P0PredictedConflictArea.MainRoute);
+            DrawConflictButton("Activity node", P0PredictedConflictArea.ActivityNode);
+            DrawConflictButton("Woodland edge", P0PredictedConflictArea.WoodlandEdge);
+            GUILayout.EndHorizontal();
+
+            GUILayout.Label(cycle.Mechanics.PredictionSummary(), bodyStyle);
+        }
+
+        private void DrawFeederButton(string label, P0PredictedFeeder value)
+        {
+            Color previous = GUI.backgroundColor;
+            if (cycle.Mechanics.PredictedFeeder == value)
+            {
+                GUI.backgroundColor = new Color(0.48f, 0.82f, 0.58f, 1f);
+            }
+            if (GUILayout.Button(label, GUILayout.Height(34f)))
+            {
+                cycle.SetPredictedFeeder(value);
+            }
+            GUI.backgroundColor = previous;
+        }
+
+        private void DrawConflictButton(string label, P0PredictedConflictArea value)
+        {
+            Color previous = GUI.backgroundColor;
+            if (cycle.Mechanics.PredictedConflictArea == value)
+            {
+                GUI.backgroundColor = new Color(0.48f, 0.82f, 0.58f, 1f);
+            }
+            if (GUILayout.Button(label, GUILayout.Height(40f)))
+            {
+                cycle.SetPredictedConflictArea(value);
+            }
+            GUI.backgroundColor = previous;
+        }
+
+        private void DrawObservation()
+        {
+            if (animalSimulation == null)
+            {
+                return;
+            }
+
+            GUILayout.Space(8f);
+            GUILayout.Label("WHAT HAPPENED", statusStyle);
+            GUILayout.Label(
+                cycle.Mechanics.BuildObservationSummary(
+                    animalSimulation.PigeonFeedEvents,
+                    animalSimulation.SquirrelFeedEvents,
+                    animalSimulation.FoxFeedEvents,
+                    animalSimulation.AvoidanceEvents),
+                bodyStyle);
+            GUILayout.Space(5f);
+            GUILayout.Label("WHY IT MAY HAVE HAPPENED", statusStyle);
+            GUILayout.Label(
+                cycle.Mechanics.BuildCausalExplanation(
+                    animalSimulation.PigeonFeedEvents,
+                    animalSimulation.SquirrelFeedEvents,
+                    animalSimulation.FoxFeedEvents,
+                    animalSimulation.AvoidanceEvents),
+                bodyStyle);
+            GUILayout.Label(
+                "The predicted pressure area is recorded now; spatial verification will be added with Trace.",
+                bodyStyle);
+        }
+
         private void DrawConstraintStatus()
         {
             P0ConstraintResult result = constraints.LatestResult;
@@ -178,7 +284,12 @@ namespace UrbanWildlife.Cycle
                     break;
                 case P0Phase.Confirm:
                     GUI.enabled = cycle.CanStartRun;
-                    if (GUILayout.Button(cycle.CanStartRun ? "START RUN" : "CHECKING…", buttonStyle, GUILayout.Height(62f)))
+                    string startLabel = cycle.CanStartRun
+                        ? "START RUN"
+                        : cycle.ConstraintsReady
+                            ? "MAKE BOTH PREDICTIONS"
+                            : "CHECKING…";
+                    if (GUILayout.Button(startLabel, buttonStyle, GUILayout.Height(62f)))
                     {
                         cycle.StartRun();
                     }

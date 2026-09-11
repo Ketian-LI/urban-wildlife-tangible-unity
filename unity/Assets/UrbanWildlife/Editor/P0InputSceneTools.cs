@@ -276,16 +276,33 @@ namespace UrbanWildlife.EditorTools
                 $"UNITY_HUMAN_STATE_SMOKE_OK dwelling={sawDwelling} " +
                 $"visiting={sawVisiting} completed={completedHumans}/{humanPlans.Length}");
 
-            AnimalSpawnPlan[] animalPlans = AnimalEnvironmentPlanner.CreatePlans(humanDemo, scenario);
-            if (animalPlans.Length != 3 ||
-                Array.FindAll(animalPlans, plan => plan.Config.Species == AnimalSpecies.Pigeon).Length != 1 ||
-                Array.FindAll(animalPlans, plan => plan.Config.Species == AnimalSpecies.Squirrel).Length != 1 ||
+            P0CycleProfile cycleOneProfile = P0CycleMechanics.ProfileForCycle(0);
+            AnimalSpawnPlan[] animalPlans = AnimalEnvironmentPlanner.CreatePlans(
+                humanDemo,
+                scenario,
+                cycleOneProfile.PigeonCount,
+                cycleOneProfile.SquirrelCount,
+                cycleOneProfile.FoxCount);
+            if (animalPlans.Length != 11 ||
+                Array.FindAll(animalPlans, plan => plan.Config.Species == AnimalSpecies.Pigeon).Length != 7 ||
+                Array.FindAll(animalPlans, plan => plan.Config.Species == AnimalSpecies.Squirrel).Length != 3 ||
                 Array.FindAll(animalPlans, plan => plan.Config.Species == AnimalSpecies.Fox).Length != 1)
             {
-                throw new InvalidOperationException("S001 must create one Pigeon, Squirrel and Fox.");
+                throw new InvalidOperationException("S001 cycle 1 must create the approved 7/3/1 wildlife population.");
             }
 
-            int feedingSpecies = 0;
+            P0CycleProfile cycleTwoProfile = P0CycleMechanics.ProfileForCycle(1);
+            P0CycleProfile cycleThreeProfile = P0CycleMechanics.ProfileForCycle(2);
+            if (cycleTwoProfile.PigeonCount != 9 || cycleTwoProfile.SquirrelCount != 4 || cycleTwoProfile.FoxCount != 1 ||
+                cycleThreeProfile.PigeonCount != 8 || cycleThreeProfile.SquirrelCount != 3 || cycleThreeProfile.FoxCount != 2)
+            {
+                throw new InvalidOperationException("Three-cycle wildlife population profiles changed unexpectedly.");
+            }
+
+            int feedingAgents = 0;
+            bool pigeonFed = false;
+            bool squirrelFed = false;
+            bool foxFed = false;
             foreach (AnimalSpawnPlan plan in animalPlans)
             {
                 AnimalAgentStateMachine animal = new AnimalAgentStateMachine(plan);
@@ -301,10 +318,13 @@ namespace UrbanWildlife.EditorTools
                 }
                 if (animal.FeedEvents > 0)
                 {
-                    feedingSpecies += 1;
+                    feedingAgents += 1;
+                    pigeonFed |= plan.Config.Species == AnimalSpecies.Pigeon;
+                    squirrelFed |= plan.Config.Species == AnimalSpecies.Squirrel;
+                    foxFed |= plan.Config.Species == AnimalSpecies.Fox;
                 }
             }
-            if (feedingSpecies != animalPlans.Length)
+            if (feedingAgents != animalPlans.Length || !pigeonFed || !squirrelFed || !foxFed)
             {
                 throw new InvalidOperationException("Every P0 animal must reach and feed at its assigned hotspot.");
             }
@@ -336,7 +356,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("Species-specific human disturbance responses are incorrect.");
             }
-            Debug.Log("UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 feeding_species=3");
+            Debug.Log("UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11");
             Debug.Log(
                 $"UNITY_ANIMAL_STATE_SMOKE_OK pigeon_avoid={tolerantPigeon.AvoidanceEvents} " +
                 $"squirrel_avoid={cautiousSquirrel.AvoidanceEvents} fox_avoid={cautiousFox.AvoidanceEvents}");
@@ -691,8 +711,12 @@ namespace UrbanWildlife.EditorTools
                     timestamp_utc = "2026-09-08T12:00:00.0000000+00:00",
                     session_id = "session:smoke",
                     cycle_index = 0,
+                    cycle_scenario_id = "S001-C1",
+                    cycle_title = "Repair the park",
                     event_type = "constraint_evaluated",
                     phase = "Confirm",
+                    predicted_top_feeder = "Pigeon",
+                    predicted_conflict_area = "Woodland edge",
                     layout_timestamp_ms = humanDemo.timestamp_ms,
                     human_connected = true,
                     animal_reachable = true,
@@ -700,6 +724,9 @@ namespace UrbanWildlife.EditorTools
                     changes_used = 2,
                     changes_allowed = 2,
                     human_trips = 6,
+                    pigeon_count = 7,
+                    squirrel_count = 3,
+                    fox_count = 1,
                     pigeon_feed_events = 1,
                     squirrel_feed_events = 1,
                     fox_feed_events = 1,
@@ -714,7 +741,9 @@ namespace UrbanWildlife.EditorTools
                     ? JsonConvert.DeserializeObject<ResearchLogRecord>(jsonLines[0])
                     : null;
                 if (parsedLog == null || parsedLog.event_type != logRecord.event_type ||
+                    parsedLog.cycle_scenario_id != "S001-C1" || parsedLog.pigeon_count != 7 ||
                     csvLines.Length != 2 || !csvLines[1].Contains("\"comma, quote \"\"checked\"\"\"") ||
+                    !ResearchLogFormatter.CsvHeader.Contains("predicted_top_feeder") ||
                     ResearchLogFormatter.CsvHeader.Contains("participant") || jsonLines[0].Contains("participant"))
                 {
                     throw new InvalidOperationException("Research logger JSONL/CSV or privacy smoke check failed.");
@@ -772,6 +801,22 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log("UNITY_SESSION_SMOKE_OK cycles=3 phase=Complete");
 
+            P0CycleMechanics mechanics = new P0CycleMechanics();
+            if (mechanics.PredictionReady ||
+                !mechanics.SetPredictedFeeder(P0PredictedFeeder.Pigeon) ||
+                !mechanics.SetPredictedConflictArea(P0PredictedConflictArea.WoodlandEdge) ||
+                !mechanics.PredictionReady ||
+                !mechanics.BuildObservationSummary(4, 2, 1, 3).Contains("prediction matched"))
+            {
+                throw new InvalidOperationException("Prediction and observation mechanics are not internally consistent.");
+            }
+            mechanics.BeginCycle(1);
+            if (mechanics.PredictionReady || mechanics.CurrentProfile.ScenarioId != "S001-C2")
+            {
+                throw new InvalidOperationException("Prediction must reset when the next planning cycle begins.");
+            }
+            Debug.Log("UNITY_PREDICTION_SMOKE_OK required=2 reset_between_cycles=True observation_feedback=True");
+
             GameObject uiObject = new GameObject("P0 UI Smoke");
             uiObject.AddComponent<LayoutPacketReader>();
             uiObject.AddComponent<P0ConstraintManager>();
@@ -782,7 +827,7 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("P0 control panel dependencies were not created.");
             }
             UnityEngine.Object.DestroyImmediate(uiObject);
-            Debug.Log("UNITY_UI_SMOKE_OK phase=Plan space_actions=Confirm/StartRun");
+            Debug.Log("UNITY_UI_SMOKE_OK phase=Plan predictions_required=2 space_actions=Confirm/StartRun");
         }
 
         private static float TightSpriteAspect(Sprite sprite)

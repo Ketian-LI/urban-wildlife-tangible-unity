@@ -12,8 +12,12 @@ namespace UrbanWildlife.Logging
         public string timestamp_utc;
         public string session_id;
         public int cycle_index;
+        public string cycle_scenario_id;
+        public string cycle_title;
         public string event_type;
         public string phase;
+        public string predicted_top_feeder;
+        public string predicted_conflict_area;
         public long? layout_timestamp_ms;
         public bool? human_connected;
         public bool? animal_reachable;
@@ -21,6 +25,9 @@ namespace UrbanWildlife.Logging
         public int? changes_used;
         public int? changes_allowed;
         public int human_trips;
+        public int pigeon_count;
+        public int squirrel_count;
+        public int fox_count;
         public int pigeon_feed_events;
         public int squirrel_feed_events;
         public int fox_feed_events;
@@ -32,8 +39,10 @@ namespace UrbanWildlife.Logging
     {
         public const string CsvHeader =
             "timestamp_utc,session_id,cycle_index,event_type,phase,layout_timestamp_ms," +
+            "cycle_scenario_id,cycle_title,predicted_top_feeder,predicted_conflict_area," +
             "human_connected,animal_reachable,food_hotspot_valid,changes_used,changes_allowed," +
-            "human_trips,pigeon_feed_events,squirrel_feed_events,fox_feed_events," +
+            "human_trips,pigeon_count,squirrel_count,fox_count," +
+            "pigeon_feed_events,squirrel_feed_events,fox_feed_events," +
             "animal_avoidance_events,note";
 
         public static string ToCsvRow(ResearchLogRecord record)
@@ -46,12 +55,19 @@ namespace UrbanWildlife.Logging
                 record.event_type,
                 record.phase,
                 record.layout_timestamp_ms,
+                record.cycle_scenario_id,
+                record.cycle_title,
+                record.predicted_top_feeder,
+                record.predicted_conflict_area,
                 record.human_connected,
                 record.animal_reachable,
                 record.food_hotspot_valid,
                 record.changes_used,
                 record.changes_allowed,
                 record.human_trips,
+                record.pigeon_count,
+                record.squirrel_count,
+                record.fox_count,
                 record.pigeon_feed_events,
                 record.squirrel_feed_events,
                 record.fox_feed_events,

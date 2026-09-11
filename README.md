@@ -67,9 +67,11 @@ urban-wildlife-tangible-unity/
 - [x] 移除广场与池塘的黄/蓝提示圈，以铺装、岸线与植被直接表达固定区域
 - [x] 完成三类人物的等高等基线6帧行走，并接入三种动物的前后肢交替行走帧
 - [x] 完成Plan、Confirm、Run、Observe单周期与最小研究日志输出
+- [x] 将三轮升级为公园修复、周末压力与黄昏提案，并接入7–9只鸽子、3–4只松鼠和1–2只狐狸
+- [x] 接入Run前双项预测、Observe因果回顾以及包含预测和群体数量的研究日志
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 
-工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md) 和 [`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md)。
+工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)、[`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md) 和 [`docs/devlog/2026-09-11.md`](docs/devlog/2026-09-11.md)。
 材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
 已确认的城市公园方向见 [`docs/images/concepts/art-direction-drafts-2026-09-10/option-h-urban-neighbourhood-park-v01.png`](docs/images/concepts/art-direction-drafts-2026-09-10/option-h-urban-neighbourhood-park-v01.png)；当前Unity使用不含固定人物、动物和路线的V0.3底图，动态内容仍由运行时生成。
 

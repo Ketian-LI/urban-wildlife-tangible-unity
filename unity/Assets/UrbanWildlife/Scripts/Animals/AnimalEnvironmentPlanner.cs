@@ -11,6 +11,16 @@ namespace UrbanWildlife.Animals
     {
         public static AnimalSpawnPlan[] CreatePlans(LayoutPacket packet, P0Scenario scenario)
         {
+            return CreatePlans(packet, scenario, 1, 1, 1);
+        }
+
+        public static AnimalSpawnPlan[] CreatePlans(
+            LayoutPacket packet,
+            P0Scenario scenario,
+            int pigeonCount,
+            int squirrelCount,
+            int foxCount)
+        {
             if (packet?.tokens == null || scenario?.animal_simulation == null || scenario.board == null)
             {
                 throw new ArgumentException("A confirmed layout and animal simulation parameters are required.");
@@ -28,38 +38,71 @@ namespace UrbanWildlife.Animals
             {
                 throw new ArgumentException("P0 animal plans require three Food Hotspots and two Woodlands.");
             }
+            if (pigeonCount < 0 || squirrelCount < 0 || foxCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pigeonCount), "Animal counts cannot be negative.");
+            }
 
             ScenarioAnimalSimulation settings = scenario.animal_simulation;
             Vector2 pigeonStart = new Vector2(
                 0f,
                 scenario.board.height_cm * settings.unity_units_per_cm * 0.42f);
-            Vector2 squirrelShelter = ToLocal(woodlands[0], scenario, settings.unity_units_per_cm);
-            Vector2 foxShelter = ToLocal(woodlands[1], scenario, settings.unity_units_per_cm);
-            List<AnimalSpawnPlan> plans = new List<AnimalSpawnPlan>
+            List<AnimalSpawnPlan> plans = new List<AnimalSpawnPlan>();
+            for (int index = 0; index < pigeonCount; index += 1)
             {
-                new AnimalSpawnPlan(
+                LayoutToken food = foods[index % foods.Length];
+                Vector2 offset = ScatterOffset(index, pigeonCount, 0.10f);
+                plans.Add(new AnimalSpawnPlan(
                     CreateConfig(AnimalSpecies.Pigeon, settings),
-                    pigeonStart,
-                    ToLocal(foods[0], scenario, settings.unity_units_per_cm),
-                    pigeonStart,
-                    foods[0].id,
-                    -1),
-                new AnimalSpawnPlan(
+                    pigeonStart + offset,
+                    ToLocal(food, scenario, settings.unity_units_per_cm),
+                    pigeonStart + offset,
+                    food.id,
+                    -1));
+            }
+
+            for (int index = 0; index < squirrelCount; index += 1)
+            {
+                LayoutToken woodland = woodlands[index % woodlands.Length];
+                LayoutToken food = foods[(index + 1) % foods.Length];
+                Vector2 shelter = ToLocal(woodland, scenario, settings.unity_units_per_cm) +
+                    ScatterOffset(index, squirrelCount, 0.08f);
+                plans.Add(new AnimalSpawnPlan(
                     CreateConfig(AnimalSpecies.Squirrel, settings),
-                    squirrelShelter,
-                    ToLocal(foods[1], scenario, settings.unity_units_per_cm),
-                    squirrelShelter,
-                    foods[1].id,
-                    woodlands[0].id),
-                new AnimalSpawnPlan(
+                    shelter,
+                    ToLocal(food, scenario, settings.unity_units_per_cm),
+                    shelter,
+                    food.id,
+                    woodland.id));
+            }
+
+            for (int index = 0; index < foxCount; index += 1)
+            {
+                LayoutToken woodland = woodlands[(index + 1) % woodlands.Length];
+                LayoutToken food = foods[(index + 2) % foods.Length];
+                Vector2 shelter = ToLocal(woodland, scenario, settings.unity_units_per_cm) +
+                    ScatterOffset(index, foxCount, 0.12f);
+                plans.Add(new AnimalSpawnPlan(
                     CreateConfig(AnimalSpecies.Fox, settings),
-                    foxShelter,
-                    ToLocal(foods[2], scenario, settings.unity_units_per_cm),
-                    foxShelter,
-                    foods[2].id,
-                    woodlands[1].id),
-            };
+                    shelter,
+                    ToLocal(food, scenario, settings.unity_units_per_cm),
+                    shelter,
+                    food.id,
+                    woodland.id));
+            }
             return plans.ToArray();
+        }
+
+        private static Vector2 ScatterOffset(int index, int count, float spacing)
+        {
+            if (count <= 1)
+            {
+                return Vector2.zero;
+            }
+
+            float angle = index * 137.5f * Mathf.Deg2Rad;
+            float radius = spacing * (1f + index / 4f);
+            return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
         }
 
         private static AnimalAgentConfig CreateConfig(

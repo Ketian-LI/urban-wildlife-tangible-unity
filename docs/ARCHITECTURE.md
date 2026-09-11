@@ -1,5 +1,7 @@
 # Technical Architecture V0.1
 
+更新日期：2026-09-11
+
 ## 软件基线
 
 - Unity `6000.3.4f1`。
@@ -139,9 +141,9 @@ Observed crossings, feeding, waiting and avoidance
 - Run开始时，Human Route Planner把确认后的单条路径转为三类路线：Walker直接通行，Dweller在中央广场停留，Visitor绕行至Food Hotspot后回到主路。
 - Human Agent State Machine只使用Waiting、Moving、Dwelling、Visiting与Finished等可记录状态；完成路线的代理在同一次Run中重新进入，以持续形成活动和干扰条件。
 - S001 V0.1使用2个Walker、2个Dweller和2个Visitor；数量、速度及停留时间属于可版本化的游戏参数，不作为真实人流预测。
-- Animal Environment Planner把Food 10/11/12分别分配给鸽子、松鼠和狐狸，把Woodland 20/21作为松鼠和狐狸的庇护点；每种动物由独立状态机处理发现、接近、进食、停留、回避和撤退。
+- Animal Environment Planner把3个活动节点与2个Woodland分配给鸽子、松鼠和狐狸；每只动物由独立状态机处理发现、接近、进食、停留、回避和撤退，同群个体用确定性小范围偏移避免完全重叠。
 - 鸽子V0.1不因人类接近而回避；松鼠和狐狸按不同干扰半径撤回Woodland，松鼠进食后增加有上限的熟悉度。它们是为了形成可观察差异的设计抽象，不是生态预测模型。
-- P0 首个 Brief 固定为“周末公园重新规划”，并要求读取入口、广场、出口、主路径、Woodland 与 Food Hotspot 的空间关系。
+- P0使用同一张“周末公园重新规划”地图完成三轮递进Brief：公园修复、周末野餐压力和黄昏最终提案；每轮读取入口、广场、出口、主路径、Woodland 与活动节点的空间关系。
 - 入口 A 和出口 B 是 6 × 8 cm 圆角固定区域，分别贴合左、右边界，中心距上均为 30 cm；路径端点必须落入对应区域。中央广场使用 20 × 14 cm 横向椭圆固定区域，中心坐标为距左 45 cm、距上 18 cm，不通过 Marker 移动。
 - 在以左上为原点、地图宽高归一化为 1 的坐标中，广场中心为 `(0.50, 0.30)`，完整形状作为静态场景数据保存。
 - 小型池塘为约 18 × 12 cm 的不规则横向固定区域，中心距左 50 cm、距上 42 cm；其归一化中心约为 `(0.556, 0.70)`，不通过 Marker 识别，也不计入玩家改动次数。
@@ -149,7 +151,7 @@ Observed crossings, feeding, waiting and avoidance
 - 首轮约束只实现连续性、可达性、路径占用和最多 3 个逻辑元素调整。`changes_used` 通过比较候选布局与上次确认快照计算：每个发生变化的 Token 计 1，路径几何发生变化计 1，磁吸锚点不单独计数。
 - 每个场景开始前由主持人摆放预设基准布局；首个 Plan 以该布局为比较基准，后续 Re-plan 以上次确认快照为基准。
 - S001 的基准 Token 坐标、路径折线和预期 Constraint Check 由 `data/scenarios/s001_weekend_park_baseline.json` 提供，Unity 与测试代码读取同一份场景数据，避免文档和实现各自维护坐标。
-- P0 路径必须单条连续、按入口 A → 中央广场 → 出口 B 的顺序通过，且不得自我交叉。
+- 当前P0数据包中的强制主路必须单条连续、按入口 A → 中央广场 → 出口 B 的顺序通过，且不得自我交叉。可选支路将在第二种色带与数据格式验证后另加字段，不复用或破坏当前主路字段。
 - 四角各保留 8 × 8 cm 校准安全区；Confirm 时若 Marker、Token 或路径被遮挡则不接受输入。
 - Food Hotspot 的人类活动影响距离和主路径安全间距作为场景参数保存，不硬编码在 Marker 检测模块中。
 - HSV 路径检测先以亮洋红色为目标候选，并与高饱和青色、橙色实拍比较后锁定最终色相与阈值；黑色板面、灰绿色 Woodland 和灰蓝色池塘均应排除在路径 Mask 外。
@@ -160,11 +162,12 @@ Observed crossings, feeding, waiting and avoidance
 - P0 Confirm 使用屏幕大号按钮，并提供空格键快捷键；触发后要求画面连续稳定约 1 秒再输出 JSON。
 - 预测试默认 Plan 不倒计时、Run 60 秒、Observe 约 30 秒，每个 Session 3 个周期；正式研究参数可在预测试后调整并记录版本。
 - `P0CycleController` 实现阶段门控：约束失败返回Plan，成功后才可从Confirm进入Run；Run与Observe到时自动推进，第三周期后进入Complete。
-- `P0ControlPanel` 提供大号阶段按钮、空格快捷键、约束反馈和倒计时；它只调用状态机公开动作，不绕过布局或约束校验。
+- `P0CycleMechanics`保存三轮情境与7/3/1、9/4/1、8/3/2的动物群体配置，并保存当前轮两项预测。预测未完成时`P0CycleController`即使约束已通过也拒绝进入Run。
+- `P0ControlPanel` 提供大号阶段按钮、空格快捷键、约束反馈、预测和倒计时；它只调用控制器公开动作，不绕过布局、约束或预测门控。
 - 最小日志包含 `session_id`、`cycle_index`、时间戳、输入布局、约束结果、改动元素、动物状态变化、关键事件和 Trace 摘要。
 - 默认不记录参与者姓名；如后续保存视频或其他可识别资料，必须另行经过研究伦理和同意流程。
 - `P0ResearchLogger`订阅`LayoutAccepted`、`ConstraintsEvaluated`与`PhaseChanged`，将布局确认、约束检查和阶段变化追加到会话日志。
-- 每条记录包含UTC时间、会话/周期/阶段、布局时间戳、三项约束、改动预算、人类完成行程、各物种进食次数和动物回避次数；尚未实现的Trace摘要不伪造为空间数据。
+- 每条记录包含UTC时间、会话/周期/情境/阶段、两项预测、布局时间戳、三项约束、改动预算、三种动物数量、人类完成行程、各物种进食次数和动物回避次数；尚未实现的Trace摘要不伪造为空间数据。
 - 输出位于被Git忽略的 `data/raw/research-logs/<session_id>/events.jsonl` 和 `events.csv`。JSONL保留机器可读结构，CSV用于快速检查与分析。
 
 ## 模块边界
@@ -176,7 +179,7 @@ Observed crossings, feeding, waiting and avoidance
 - `data/` 只定义可公开的数据结构和脱敏样例。
 - `unity/` 中的 Constraint Manager 负责规划限制与通行检查；Human 和 Animal 系统仍负责产生实际行为结果。
 - `HumanRoutePlanner` 只从已确认布局和S001参数生成路线，`HumanAgentStateMachine` 负责确定性移动/停留，`P0HumanSimulation` 负责Run阶段的Unity实例与可视化。
-- `AnimalEnvironmentPlanner`负责布局到动物资源关系的确定性映射，`AnimalAgentStateMachine`不依赖Unity场景对象，`P0AnimalSimulation`只负责运行期感知、实例和可视化。
+- `AnimalEnvironmentPlanner`负责布局到群体动物资源关系的确定性映射，`AnimalAgentStateMachine`不依赖Unity场景对象，`P0AnimalSimulation`按当前轮配置生成11–14个实例并只负责运行期感知、实例和可视化。
 - 动物显示层与行为状态机保持分离：`P0AnimalSimulation`从`Resources/UrbanWildlife/Animals`加载透明俯视Sprite，并只根据状态机结果处理平滑转向、待机摆动、进食脉动与状态色；替换美术不会改变生态规则或研究日志。
 - V0.2松鼠和狐狸通过透明轮廓顶点的宽高比进行显示层回归检查：松鼠使用宽圆C形侧尾，狐狸使用细长直尾、黑腿和白色尾尖；检查只保护地图尺寸下的物种可辨性，不参与行为判定。
 - 动物位置仍完全由状态机决定；表现层以8 FPS采样共用待机、转身、行走、进食、坐下和起身节奏。鸽子、松鼠和狐狸的Walking与Feeding各使用6张独立Sprite；行走帧直接绘制两腿或四肢的交替步态，启用时关闭整只动物的程序缩放和抬升，不改变生态逻辑。
@@ -187,6 +190,6 @@ Observed crossings, feeding, waiting and avoidance
 - `LayoutDebugView`把每次确认布局组织为7个语义根对象：1个地图、1条路径和5个Token；装饰子对象不再影响输入验收计数。运行期创建的Mesh和Material在重载布局时显式释放。
 - `LayoutDebugView`的V0.3装饰层包括Food活动点与中心铭牌、Woodland冠层/叶脉/木纹，以及入口和出口的双门柱与弧形门槛；其父级坐标继续由已确认布局和S001固定场景参数驱动。
 - Planned Human Path在视觉层中由同一识别Polyline实时生成暖灰砂砾步道：深色土肩、浅色石质路缘、砂砾表面和确定性碎石细节均作为路径根对象的子层。实体洋红带及HSV Mask保持不变，显示宽度不参与约束判定。
-- `P0ControlPanel`在Plan/Confirm显示完整约束和操作，在Run/Observe自动切换为紧凑信息卡；这是显示密度变化，不改变阶段状态机。
+- `P0ControlPanel`在Plan/Confirm显示Brief、完整约束、预测和操作，在Run/Observe切换为运行信息与因果回顾卡；这是显示密度变化，不改变阶段状态机。
 - `P0ConstraintManager` 当前实现入口→广场→出口、人类活动来源、路径安全间距、池塘避让和改动次数；动物可达性以S001只有一个不接触边界的池塘为前提，路径只增加成本而不封路。新增围栏或多个障碍时应替换为网格寻路。
 - `P0ResearchLogger`只消费公开事件和汇总计数；原始研究日志写入Git忽略目录，必须标注会话和时间，不记录不必要的身份信息。

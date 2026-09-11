@@ -20,18 +20,23 @@ namespace UrbanWildlife.Cycle
         private LayoutPacketReader reader;
         private P0ConstraintManager constraintManager;
         private P0CycleStateMachine state;
+        private P0CycleMechanics mechanics;
 
         public event Action<P0Phase> PhaseChanged;
         public P0Phase Phase => state.Phase;
         public int CycleIndex => state.CycleIndex;
         public int CyclesPerSession => cyclesPerSession;
         public float RemainingSeconds => state.RemainingSeconds;
-        public bool CanStartRun => state.CanStartRun;
+        public bool ConstraintsReady => state.CanStartRun;
+        public bool CanStartRun => state.CanStartRun && mechanics.PredictionReady;
+        public P0CycleMechanics Mechanics => mechanics;
+        public P0CycleProfile CurrentProfile => mechanics.CurrentProfile;
 
         private void Awake()
         {
             reader = GetComponent<LayoutPacketReader>();
             constraintManager = GetComponent<P0ConstraintManager>();
+            mechanics = new P0CycleMechanics();
             state = new P0CycleStateMachine(runSeconds, observeSeconds, cyclesPerSession);
             state.PhaseChanged += OnPhaseChanged;
         }
@@ -78,6 +83,12 @@ namespace UrbanWildlife.Cycle
         [ContextMenu("Start Run")]
         public void StartRun()
         {
+            if (!mechanics.PredictionReady)
+            {
+                Debug.LogWarning("Run cannot start until both prediction questions are answered.", this);
+                return;
+            }
+
             if (!state.TryStartRun())
             {
                 Debug.LogWarning("Run cannot start until the confirmed plan passes every P0 constraint.", this);
@@ -88,6 +99,17 @@ namespace UrbanWildlife.Cycle
         public void ResetSession()
         {
             state.ResetSession();
+            mechanics.BeginCycle(0);
+        }
+
+        public bool SetPredictedFeeder(P0PredictedFeeder prediction)
+        {
+            return state.Phase == P0Phase.Confirm && mechanics.SetPredictedFeeder(prediction);
+        }
+
+        public bool SetPredictedConflictArea(P0PredictedConflictArea prediction)
+        {
+            return state.Phase == P0Phase.Confirm && mechanics.SetPredictedConflictArea(prediction);
         }
 
         private void OnConstraintsEvaluated(P0ConstraintResult result)
@@ -101,6 +123,10 @@ namespace UrbanWildlife.Cycle
 
         private void OnPhaseChanged(P0Phase next)
         {
+            if (next == P0Phase.Plan)
+            {
+                mechanics.BeginCycle(state.CycleIndex);
+            }
             PhaseChanged?.Invoke(next);
             Debug.Log($"P0 phase -> {next}; cycle={state.CycleIndex}; remaining={state.RemainingSeconds:F1}s", this);
         }

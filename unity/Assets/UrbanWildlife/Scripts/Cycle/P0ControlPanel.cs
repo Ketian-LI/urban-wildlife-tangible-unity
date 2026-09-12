@@ -163,8 +163,6 @@ namespace UrbanWildlife.Cycle
                 if (running)
                 {
                     DrawScore(CurrentScore(), "LIVE PLANNING SCORE");
-                    GUILayout.Space(6f);
-                    GUILayout.Label($"PREDICTION  {cycle.Mechanics.PredictionSummary()}", bodyStyle);
                 }
                 else
                 {
@@ -178,10 +176,6 @@ namespace UrbanWildlife.Cycle
 
             GUILayout.Space(10f);
             DrawConstraintStatus();
-            if (cycle.Phase == P0Phase.Confirm)
-            {
-                DrawPredictionControls();
-            }
             DrawElectronicDemoControl();
             GUILayout.FlexibleSpace();
             DrawActionButton();
@@ -385,49 +379,6 @@ namespace UrbanWildlife.Cycle
             }
         }
 
-        private void DrawPredictionControls()
-        {
-            GUILayout.Space(10f);
-            GUILayout.Label("BEFORE RUN: MAKE A PREDICTION", statusStyle);
-            GUILayout.Label("1. Which species will record the most feeding?", bodyStyle);
-            GUILayout.BeginHorizontal();
-            DrawFeederButton("Pigeon", P0PredictedFeeder.Pigeon);
-            DrawFeederButton("Squirrel", P0PredictedFeeder.Squirrel);
-            DrawFeederButton("Fox", P0PredictedFeeder.Fox);
-            GUILayout.EndHorizontal();
-
-            GUILayout.Label("2. Where will human–wildlife pressure be most likely?", bodyStyle);
-            GUILayout.BeginHorizontal();
-            DrawConflictButton("Main route", P0PredictedConflictArea.MainRoute);
-            DrawConflictButton("Activity node", P0PredictedConflictArea.ActivityNode);
-            DrawConflictButton("Woodland edge", P0PredictedConflictArea.WoodlandEdge);
-            GUILayout.EndHorizontal();
-
-            GUILayout.Label(cycle.Mechanics.PredictionSummary(), bodyStyle);
-        }
-
-        private void DrawFeederButton(string label, P0PredictedFeeder value)
-        {
-            GUIStyle style = cycle.Mechanics.PredictedFeeder == value
-                ? selectedToggleButtonStyle
-                : toggleButtonStyle;
-            if (GUILayout.Button(label, style, GUILayout.Height(34f)))
-            {
-                cycle.SetPredictedFeeder(value);
-            }
-        }
-
-        private void DrawConflictButton(string label, P0PredictedConflictArea value)
-        {
-            GUIStyle style = cycle.Mechanics.PredictedConflictArea == value
-                ? selectedToggleButtonStyle
-                : toggleButtonStyle;
-            if (GUILayout.Button(label, style, GUILayout.Height(40f)))
-            {
-                cycle.SetPredictedConflictArea(value);
-            }
-        }
-
         private void DrawObservation()
         {
             if (animalSimulation == null)
@@ -456,7 +407,7 @@ namespace UrbanWildlife.Cycle
                     animalSimulation.AvoidanceEvents),
                 bodyStyle);
             GUILayout.Label(
-                "Compare the cool human trace with the warm animal trace to inspect the predicted pressure area.",
+                "Compare the cool human trace with the warm animal trace to inspect where pressure emerged.",
                 bodyStyle);
             GUILayout.Space(5f);
             GUILayout.Label("SAVED FOR THE NEXT CYCLE", statusStyle);
@@ -556,11 +507,7 @@ namespace UrbanWildlife.Cycle
                     break;
                 case P0Phase.Confirm:
                     GUI.enabled = cycle.CanStartRun;
-                    string startLabel = cycle.CanStartRun
-                        ? "START RUN"
-                        : cycle.ConstraintsReady
-                            ? "MAKE BOTH PREDICTIONS"
-                            : "CHECKING…";
+                    string startLabel = cycle.CanStartRun ? "START RUN" : "CHECKING…";
                     if (GUILayout.Button(startLabel, buttonStyle, GUILayout.Height(62f)))
                     {
                         cycle.StartRun();

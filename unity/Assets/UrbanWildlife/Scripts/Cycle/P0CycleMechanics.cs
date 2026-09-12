@@ -168,9 +168,6 @@ namespace UrbanWildlife.Cycle
         public P0CycleProfile CurrentProfile { get; private set; }
         public P0PredictedFeeder PredictedFeeder { get; private set; }
         public P0PredictedConflictArea PredictedConflictArea { get; private set; }
-        public bool PredictionReady =>
-            PredictedFeeder != P0PredictedFeeder.None &&
-            PredictedConflictArea != P0PredictedConflictArea.None;
         public P0CycleMemorySnapshot LastMemory =>
             memoryHistory.Count == 0 ? null : memoryHistory[memoryHistory.Count - 1];
         public int MemoryCount => memoryHistory.Count;
@@ -238,38 +235,6 @@ namespace UrbanWildlife.Cycle
             return true;
         }
 
-        public bool SetPredictedFeeder(P0PredictedFeeder prediction)
-        {
-            if (prediction == P0PredictedFeeder.None)
-            {
-                return false;
-            }
-
-            PredictedFeeder = prediction;
-            return true;
-        }
-
-        public bool SetPredictedConflictArea(P0PredictedConflictArea prediction)
-        {
-            if (prediction == P0PredictedConflictArea.None)
-            {
-                return false;
-            }
-
-            PredictedConflictArea = prediction;
-            return true;
-        }
-
-        public string PredictionSummary()
-        {
-            if (!PredictionReady)
-            {
-                return "Prediction incomplete";
-            }
-
-            return $"Most feeding: {FeederLabel(PredictedFeeder)} · Most pressure: {ConflictAreaLabel(PredictedConflictArea)}";
-        }
-
         public string MemorySummary()
         {
             P0CycleMemorySnapshot memory = LastMemory;
@@ -326,16 +291,9 @@ namespace UrbanWildlife.Cycle
             int avoidanceEvents)
         {
             string actual = ActualTopFeeder(pigeonFeedEvents, squirrelFeedEvents, foxFeedEvents);
-            string comparison = PredictionReady
-                ? string.Equals(actual, FeederLabel(PredictedFeeder), StringComparison.Ordinal)
-                    ? "prediction matched"
-                    : actual == "Mixed"
-                        ? "outcome was mixed"
-                        : "prediction differed"
-                : "no prediction recorded";
             return
                 $"Observed feeds — Pigeon {pigeonFeedEvents}, Squirrel {squirrelFeedEvents}, Fox {foxFeedEvents}. " +
-                $"Most feeding: {actual} ({comparison}). Avoidance events: {avoidanceEvents}.";
+                $"Most feeding: {actual}. Avoidance events: {avoidanceEvents}.";
         }
 
         public string BuildCausalExplanation(

@@ -1049,13 +1049,15 @@ namespace UrbanWildlife.EditorTools
             Debug.Log("UNITY_SESSION_SMOKE_OK cycles=3 phase=Complete");
 
             P0CycleMechanics mechanics = new P0CycleMechanics();
-            if (mechanics.PredictionReady ||
-                !mechanics.SetPredictedFeeder(P0PredictedFeeder.Pigeon) ||
-                !mechanics.SetPredictedConflictArea(P0PredictedConflictArea.WoodlandEdge) ||
-                !mechanics.PredictionReady ||
-                !mechanics.BuildObservationSummary(4, 2, 1, 3).Contains("prediction matched"))
+            if (mechanics.PredictedFeeder != P0PredictedFeeder.None ||
+                mechanics.PredictedConflictArea != P0PredictedConflictArea.None ||
+                mechanics.BuildObservationSummary(4, 2, 1, 3).IndexOf(
+                    "prediction",
+                    StringComparison.OrdinalIgnoreCase) >= 0 ||
+                !mechanics.BuildObservationSummary(4, 2, 1, 3).Contains("Most feeding: Pigeon"))
             {
-                throw new InvalidOperationException("Prediction and observation mechanics are not internally consistent.");
+                throw new InvalidOperationException(
+                    "Observation must work without pre-run prediction questions.");
             }
             if (!mechanics.RecordOutcome(plannerMemory) || mechanics.MemoryCount != 1 ||
                 !mechanics.MemorySummary().Contains("Remembered nodes") ||
@@ -1066,18 +1068,23 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("Completed outcomes were not saved as cross-cycle memory.");
             }
             mechanics.BeginCycle(1);
-            if (mechanics.PredictionReady || mechanics.CurrentProfile.ScenarioId != "S001-C2" ||
+            if (mechanics.PredictedFeeder != P0PredictedFeeder.None ||
+                mechanics.PredictedConflictArea != P0PredictedConflictArea.None ||
+                mechanics.CurrentProfile.ScenarioId != "S001-C2" ||
                 mechanics.LastMemory == null || mechanics.LastMemory.SourceCycleIndex != 0 ||
                 !mechanics.MemoryEffectSummary().Contains("revisit"))
             {
-                throw new InvalidOperationException("Prediction must reset while memory persists into the next planning cycle.");
+                throw new InvalidOperationException(
+                    "Optional legacy prediction fields must reset while memory persists into the next planning cycle.");
             }
             mechanics.ResetSession();
             if (mechanics.MemoryCount != 0 || mechanics.LastMemory != null)
             {
                 throw new InvalidOperationException("Reset Session must clear cross-cycle memory.");
             }
-            Debug.Log("UNITY_PREDICTION_SMOKE_OK required=2 reset_between_cycles=True observation_feedback=True");
+            Debug.Log(
+                "UNITY_OPTIONAL_PREDICTION_SCHEMA_SMOKE_OK required=0 questions=none " +
+                "legacy_log_fields_retained=True");
             Debug.Log(
                 "UNITY_CYCLE_MEMORY_SMOKE_OK revisit_share>=0.5 squirrel_carry=0.8 " +
                 "caution_cap=1.25 visible_summary=True reset_session=True");
@@ -1125,7 +1132,8 @@ namespace UrbanWildlife.EditorTools
             }
             UnityEngine.Object.DestroyImmediate(uiObject);
             Debug.Log(
-                "UNITY_UI_SMOKE_OK phase=Plan predictions_required=2 space_actions=Confirm/StartRun " +
+                "UNITY_UI_SMOKE_OK phase=Plan predictions_required=0 questions=none " +
+                "space_actions=Confirm/StartRun " +
                 "trace_modes=3 park_notice_style=True split_screen=True map_unobscured=True " +
                 "typography=hierarchical_display/interface information_cards=True round_progress=3 " +
                 "confirm_memory=compact");

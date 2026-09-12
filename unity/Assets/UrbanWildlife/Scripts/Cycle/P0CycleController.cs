@@ -28,7 +28,7 @@ namespace UrbanWildlife.Cycle
         public int CyclesPerSession => cyclesPerSession;
         public float RemainingSeconds => state.RemainingSeconds;
         public bool ConstraintsReady => state.CanStartRun;
-        public bool CanStartRun => state.CanStartRun && mechanics.PredictionReady;
+        public bool CanStartRun => state.CanStartRun;
         public P0CycleMechanics Mechanics => mechanics;
         public P0CycleProfile CurrentProfile => mechanics.CurrentProfile;
 
@@ -83,12 +83,6 @@ namespace UrbanWildlife.Cycle
         [ContextMenu("Start Run")]
         public void StartRun()
         {
-            if (!mechanics.PredictionReady)
-            {
-                Debug.LogWarning("Run cannot start until both prediction questions are answered.", this);
-                return;
-            }
-
             if (!state.TryStartRun())
             {
                 Debug.LogWarning("Run cannot start until the confirmed plan passes every P0 constraint.", this);
@@ -100,16 +94,6 @@ namespace UrbanWildlife.Cycle
         {
             state.ResetSession();
             mechanics.ResetSession();
-        }
-
-        public bool SetPredictedFeeder(P0PredictedFeeder prediction)
-        {
-            return state.Phase == P0Phase.Confirm && mechanics.SetPredictedFeeder(prediction);
-        }
-
-        public bool SetPredictedConflictArea(P0PredictedConflictArea prediction)
-        {
-            return state.Phase == P0Phase.Confirm && mechanics.SetPredictedConflictArea(prediction);
         }
 
         private void OnConstraintsEvaluated(P0ConstraintResult result)

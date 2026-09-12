@@ -163,14 +163,14 @@ Observed crossings, feeding, waiting and avoidance
 - P0 Confirm 使用屏幕大号按钮，并提供空格键快捷键；触发后要求画面连续稳定约 1 秒再输出 JSON。
 - 预测试默认 Plan 不倒计时、Run 60 秒、Observe 约 30 秒，每个 Session 3 个周期；正式研究参数可在预测试后调整并记录版本。
 - `P0CycleController` 实现阶段门控：约束失败返回Plan，成功后才可从Confirm进入Run；Run与Observe到时自动推进，第三周期后进入Complete。
-- `P0CycleMechanics`保存三轮情境与7/3/1、9/4/1、8/3/2的动物群体配置，并保存当前轮两项预测。预测未完成时`P0CycleController`即使约束已通过也拒绝进入Run。
+- `P0CycleMechanics`保存三轮情境与7/3/1、9/4/1、8/3/2的动物群体配置。旧预测字段暂保留为日志兼容字段，但不再显示选择题，也不参与Run门控。
 - `P0CycleMechanics`还保存每轮结束时的不可变结果快照；运行逻辑只读取最近一轮，完整列表保留到Reset Session。快照包含人类行程、分物种进食、回避、最常使用活动节点、松鼠平均熟悉度以及Human/Animal累计轨迹距离。
 - 结果快照同时冻结`P0CycleScore`分项与总分。Run界面从实时代理状态计算预览分，Observe和日志读取冻结分，避免阶段结束后的实例清除改变结果。
-- `P0ControlPanel` 提供大号阶段按钮、空格快捷键、约束反馈、预测和倒计时；它只调用控制器公开动作，不绕过布局、约束或预测门控。
+- `P0ControlPanel` 提供大号阶段按钮、空格快捷键、约束反馈和倒计时；它只调用控制器公开动作，不绕过布局或约束门控。
 - 最小日志包含 `session_id`、`cycle_index`、时间戳、输入布局、约束结果、改动元素、动物状态变化、关键事件和 Trace 摘要。
 - 默认不记录参与者姓名；如后续保存视频或其他可识别资料，必须另行经过研究伦理和同意流程。
 - `P0ResearchLogger`订阅`LayoutAccepted`、`ConstraintsEvaluated`与`PhaseChanged`，将布局确认、约束检查和阶段变化追加到会话日志。
-- 每条记录包含UTC时间、会话/周期/情境/阶段、两项预测、布局时间戳、三项约束、改动预算、三种动物数量、人类完成行程、各物种进食次数、动物回避次数、分项/总分、轨迹采样点数、Human/Animal累计距离和实际读取的上一轮记忆字段。
+- 每条记录包含UTC时间、会话/周期/情境/阶段、布局时间戳、三项约束、改动预算、三种动物数量、人类完成行程、各物种进食次数、动物回避次数、分项/总分、轨迹采样点数、Human/Animal累计距离和实际读取的上一轮记忆字段。旧预测列暂写入`Not set`以兼容已有记录。
 - 输出位于被Git忽略的 `data/raw/research-logs/<session_id>/events.jsonl` 和 `events.csv`。JSONL保留机器可读结构，CSV用于快速检查与分析。
 
 ## 模块边界
@@ -195,6 +195,6 @@ Observed crossings, feeding, waiting and avoidance
 - `LayoutDebugView`把每次确认布局组织为7个语义根对象：1个地图、1条路径和5个Token；装饰子对象不再影响输入验收计数。运行期创建的Mesh和Material在重载布局时显式释放。
 - `LayoutDebugView`的V0.3装饰层包括Food活动点与中心铭牌、Woodland冠层/叶脉/木纹，以及入口和出口的双门柱与弧形门槛；其父级坐标继续由已确认布局和S001固定场景参数驱动。
 - Planned Human Path在视觉层中由同一识别Polyline实时生成暖灰砂砾步道：深色土肩、浅色石质路缘、砂砾表面和确定性碎石细节均作为路径根对象的子层。实体洋红带及HSV Mask保持不变，显示宽度不参与约束判定。
-- `P0ControlPanel`在Plan/Confirm显示Brief、完整约束、预测和操作，在Run/Observe切换为运行信息与因果回顾卡；这是显示密度变化，不改变阶段状态机。
+- `P0ControlPanel`在Plan/Confirm显示Brief、完整约束和操作，在Run/Observe切换为运行信息与因果回顾卡；这是显示密度变化，不改变阶段状态机。
 - `P0ConstraintManager` 当前实现入口→广场→出口、人类活动来源、路径安全间距、池塘避让和改动次数；动物可达性以S001只有一个不接触边界的池塘为前提，路径只增加成本而不封路。新增围栏或多个障碍时应替换为网格寻路。
 - `P0ResearchLogger`只消费公开事件和汇总计数；原始研究日志写入Git忽略目录，必须标注会话和时间，不记录不必要的身份信息。

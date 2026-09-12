@@ -9,7 +9,7 @@
 1. 用Unity `6000.3.4f1` 打开仓库中的 `unity/`，进入 `Assets/Scenes/P0_InputSpike.unity` 并点击Play。
 2. 在Plan阶段按 `D`，或点击 **LOAD ELECTRONIC DEMO**。面板应提示当前周期的电子布局已经准备好。
 3. 按空格或点击 **CONFIRM LAYOUT**。三项约束和改动预算应全部显示 `PASS`。
-4. 选择“进食最多的物种”和“压力区域”两项预测，再按空格或点击 **START RUN**。观察8个人类和当前轮11–14只动物在60秒Run中的移动、停留、进食、回避与实时轨迹。
+4. 约束通过后直接按空格或点击 **START RUN**。观察8个人类和当前轮11–14只动物在60秒Run中的移动、停留、进食、回避与实时轨迹。
 5. Run结束后进入30秒Observe；此时代理和本轮轨迹保持最后状态。依次点击Human、Animal、Combined，确认显示切换正确。
 6. 回到下一轮Plan后重新按 `D` 生成带新时间戳和正确周期号的布局，再重复步骤3至5。
 7. 完成3轮后，阶段应进入Complete；如需新会话，点击 **RESET SESSION**。

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
+using UrbanWildlife.City;
 using UrbanWildlife.Input;
 
 namespace UrbanWildlife.Planning
@@ -17,7 +18,9 @@ namespace UrbanWildlife.Planning
         private P0Scenario scenario;
 
         public event Action<P0ConstraintResult> ConstraintsEvaluated;
+        public event Action<CityState> CityStateAdapted;
         public P0ConstraintResult LatestResult { get; private set; }
+        public CityState LatestCityState { get; private set; }
 
         private void Awake()
         {
@@ -51,12 +54,26 @@ namespace UrbanWildlife.Planning
             }
 
             LatestResult = P0ConstraintEvaluator.Evaluate(packet, scenario);
+            LatestCityState = LegacyParkCityAdapter.Create(scenario, packet);
+            CityStateValidationResult cityValidation = CityStateValidator.Validate(LatestCityState);
+            if (!cityValidation.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"Legacy layout could not be represented as a city state: {cityValidation.Summary}");
+            }
             ConstraintsEvaluated?.Invoke(LatestResult);
+            CityStateAdapted?.Invoke(LatestCityState);
             Debug.Log(
                 $"Constraint Check: human_connected={LatestResult.human_connected}, " +
                 $"animal_reachable={LatestResult.animal_reachable}, " +
                 $"food_hotspot_valid={LatestResult.food_hotspot_valid}, " +
                 $"changes={LatestResult.changes_used}/{LatestResult.changes_allowed}",
+                this);
+            Debug.Log(
+                $"City State Adapter: buildings={LatestCityState.buildings.Length}, " +
+                $"green_patches={LatestCityState.green_patches.Length}, " +
+                $"vehicle_roads={LatestCityState.vehicle_roads.Length}, " +
+                $"pedestrian_links={LatestCityState.pedestrian_links.Length}",
                 this);
         }
 

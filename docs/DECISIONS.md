@@ -86,6 +86,7 @@
 | D078 | S001人类扩展为4类各2名：Walker、Dweller、Visitor与Wheelchair User。第四类以较慢速度完整通行主路并使用4帧侧视轮椅推进动画；角色整体覆盖不同年龄、性别、肤色和行动方式，但当前P0只验证路径连续性，不声称已经模拟坡度或完整无障碍规范 | 已确定，待实体预测试检查尺寸与道路净空 |
 | D079 | 项目目标版本切换为 GDD V3.0 的多物种城市建设即时策略游戏；旧公园 Vertical Slice 作为可运行技术底座，按 `docs/GDD_V3_MIGRATION.md` 分批迁移，不把未实现的新系统提前标记为完成 | 已确定 |
 | D080 | 取消 Run 前“进食最多物种”和“压力区域”两项选择题及其启动门槛；约束通过后可直接 Run。旧预测日志列暂写入 `Not set`，待城市日志 schema 升级时统一移除 | 已确定，替代 D071 |
+| D081 | 新城市运行时采用 `CityState` V0.1 作为 Building、GreenPatch、VehicleRoad、PedestrianLink 与 WasteSystem 的共享快照；VehicleRoad 与 PedestrianLink 分开存储，GreenPatch 必须保留 Natural Food。迁移期由只读 `LegacyParkCityAdapter` 并行生成 CityState，不直接改写旧 P0 行为 | 已实现，待批次 2 正式城市输入替换适配层 |
 
 ## 待确定顺序
 

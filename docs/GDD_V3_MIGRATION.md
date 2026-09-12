@@ -13,8 +13,8 @@
 | 批次 | 目标 | 主要交付 | 状态 |
 | --- | --- | --- | --- |
 | 0 | 对齐新版交互基线 | 移除 Run 前选择题和预测门槛；保留旧日志列以兼容已有记录 | 已完成 |
-| 1 | 城市片区数据底座 | 建立 Building、GreenPatch、Road、Pedestrian、Waste 与 CityState 数据模型；保留旧场景适配层 | 下一步 |
-| 2 | 五类实体 Token 与建设流程 | Apartment、Detached、Commercial、Community、Green Intervention；Scan City → Preview → Confirm Construction；New、Moved、Missing、Unchanged 差分 | 待开始 |
+| 1 | 城市片区数据底座 | 建立 Building、GreenPatch、Road、Pedestrian、Waste 与 CityState 数据模型；保留旧场景适配层 | 已完成 |
+| 2 | 五类实体 Token 与建设流程 | Apartment、Detached、Commercial、Community、Green Intervention；Scan City → Preview → Confirm Construction；New、Moved、Missing、Unchanged 差分 | 下一步 |
 | 3 | 道路与步行网络 | 为新建筑生成 Direct、Existing-network、Low-impact 三条候选机动车路线；自动基础步行接入；屏幕编辑额外 Footpath | 待开始 |
 | 4 | 人流与车辆 | 建筑 Origin/Destination、代表性 Trip、Walk/Drive、Destination Capacity、Crowding 与车辆代理 | 待开始 |
 | 5 | 城市环境压力 | 三类 Green Patch、Natural/Anthropogenic Food、Bin、Bench、Waste Capacity、Overflow 与局部 Disturbance | 待开始 |
@@ -34,6 +34,15 @@
 - 约束通过后 `START RUN` 立即可用，空格键也可直接开始。
 - Observe 只陈述实际结果，不再显示“预测命中”或“预测不同”。
 - 旧版 `predicted_top_feeder` 与 `predicted_conflict_area` 日志列暂时保留并写入 `Not set`，避免破坏已有 CSV/JSONL 读取流程；在城市日志 schema 升级时再统一移除。
+
+## 批次 1 验收
+
+- `CityState` V0.1 同时保存 Building、GreenPatch、VehicleRoad、PedestrianLink 与 WasteSystem，所有空间位置继续使用左上原点的归一化坐标。
+- Building 固定支持 Apartment、Detached House、Commercial 与 Community Facility 四种核心类型，并保存人流、目的地、车辆、垃圾、食物、干扰和占地变量。
+- GreenPatch 固定支持 Woodland、Shrub/Garden 与 Open Grass；`PublicPark` 是可叠加的土地属性，验证器要求城市仍保留 Natural Food。
+- VehicleRoad 与 PedestrianLink 是两个独立网络，分别记录来源和连接建筑；新城市不会把实体彩带重新解释为机动车道路。
+- `LegacyParkCityAdapter` 在旧 P0 约束检查旁路生成 CityState，不改变旧场景行为；后续批次用正式城市 Token 输入替换该适配层。
+- JSON Schema 位于 `data/schemas/city_state_v0.1.schema.json`，Unity 自动检查 ID、坐标、引用、网络几何和数值范围。
 
 ## 每批通用完成条件
 

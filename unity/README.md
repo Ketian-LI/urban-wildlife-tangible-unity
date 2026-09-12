@@ -42,6 +42,9 @@
 
 ## 已实现组件
 
+- `CityStateModels.cs`：统一保存四类核心 Building、三类 GreenPatch、独立 VehicleRoad/PedestrianLink 网络与 WasteSystem。
+- `CityStateValidator.cs`：验证城市状态版本、ID、坐标、数值、引用关系和 Natural Food 保留原则。
+- `LegacyParkCityAdapter.cs`：在不改变现有 P0 行为的情况下，把旧 S001 布局旁路映射为 CityState；正式城市输入接入后移除该过渡职责。
 - `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
 - `P0ElectronicDemoInput.cs`：在材料到货前，从脱敏夹具原子生成带新时间戳、Session和Cycle的电子演示包；不产生实体识别已经通过的主张。

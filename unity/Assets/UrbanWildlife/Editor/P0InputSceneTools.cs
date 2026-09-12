@@ -13,6 +13,7 @@ using UrbanWildlife.Humans;
 using UrbanWildlife.Animals;
 using UrbanWildlife.Logging;
 using UrbanWildlife.Presentation;
+using UrbanWildlife.City;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -162,6 +163,55 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("S001 baseline constraint result does not match its expected values.");
             }
+
+            CityState legacyCity = LegacyParkCityAdapter.Create(scenario, baselinePacket);
+            CityStateValidationResult cityValidation = CityStateValidator.Validate(legacyCity);
+            string cityJson = JsonConvert.SerializeObject(legacyCity);
+            CityState roundTripCity = JsonConvert.DeserializeObject<CityState>(cityJson);
+            CityStateValidationResult roundTripValidation = CityStateValidator.Validate(roundTripCity);
+            if (!cityValidation.IsValid || !roundTripValidation.IsValid ||
+                legacyCity.buildings.Length != 3 || legacyCity.green_patches.Length != 3 ||
+                legacyCity.vehicle_roads.Length != 1 || legacyCity.pedestrian_links.Length != 1 ||
+                legacyCity.waste.nodes.Length != legacyCity.buildings.Length ||
+                legacyCity.vehicle_roads[0].source != CityNetworkSource.LegacyAdapter ||
+                legacyCity.pedestrian_links[0].source != CityNetworkSource.LegacyAdapter ||
+                legacyCity.vehicle_roads[0].points_norm == legacyCity.pedestrian_links[0].points_norm ||
+                !legacyCity.green_patches.Any(patch => patch.natural_food_value > 0f) ||
+                Enum.GetValues(typeof(CityBuildingType)).Length != 4 ||
+                Enum.GetValues(typeof(CityGreenPatchType)).Length != 3)
+            {
+                throw new InvalidOperationException(
+                    $"City state foundation smoke check failed: {cityValidation.Summary}");
+            }
+
+            float[] naturalFoodValues = legacyCity.green_patches
+                .Select(patch => patch.natural_food_value)
+                .ToArray();
+            foreach (CityGreenPatch patch in legacyCity.green_patches)
+            {
+                patch.natural_food_value = 0f;
+            }
+            bool rejectedMissingNaturalFood = !CityStateValidator.Validate(legacyCity).IsValid;
+            for (int index = 0; index < legacyCity.green_patches.Length; index += 1)
+            {
+                legacyCity.green_patches[index].natural_food_value = naturalFoodValues[index];
+            }
+
+            string[] originalRoadReferences = legacyCity.buildings[0].vehicle_road_ids;
+            legacyCity.buildings[0].vehicle_road_ids = new[] { "missing-road" };
+            bool rejectedMissingNetworkReference = !CityStateValidator.Validate(legacyCity).IsValid;
+            legacyCity.buildings[0].vehicle_road_ids = originalRoadReferences;
+            if (!rejectedMissingNaturalFood || !rejectedMissingNetworkReference ||
+                !CityStateValidator.Validate(legacyCity).IsValid)
+            {
+                throw new InvalidOperationException(
+                    "City state validator did not enforce Natural Food and network references.");
+            }
+            Debug.Log(
+                "UNITY_CITY_STATE_SMOKE_OK schema=0.1 buildings=3 building_types=4 " +
+                "green_patches=3 patch_types=3 vehicle_roads=1 pedestrian_links=1 " +
+                "waste_sources=3 natural_food=True legacy_adapter=True json_round_trip=True " +
+                "rejects_missing_natural_food=True rejects_missing_network_reference=True");
 
             LayoutToken repairedFood10 = Array.Find(baselinePacket.tokens, token => token.id == 10);
             LayoutToken repairedFood12 = Array.Find(baselinePacket.tokens, token => token.id == 12);

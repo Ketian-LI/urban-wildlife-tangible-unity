@@ -1,14 +1,25 @@
-# Scope Freeze V1
+# Project Scope — GDD V3 Migration
 
-更新日期：2026-09-11
+更新日期：2026-09-12
 
-冻结状态：P0 技术闭环与 Vertical Slice 的第一版范围已锁定。任何范围变更都必须写入开发日志，并说明替换或删除的内容。
+迁移状态：GDD V3.0 已替代旧版 Scope Freeze V1。旧公园 P0 保留为可运行技术底座，下文相关细节仅用于回归验证，不再定义最终玩法；新范围的分批状态以 `docs/GDD_V3_MIGRATION.md` 为准。
 
 ## 项目目标
 
-完成一个实体桌面与 Unity 2D 相连的可研究原型。玩家承担城市公园规划与管理任务，通过 Token 与彩色路径配置空间条件，在人类通行、动物可达性和有限资源之间作出取舍；系统让人类 NPC 与动物自主响应，并通过 Trace 呈现累积后果。
+完成一个实体桌面与 Unity 2D 相连的多物种城市建设即时策略研究原型。玩家使用 Apartment、Detached House、Commercial、Community Facility 与 Green Intervention Token 规划城市条件；Unity 生成道路选择并实时模拟人流、车辆、垃圾与动物后果，玩家通过 Trace 解释历史并继续规划，但不能直接控制动物。
 
-## P0 MVP
+## GDD V3 P0 MVP
+
+- 单张约 120 × 90 world units 的城市片区地图，开局已有住宅、机动车道路、公共设施和 3–5 块 Green Patch。
+- `CityState` 统一保存 Building、GreenPatch、VehicleRoad、PedestrianLink 与 WasteSystem；状态更新可验证、可记录、可跨阶段延续。
+- 四类核心建筑实体 Token 与 Scan → Preview → Confirm Construction；Green Intervention 接口进入 P0，完整三模式可在稳定后补齐。
+- 每个新建筑获得自动基础步行接入；机动车道路由 Unity 提供 Direct、Existing-network、Low-impact 候选，玩家选择，不使用彩带绘制机动车道路。
+- 人流由建筑 Origin/Destination 与代表性 Trip 产生，并在 Walk/Drive 间选择；车辆沿 Vehicle Road Network 实际移动。
+- P0 先实现鸽子、灰松鼠、狐狸三物种；Natural Food、Anthropogenic Food、基础个体记忆、迁入迁出和真实车辆碰撞 Roadkill 进入技术闭环。
+- Human Trace、Animal Trace、三个 Development Phase、五维 City Balance Score 与基础研究日志进入首轮可玩版本。
+- 刺猬、五阶段、完整 Green Intervention、Bench/Bin、Waste Overflow、Combined Trace、事件和 City Report 在 P0 稳定后进入 P1。
+
+## 旧版 P0 Vertical Slice（迁移与回归底座）
 
 ### 实物端
 
@@ -92,7 +103,7 @@
 
 P0 验收：玩家在磁吸板上移动 Food Hotspot、Woodland Token 和彩绳后，系统能够识别布局、检查人类与动物通行约束并传入 Unity，使数字公园中的人类与三种动物产生可观察的变化。系统呈现取舍，并提供可拆解的规划表现分，但不把分数解释为生态价值、道德判断或唯一正确答案。
 
-## P1 Final Target
+## 旧版 P1 Final Target（已被 GDD V3 替代）
 
 - Bench、Human Activity、Bin 与 Management Sign。
 - Human Trace、Animal Trace 与 Combined Trace 的视觉与Session Summary完善；实时基础版已提前纳入P0软件闭环。

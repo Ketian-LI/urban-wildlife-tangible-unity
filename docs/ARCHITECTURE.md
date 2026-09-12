@@ -1,6 +1,6 @@
 # Technical Architecture V0.1
 
-更新日期：2026-09-11
+更新日期：2026-09-12
 
 ## 软件基线
 
@@ -11,6 +11,18 @@
 - Git `2.51.0.windows.2`。
 - OBS Studio `32.0.4`，已安装于 `D:\obs-studio`；首次 DJI Pocket 3 采集测试时补录具体场景与视频设置。
 - Unity输入层使用官方 `com.unity.nuget.newtonsoft-json 3.2.2` 解析标准数据包与S001场景配置。
+
+## GDD V3 城市状态底座
+
+`CityState` V0.1 是新城市模拟的共享状态快照，契约见 `data/schemas/city_state_v0.1.schema.json`。它包含以下互相引用但职责分离的数据：
+
+- `Building`：Apartment、DetachedHouse、Commercial、CommunityFacility，以及 Housing、Origin、Destination、Vehicle、Waste、Anthropogenic Food、Disturbance 与 Footprint 参数。
+- `GreenPatch`：Woodland、ShrubGarden、OpenGrass，以及 PublicPark 土地属性、Shelter、Natural Food、Human Disturbance 和 Patch Size。
+- `VehicleRoad`：主路、支路和建筑接入路；记录 Existing、Direct、ExistingNetwork、LowImpact 路线来源，但不接受实体彩带直接改路。
+- `PedestrianLink`：既有人行网络、自动基础接入和屏幕新增 Footpath；与 VehicleRoad 分开保存。
+- `WasteSystem`：总需求、总容量、Overflow 状态、建筑输出/Bin 节点和 Litter Hotspot。
+
+`CityStateValidator` 在状态进入后续模拟前检查 schema、唯一 ID、归一化坐标、网络几何、建筑引用与数值范围，并要求至少一块 GreenPatch 保留 Natural Food。迁移期间，`LegacyParkCityAdapter` 只在旧 S001 约束检查旁路生成兼容 CityState；旧 Human/Animal 系统继续读取原 P0 数据，不会被未完成的城市功能打断。
 
 ## 已确定的实体输入基线
 
@@ -28,10 +40,10 @@
 - P0逻辑ID固定为Food Hotspot 10–12、Woodland 20–21；其值由轮廓缺口恢复，P1预留30–43。
 - Food Hotspot Token 的实体主体固定为最大外径60 mm的A款柔和六边形3–4 mm桦木片；视觉系统读取木片外缘的方向缺口与编码缺口。
 - Food Hotspot逻辑ID 10–12由六边形木片的方向缺口与A、B、A+B编码槽区分；最大直径同时作为类型复核。
-- Planned Human Path 的实体输入使用约 15 mm 宽、100 cm 有效长度的高饱和哑光罗纹带；首选亮洋红色，同时测试青色和橙色。先准备 120 cm 材料并保留 20 cm 备用；薄磁吸点只用于固定，不作为视觉输入。
+- Planned Human Path 的实体彩带仅保留为旧 P0 技术验证材料；GDD V3 城市版机动车道路由 Unity 提供候选路线，额外 Footpath 在屏幕编辑，不再把彩带作为正式输入。
 - 板面左右各使用一盏 5000–5600 K 柔光灯，以约 45°照射；完成校准后尽量固定曝光和白平衡。
 - 四角使用固定且 ID 不同的白底校准 Marker。
-- 玩家操作 Token 与彩绳，双手离开后再确认读取。
+- 旧 P0 测试时玩家操作 Token 与彩带并在双手离开后确认读取；正式城市版只扫描建筑与 Green Intervention Token。
 
 ## 数据流
 
@@ -46,8 +58,12 @@ Coordinate normalizer
 Versioned input packet
                  ↓
 Unity Input Manager
-                 ↓
-Environment, Human NPC and Animal systems
+   ├─ Legacy P0 systems（迁移期间继续运行）
+   └─ LegacyParkCityAdapter → CityState V0.1
+                              ↓
+                 Building / GreenPatch / Networks / Waste
+                              ↓
+Environment, Human NPC, Vehicle and Animal systems
                  ↓
 Trace renderer and Research Logger
 ```

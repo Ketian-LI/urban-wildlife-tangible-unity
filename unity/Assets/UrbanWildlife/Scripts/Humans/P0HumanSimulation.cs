@@ -22,6 +22,7 @@ namespace UrbanWildlife.Humans
         public const int FeedFrameCount = SteppedCharacterAnimation.FeedFrameCount;
         public const int HumanWalkArtworkFrameCount = 6;
         public const int WalkerWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
+        public const int WalkerSideWalkArtworkFrameCount = 4;
         public const int DwellerWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
         public const int VisitorWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
         public const int WalkPlaybackFrameCount = 4;
@@ -60,8 +61,11 @@ namespace UrbanWildlife.Humans
             public Sprite standingSprite;
             public Sprite alternateWalkSprite;
             public Sprite[] walkingSprites;
+            public Sprite[] sideWalkingSprites;
             public Sprite[] feedingSprites;
             public Sprite[] sittingSprites;
+            public SpriteRenderer tokenRimRenderer;
+            public SpriteRenderer tokenShadowRenderer;
             public Vector3 artworkBaseScale;
             public Vector3 artworkBasePosition;
             public float animationOffset;
@@ -89,6 +93,8 @@ namespace UrbanWildlife.Humans
         private Transform previousTraceRoot;
         private Material humanTraceMaterial;
         private Material previousHumanTraceMaterial;
+        private Material humanTokenRimMaterial;
+        private Material humanTokenShadowMaterial;
         private bool traceVisible = true;
 
         public int AgentCount => humans.Count;
@@ -270,6 +276,8 @@ namespace UrbanWildlife.Humans
             root.transform.SetParent(transform, false);
             generatedRoot = root.transform;
             humanTraceMaterial = CreateTraceMaterial(HumanTraceColour);
+            humanTokenRimMaterial = WoodenTokenPresentation.CreateRimMaterial();
+            humanTokenShadowMaterial = WoodenTokenPresentation.CreateShadowMaterial();
             for (int index = 0; index < plans.Length; index += 1)
             {
                 HumanAgentStateMachine model = new HumanAgentStateMachine(plans[index]);
@@ -320,6 +328,10 @@ namespace UrbanWildlife.Humans
 
             DestroyObject(humanTraceMaterial);
             humanTraceMaterial = null;
+            DestroyObject(humanTokenRimMaterial);
+            humanTokenRimMaterial = null;
+            DestroyObject(humanTokenShadowMaterial);
+            humanTokenShadowMaterial = null;
 
             if (generatedRoot == null)
             {
@@ -427,7 +439,7 @@ namespace UrbanWildlife.Humans
             }
         }
 
-        private static void CreateArtwork(RuntimeHuman human)
+        private void CreateArtwork(RuntimeHuman human)
         {
             Sprite sourceSprite = Resources.Load<Sprite>(ResourcePathFor(human.model.Archetype));
             if (sourceSprite != null)
@@ -453,6 +465,11 @@ namespace UrbanWildlife.Humans
                     WalkingResourcePrefixFor(human.model.Archetype),
                     HumanWalkArtworkFrameCount,
                     WalkingResourceVersionFor(human.model.Archetype));
+                human.sideWalkingSprites = human.model.Archetype == HumanArchetype.Walker
+                    ? LoadActionSprites(
+                        "UrbanWildlife/Humans/walker-side-walk",
+                        WalkerSideWalkArtworkFrameCount)
+                    : new Sprite[0];
                 human.feedingSprites = LoadActionSprites(
                     FeedingResourcePrefixFor(human.model.Archetype),
                     VisitorFeedArtworkFrameCount);
@@ -477,6 +494,13 @@ namespace UrbanWildlife.Humans
                 {
                     Debug.LogWarning($"Alternate walk sprite missing for {human.model.Archetype}; using the standing frame.");
                 }
+                WoodenTokenPresentation.Attach(
+                    artwork.transform,
+                    spriteRenderer,
+                    humanTokenRimMaterial,
+                    humanTokenShadowMaterial,
+                    out human.tokenRimRenderer,
+                    out human.tokenShadowRenderer);
                 return;
             }
 
@@ -508,9 +532,13 @@ namespace UrbanWildlife.Humans
             }
 
             float elapsed = Mathf.Max(0f, Time.time - human.actionStartedAt);
+            bool hasSideWalkingArtwork = action == CharacterAnimationAction.Walking &&
+                human.sideWalkingSprites != null &&
+                human.sideWalkingSprites.Length == WalkerSideWalkArtworkFrameCount;
             bool hasWalkingArtwork = action == CharacterAnimationAction.Walking &&
+                (hasSideWalkingArtwork ||
                 human.walkingSprites != null &&
-                human.walkingSprites.Length == WalkFrameCount;
+                human.walkingSprites.Length == WalkFrameCount);
             bool hasFeedingArtwork = action == CharacterAnimationAction.Feeding &&
                 human.feedingSprites != null &&
                 human.feedingSprites.Length == FeedFrameCount;
@@ -539,9 +567,11 @@ namespace UrbanWildlife.Humans
                             0,
                             Mathf.FloorToInt(elapsed * WalkFramesPerSecond)) %
                             WalkPlaybackFrameCount;
-                        selectedSprite = human.walkingSprites[WalkArtworkIndexFor(
-                            human.model.Archetype,
-                            playbackFrame)];
+                        selectedSprite = hasSideWalkingArtwork
+                            ? human.sideWalkingSprites[playbackFrame]
+                            : human.walkingSprites[WalkArtworkIndexFor(
+                                human.model.Archetype,
+                                playbackFrame)];
                     }
                     else if (hasFeedingArtwork)
                     {
@@ -568,6 +598,10 @@ namespace UrbanWildlife.Humans
                     ? human.turnFromFacingRight
                     : human.facingRight;
                 human.spriteRenderer.flipX = !renderedFacingRight;
+                WoodenTokenPresentation.Sync(
+                    human.spriteRenderer,
+                    human.tokenRimRenderer,
+                    human.tokenShadowRenderer);
             }
 
             float swayDegrees = hasWalkingArtwork
@@ -681,6 +715,10 @@ namespace UrbanWildlife.Humans
             {
                 human.spriteRenderer.enabled = visible;
                 human.spriteRenderer.color = SpriteTintFor(human.model.State);
+                WoodenTokenPresentation.Sync(
+                    human.spriteRenderer,
+                    human.tokenRimRenderer,
+                    human.tokenShadowRenderer);
             }
             else if (human.renderer != null && human.renderer.sharedMaterial != null)
             {

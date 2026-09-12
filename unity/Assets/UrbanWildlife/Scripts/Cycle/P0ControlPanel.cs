@@ -25,6 +25,11 @@ namespace UrbanWildlife.Cycle
         private GUIStyle titleStyle;
         private GUIStyle noticeStyle;
         private GUIStyle phaseStyle;
+        private GUIStyle phaseBadgeStyle;
+        private GUIStyle progressNumberStyle;
+        private GUIStyle sectionStyle;
+        private GUIStyle metaStyle;
+        private GUIStyle infoCardStyle;
         private GUIStyle bodyStyle;
         private GUIStyle buttonStyle;
         private GUIStyle toggleButtonStyle;
@@ -42,6 +47,13 @@ namespace UrbanWildlife.Cycle
         private Texture2D buttonHoverTexture;
         private Texture2D selectedButtonTexture;
         private Texture2D boltTexture;
+        private Texture2D infoCardTexture;
+        private Texture2D phaseBadgeTexture;
+        private Texture2D progressLineTexture;
+        private Texture2D progressActiveTexture;
+        private Texture2D progressInactiveTexture;
+        private Font displayFont;
+        private Font interfaceFont;
         private Camera mapCamera;
         private Renderer boardRenderer;
         private Vector3 mapCameraRestingPosition;
@@ -123,9 +135,8 @@ namespace UrbanWildlife.Cycle
             GUI.color = previousColour;
 
             GUILayout.BeginArea(new Rect(panel.x + 27f, panel.y + 18f, panel.width - 54f, panel.height - 36f));
-            GUILayout.Label("BOROUGH PARKS · FIELD NOTICE", noticeStyle);
-            GUILayout.Label("URBAN WILDLIFE PLANNER", titleStyle);
-            GUILayout.Label(PhaseLine(), phaseStyle);
+            DrawMasthead(scale);
+            DrawPhaseHeader(scale);
             DrawScenarioBrief();
             if (cycle.Phase != P0Phase.Observe)
             {
@@ -259,11 +270,63 @@ namespace UrbanWildlife.Cycle
         private void DrawScenarioBrief()
         {
             P0CycleProfile profile = cycle.CurrentProfile;
-            GUILayout.Label(profile.Title.ToUpperInvariant(), statusStyle);
+            GUILayout.BeginVertical(infoCardStyle);
+            GUILayout.Label("CURRENT PARK BRIEF", sectionStyle);
+            GUILayout.Label(profile.Title, statusStyle);
             GUILayout.Label(profile.Brief, bodyStyle);
             GUILayout.Label(
-                $"This run: {profile.PigeonCount} pigeons · {profile.SquirrelCount} squirrels · {profile.FoxCount} foxes",
-                bodyStyle);
+                $"PIGEONS  {profile.PigeonCount}     SQUIRRELS  {profile.SquirrelCount}     FOXES  {profile.FoxCount}",
+                metaStyle);
+            GUILayout.EndVertical();
+        }
+
+        private void DrawMasthead(float scale)
+        {
+            GUILayout.Label("LONDON BOROUGH PARKS  /  FIELD OFFICE", noticeStyle);
+            GUILayout.Label("Urban Wildlife Planner", titleStyle);
+            Rect rule = GUILayoutUtility.GetRect(1f, Mathf.Max(2f, 3f * scale), GUILayout.ExpandWidth(true));
+            GUI.DrawTexture(rule, brassTexture);
+            GUILayout.Space(2f * scale);
+        }
+
+        private void DrawPhaseHeader(float scale)
+        {
+            int displayCycle = cycle.Phase == P0Phase.Complete
+                ? cycle.CyclesPerSession
+                : Mathf.Min(cycle.CycleIndex + 1, cycle.CyclesPerSession);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(cycle.Phase.ToString().ToUpperInvariant(), phaseStyle);
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(
+                $"ROUND {displayCycle} OF {cycle.CyclesPerSession}",
+                phaseBadgeStyle,
+                GUILayout.Width(116f * scale),
+                GUILayout.Height(29f * scale));
+            GUILayout.EndHorizontal();
+            DrawCycleProgress(displayCycle, cycle.CyclesPerSession, scale);
+            GUILayout.Space(5f * scale);
+        }
+
+        private void DrawCycleProgress(int displayCycle, int cycleCount, float scale)
+        {
+            Rect track = GUILayoutUtility.GetRect(1f, 24f * scale, GUILayout.ExpandWidth(true));
+            float nodeSize = 18f * scale;
+            float startX = track.x + nodeSize * 0.5f;
+            float endX = track.xMax - nodeSize * 0.5f;
+            float centreY = track.y + nodeSize * 0.5f;
+            GUI.DrawTexture(
+                new Rect(startX, centreY - 1f * scale, Mathf.Max(1f, endX - startX), 2f * scale),
+                progressLineTexture);
+            for (int index = 0; index < cycleCount; index += 1)
+            {
+                float t = cycleCount <= 1 ? 0f : index / (float)(cycleCount - 1);
+                float x = Mathf.Lerp(startX, endX, t) - nodeSize * 0.5f;
+                Rect node = new Rect(x, track.y, nodeSize, nodeSize);
+                GUI.DrawTexture(
+                    node,
+                    index < displayCycle ? progressActiveTexture : progressInactiveTexture);
+                GUI.Label(node, (index + 1).ToString(), progressNumberStyle);
+            }
         }
 
         private void DrawMemoryContext(bool compact)
@@ -274,12 +337,14 @@ namespace UrbanWildlife.Cycle
             }
 
             GUILayout.Space(5f);
-            GUILayout.Label("MEMORY FROM LAST RUN", statusStyle);
+            GUILayout.BeginVertical(infoCardStyle);
+            GUILayout.Label("MEMORY FROM THE LAST ROUND", sectionStyle);
             GUILayout.Label(cycle.Mechanics.MemorySummary(), bodyStyle);
             if (!compact)
             {
                 GUILayout.Label(cycle.Mechanics.MemoryEffectSummary(), bodyStyle);
             }
+            GUILayout.EndVertical();
         }
 
         private void DrawAgentSummary()
@@ -453,13 +518,16 @@ namespace UrbanWildlife.Cycle
         private void DrawConstraintStatus()
         {
             P0ConstraintResult result = constraints.LatestResult;
+            GUILayout.BeginVertical(infoCardStyle);
+            GUILayout.Label("LAYOUT CHECK", sectionStyle);
             if (result == null)
             {
-                GUILayout.Label("No layout confirmed yet.", statusStyle);
+                GUILayout.Label("Waiting for a confirmed layout", statusStyle);
                 if (!string.IsNullOrWhiteSpace(reader.LastError))
                 {
                     GUILayout.Label($"Last check: {reader.LastError}", bodyStyle);
                 }
+                GUILayout.EndVertical();
                 return;
             }
 
@@ -467,6 +535,7 @@ namespace UrbanWildlife.Cycle
             DrawStatusLine("Animal route reachable", result.animal_reachable);
             DrawStatusLine("Activity hotspots valid", result.food_hotspot_valid);
             DrawStatusLine($"Changes {result.changes_used}/{result.changes_allowed}", result.within_change_budget);
+            GUILayout.EndVertical();
         }
 
         private void DrawStatusLine(string label, bool passed)
@@ -522,7 +591,7 @@ namespace UrbanWildlife.Cycle
 
         private static string StatusLine(string label, bool passed)
         {
-            return $"{(passed ? "PASS" : "FIX")}  {label}";
+            return $"{(passed ? "READY" : "REVISE")}  {label}";
         }
 
         private Color PhaseColour()
@@ -547,7 +616,9 @@ namespace UrbanWildlife.Cycle
             if (titleStyle != null && panelTexture != null && sidebarBackdropTexture != null &&
                 panelShadowTexture != null &&
                 brassTexture != null && innerBorderTexture != null && buttonTexture != null &&
-                buttonHoverTexture != null && selectedButtonTexture != null && boltTexture != null)
+                buttonHoverTexture != null && selectedButtonTexture != null && boltTexture != null &&
+                infoCardTexture != null && phaseBadgeTexture != null && progressLineTexture != null &&
+                progressActiveTexture != null && progressInactiveTexture != null)
             {
                 return;
             }
@@ -564,40 +635,122 @@ namespace UrbanWildlife.Cycle
             panelShadowTexture = CreateSolidTexture("Park notice shadow", new Color(0f, 0f, 0f, 0.42f));
             brassTexture = CreateSolidTexture("Park notice brass", brass);
             innerBorderTexture = CreateSolidTexture("Park notice inner border", new Color(0.82f, 0.77f, 0.58f, 0.72f));
-            buttonTexture = CreateSolidTexture("Park notice button", new Color(0.78f, 0.76f, 0.64f, 0.96f));
-            buttonHoverTexture = CreateSolidTexture("Park notice button hover", parchment);
-            selectedButtonTexture = CreateSolidTexture("Park notice selected", new Color(0.78f, 0.58f, 0.24f, 1f));
+            buttonTexture = CreateFramedTexture(
+                "Park notice button",
+                new Color(0.78f, 0.76f, 0.64f, 0.98f),
+                new Color(0.32f, 0.24f, 0.12f, 1f));
+            buttonHoverTexture = CreateFramedTexture(
+                "Park notice button hover",
+                parchment,
+                brass);
+            selectedButtonTexture = CreateFramedTexture(
+                "Park notice selected",
+                new Color(0.78f, 0.58f, 0.24f, 1f),
+                new Color(0.26f, 0.15f, 0.055f, 1f));
             boltTexture = CreateBoltTexture(18, brass, deepGreen);
+            infoCardTexture = CreateFramedTexture(
+                "Park notice information card",
+                new Color(0.025f, 0.085f, 0.068f, 0.9f),
+                new Color(0.48f, 0.40f, 0.22f, 0.82f));
+            phaseBadgeTexture = CreateFramedTexture(
+                "Park notice round badge",
+                new Color(0.88f, 0.83f, 0.65f, 1f),
+                new Color(0.34f, 0.23f, 0.09f, 1f));
+            progressLineTexture = CreateSolidTexture(
+                "Park notice round track",
+                new Color(0.52f, 0.43f, 0.24f, 0.95f));
+            progressActiveTexture = CreateDiscTexture(
+                "Park notice active round",
+                24,
+                new Color(0.9f, 0.72f, 0.34f, 1f),
+                new Color(0.25f, 0.14f, 0.05f, 1f));
+            progressInactiveTexture = CreateDiscTexture(
+                "Park notice inactive round",
+                24,
+                new Color(0.13f, 0.24f, 0.18f, 1f),
+                new Color(0.58f, 0.5f, 0.31f, 1f));
+            // IMGUI's built-in font is packaged with the player and remains stable
+            // across Unity versions. The hierarchy comes from size, weight, colour,
+            // spacing and the sign materials rather than an OS-only font lookup.
+            displayFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            interfaceFont = displayFont;
             panelStyle = new GUIStyle(GUI.skin.box);
             panelStyle.normal.background = panelTexture;
 
+            infoCardStyle = new GUIStyle(GUI.skin.box)
+            {
+                normal = { background = infoCardTexture },
+                border = new RectOffset(3, 3, 3, 3),
+                padding = new RectOffset(11, 11, 8, 8),
+                margin = new RectOffset(0, 0, 4, 5),
+            };
+
             noticeStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 11,
+                font = interfaceFont,
+                fontSize = 10,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = brass },
             };
             titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 20,
+                font = displayFont,
+                fontSize = 23,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(0.96f, 0.94f, 0.82f) },
             };
             phaseStyle = new GUIStyle(GUI.skin.label)
             {
+                font = displayFont,
                 fontSize = 26,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(0.97f, 0.91f, 0.7f) },
             };
+            phaseBadgeStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = interfaceFont,
+                fontSize = 11,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { background = phaseBadgeTexture, textColor = ink },
+                border = new RectOffset(3, 3, 3, 3),
+                padding = new RectOffset(7, 7, 4, 4),
+            };
+            progressNumberStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = interfaceFont,
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = ink },
+            };
+            sectionStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = interfaceFont,
+                fontSize = 10,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = brass },
+                margin = new RectOffset(0, 0, 0, 2),
+            };
+            metaStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = interfaceFont,
+                fontSize = 11,
+                fontStyle = FontStyle.Bold,
+                wordWrap = true,
+                normal = { textColor = new Color(0.74f, 0.79f, 0.67f, 1f) },
+            };
             bodyStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 15,
+                font = interfaceFont,
+                fontSize = 14,
                 wordWrap = true,
                 normal = { textColor = paleInk },
             };
             statusStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 17,
+                font = interfaceFont,
+                fontSize = 16,
                 fontStyle = FontStyle.Bold,
                 normal = { textColor = new Color(0.9f, 0.82f, 0.55f) },
             };
@@ -611,16 +764,21 @@ namespace UrbanWildlife.Cycle
             };
             buttonStyle = new GUIStyle(GUI.skin.button)
             {
+                font = displayFont,
                 fontSize = 22,
                 fontStyle = FontStyle.Bold,
+                border = new RectOffset(3, 3, 3, 3),
+                padding = new RectOffset(12, 12, 7, 7),
                 normal = { background = selectedButtonTexture, textColor = ink },
                 hover = { background = buttonHoverTexture, textColor = ink },
                 active = { background = brassTexture, textColor = ink },
             };
             toggleButtonStyle = new GUIStyle(GUI.skin.button)
             {
-                fontSize = 14,
+                font = interfaceFont,
+                fontSize = 13,
                 fontStyle = FontStyle.Bold,
+                border = new RectOffset(3, 3, 3, 3),
                 padding = new RectOffset(8, 8, 5, 5),
                 normal = { background = buttonTexture, textColor = ink },
                 hover = { background = buttonHoverTexture, textColor = ink },
@@ -697,6 +855,71 @@ namespace UrbanWildlife.Cycle
             return texture;
         }
 
+        private static Texture2D CreateFramedTexture(
+            string name,
+            Color fill,
+            Color border)
+        {
+            const int width = 64;
+            const int height = 32;
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = name,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+            };
+            Color[] pixels = new Color[width * height];
+            for (int y = 0; y < height; y += 1)
+            {
+                for (int x = 0; x < width; x += 1)
+                {
+                    bool edge = x < 3 || x >= width - 3 || y < 3 || y >= height - 3;
+                    uint hash = (uint)(x * 2246822519u + y * 3266489917u);
+                    hash ^= hash >> 15;
+                    float grain = ((hash & 255u) / 255f - 0.5f) * 0.035f;
+                    Color colour = edge ? border : fill;
+                    pixels[y * width + x] = new Color(
+                        Mathf.Clamp01(colour.r + grain),
+                        Mathf.Clamp01(colour.g + grain),
+                        Mathf.Clamp01(colour.b + grain),
+                        colour.a);
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+            return texture;
+        }
+
+        private static Texture2D CreateDiscTexture(
+            string name,
+            int size,
+            Color fill,
+            Color edge)
+        {
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = name,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+            };
+            Color[] pixels = new Color[size * size];
+            Vector2 centre = Vector2.one * (size - 1) * 0.5f;
+            float radius = size * 0.47f;
+            for (int y = 0; y < size; y += 1)
+            {
+                for (int x = 0; x < size; x += 1)
+                {
+                    float distance = (new Vector2(x, y) - centre).magnitude;
+                    pixels[y * size + x] = distance > radius
+                        ? Color.clear
+                        : distance > radius * 0.78f ? edge : fill;
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+            return texture;
+        }
+
         private static Texture2D CreateBoltTexture(int size, Color brass, Color groove)
         {
             Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
@@ -744,6 +967,11 @@ namespace UrbanWildlife.Cycle
                 buttonHoverTexture,
                 selectedButtonTexture,
                 boltTexture,
+                infoCardTexture,
+                phaseBadgeTexture,
+                progressLineTexture,
+                progressActiveTexture,
+                progressInactiveTexture,
             };
             foreach (Texture2D texture in textures)
             {

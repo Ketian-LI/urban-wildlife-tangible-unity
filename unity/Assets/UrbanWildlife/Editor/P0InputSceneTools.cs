@@ -672,6 +672,21 @@ namespace UrbanWildlife.EditorTools
                     throw new InvalidOperationException($"P0 human walk sprite is missing or invalid: {spritePath}");
                 }
             }
+            string[] walkerSideWalkSpritePaths = Enumerable.Range(
+                    1,
+                    P0HumanSimulation.WalkerSideWalkArtworkFrameCount)
+                .Select(index => $"UrbanWildlife/Humans/walker-side-walk-{index:00}-v01")
+                .ToArray();
+            foreach (string spritePath in walkerSideWalkSpritePaths)
+            {
+                Sprite sprite = Resources.Load<Sprite>(spritePath);
+                if (sprite == null || sprite.texture == null || sprite.bounds.size.y <= 0f ||
+                    TightSpriteAspect(sprite) < 0.42f)
+                {
+                    throw new InvalidOperationException(
+                        $"P0 walker side-profile frame is missing or invalid: {spritePath}");
+                }
+            }
             string[] visitorFeedSpritePaths = Enumerable.Range(
                     1,
                     P0HumanSimulation.VisitorFeedArtworkFrameCount)
@@ -718,6 +733,7 @@ namespace UrbanWildlife.EditorTools
                 P0HumanSimulation.FeedFrameCount != 6 ||
                 P0HumanSimulation.HumanWalkArtworkFrameCount != 6 ||
                 P0HumanSimulation.WalkerWalkArtworkFrameCount != 6 ||
+                P0HumanSimulation.WalkerSideWalkArtworkFrameCount != 4 ||
                 P0HumanSimulation.DwellerWalkArtworkFrameCount != 6 ||
                 P0HumanSimulation.VisitorWalkArtworkFrameCount != 6 ||
                 P0HumanSimulation.WalkPlaybackFrameCount != 4 ||
@@ -774,6 +790,9 @@ namespace UrbanWildlife.EditorTools
                 "continuous_road_state=True playback_frames=4 fps=4 strict_leg_alternation=True " +
                 "sway_multiplier=2");
             Debug.Log(
+                "UNITY_WALKER_SIDE_PROFILE_SMOKE_OK frames=4 facing=right flip_x=True " +
+                "transparent_import=True gait=heel_contact/passing/opposite_contact/opposite_passing");
+            Debug.Log(
                 "UNITY_VISITOR_FEED_ARTWORK_SMOKE_OK frames=6 transparent_import=True " +
                 "sequence=stand/reach/extend/release/withdraw/stand procedural_fallback=True");
             Debug.Log(
@@ -808,6 +827,24 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CHARACTER_PALETTE_SMOKE_OK shader=True human_sat=0.72 " +
                 "animal_sat=0.78/0.68/0.66 ambient_tint=True softened_state_tints=True");
+            Shader woodenTokenShader = Resources.Load<Shader>(WoodenTokenPresentation.ResourcePath);
+            Material woodenRimMaterial = WoodenTokenPresentation.CreateRimMaterial();
+            Material woodenShadowMaterial = WoodenTokenPresentation.CreateShadowMaterial();
+            if (woodenTokenShader == null ||
+                woodenTokenShader.name != WoodenTokenPresentation.ShaderName ||
+                woodenRimMaterial == null || woodenShadowMaterial == null ||
+                WoodenTokenPresentation.RimScale <= 1.05f ||
+                WoodenTokenPresentation.ShadowScale <= WoodenTokenPresentation.RimScale ||
+                woodenRimMaterial.GetFloat("_Opacity") < 0.95f ||
+                woodenShadowMaterial.GetFloat("_Opacity") > 0.6f)
+            {
+                throw new InvalidOperationException("Wooden tabletop token presentation is missing or invalid.");
+            }
+            UnityEngine.Object.DestroyImmediate(woodenRimMaterial);
+            UnityEngine.Object.DestroyImmediate(woodenShadowMaterial);
+            Debug.Log(
+                "UNITY_WOODEN_TOKEN_SMOKE_OK human=True animal=True wood_grain=True " +
+                "rim=True drop_shadow=True sprite_sync=True");
             if (!(P0AnimalSimulation.PigeonDisplayLength < P0AnimalSimulation.SquirrelDisplayLength &&
                   P0AnimalSimulation.SquirrelDisplayLength < P0AnimalSimulation.FoxDisplayLength &&
                   P0AnimalSimulation.FoxDisplayLength < P0HumanSimulation.DwellerDisplayLength &&
@@ -842,13 +879,14 @@ namespace UrbanWildlife.EditorTools
                 "UNITY_FIXED_REGION_PRESENTATION_SMOKE_OK plaza_ring=False pond_ring=False " +
                 "background_landmarks=True");
             Debug.Log(
-                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=40 animal_sprites=42 map_sprites=1 " +
+                "UNITY_VISUAL_LAYER_SMOKE_OK human_sprites=44 animal_sprites=42 map_sprites=1 " +
                 "planning_area_sprites=4 semantic_elements=7 refined_visuals=7 asphalt_path=True " +
                 "weathered_asphalt=True road_palette_harmonized=True web_style_motion=True " +
                 "animal_side_profile=True palette_harmonized=True animal_lengths=0.30/0.44/0.72 human_lengths=0.89/0.84/0.85 " +
                 "real_size_order=True stepped_animation=True actions=idle/turn/walk/feed/sit/rise " +
                 "true_action_artwork=pigeon_walk_feed/squirrel_walk_feed/fox_walk_feed/" +
-                "walker_walk/dweller_walk_sit_rise/visitor_walk_feed");
+                "walker_front_walk/walker_side_walk/dweller_walk_sit_rise/visitor_walk_feed " +
+                "tabletop_tokens=wood_rim_shadow");
 
             string loggerSmokeRoot = Path.Combine(
                 Path.GetTempPath(),
@@ -1056,7 +1094,8 @@ namespace UrbanWildlife.EditorTools
             UnityEngine.Object.DestroyImmediate(uiObject);
             Debug.Log(
                 "UNITY_UI_SMOKE_OK phase=Plan predictions_required=2 space_actions=Confirm/StartRun " +
-                "trace_modes=3 park_notice_style=True split_screen=True map_unobscured=True");
+                "trace_modes=3 park_notice_style=True split_screen=True map_unobscured=True " +
+                "typography=serif_display/sans_interface information_cards=True round_progress=3");
         }
 
         private static float TightSpriteAspect(Sprite sprite)

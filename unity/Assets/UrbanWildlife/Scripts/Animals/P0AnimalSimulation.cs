@@ -60,6 +60,8 @@ namespace UrbanWildlife.Animals
             public Sprite alternateWalkSprite;
             public Sprite[] walkingSprites;
             public Sprite[] feedingSprites;
+            public SpriteRenderer tokenRimRenderer;
+            public SpriteRenderer tokenShadowRenderer;
             public Vector3 artworkBaseScale;
             public Vector3 artworkBasePosition;
             public float animationOffset;
@@ -86,6 +88,8 @@ namespace UrbanWildlife.Animals
         private Transform previousTraceRoot;
         private Material animalTraceMaterial;
         private Material previousAnimalTraceMaterial;
+        private Material animalTokenRimMaterial;
+        private Material animalTokenShadowMaterial;
         private AnimalMovementObstacle[] movementObstacles = Array.Empty<AnimalMovementObstacle>();
         private Vector2 animalBoardHalfExtents;
         private bool traceVisible = true;
@@ -277,6 +281,8 @@ namespace UrbanWildlife.Animals
             GameObject root = new GameObject("Runtime Animals");
             root.transform.SetParent(transform, false);
             generatedRoot = root.transform;
+            animalTokenRimMaterial = WoodenTokenPresentation.CreateRimMaterial();
+            animalTokenShadowMaterial = WoodenTokenPresentation.CreateShadowMaterial();
             animalTraceMaterial = CreateTraceMaterial(AnimalTraceColour);
             for (int index = 0; index < plans.Length; index += 1)
             {
@@ -395,6 +401,10 @@ namespace UrbanWildlife.Animals
             animals.Clear();
             DestroyObject(animalTraceMaterial);
             animalTraceMaterial = null;
+            DestroyObject(animalTokenRimMaterial);
+            animalTokenRimMaterial = null;
+            DestroyObject(animalTokenShadowMaterial);
+            animalTokenShadowMaterial = null;
             if (generatedRoot == null)
             {
                 Transform existing = transform.Find("Runtime Animals");
@@ -501,7 +511,7 @@ namespace UrbanWildlife.Animals
             }
         }
 
-        private static void CreateArtwork(RuntimeAnimal animal)
+        private void CreateArtwork(RuntimeAnimal animal)
         {
             Sprite sourceSprite = Resources.Load<Sprite>(ResourcePathFor(animal.model.Species));
             if (sourceSprite != null)
@@ -547,6 +557,13 @@ namespace UrbanWildlife.Animals
                 {
                     Debug.LogWarning($"Alternate walk sprite missing for {animal.model.Species}; using the standing frame.");
                 }
+                WoodenTokenPresentation.Attach(
+                    artwork.transform,
+                    spriteRenderer,
+                    animalTokenRimMaterial,
+                    animalTokenShadowMaterial,
+                    out animal.tokenRimRenderer,
+                    out animal.tokenShadowRenderer);
                 return;
             }
 
@@ -622,6 +639,10 @@ namespace UrbanWildlife.Animals
                     ? animal.turnFromFacingRight
                     : animal.facingRight;
                 animal.spriteRenderer.flipX = !renderedFacingRight;
+                WoodenTokenPresentation.Sync(
+                    animal.spriteRenderer,
+                    animal.tokenRimRenderer,
+                    animal.tokenShadowRenderer);
             }
 
             animal.visual.localRotation = Quaternion.Euler(
@@ -704,6 +725,10 @@ namespace UrbanWildlife.Animals
             if (animal.spriteRenderer != null)
             {
                 animal.spriteRenderer.color = SpriteTintFor(animal.model.State);
+                WoodenTokenPresentation.Sync(
+                    animal.spriteRenderer,
+                    animal.tokenRimRenderer,
+                    animal.tokenShadowRenderer);
             }
             else if (animal.renderer != null && animal.renderer.sharedMaterial != null)
             {

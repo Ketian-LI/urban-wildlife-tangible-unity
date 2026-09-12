@@ -23,9 +23,11 @@ namespace UrbanWildlife.Planning
         public int walker_count;
         public int dweller_count;
         public int visitor_count;
+        public int wheelchair_user_count;
         public float walker_speed_cm_per_second;
         public float dweller_speed_cm_per_second;
         public float visitor_speed_cm_per_second;
+        public float wheelchair_user_speed_cm_per_second;
         public float dwell_seconds;
         public float visit_seconds;
         public float spawn_interval_seconds;

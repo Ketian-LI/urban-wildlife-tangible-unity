@@ -16,6 +16,7 @@ namespace UrbanWildlife.Humans
         public const float WalkerDisplayLength = 0.89f;
         public const float DwellerDisplayLength = 0.84f;
         public const float VisitorDisplayLength = 0.85f;
+        public const float WheelchairUserDisplayLength = 0.80f;
         public const int IdleFrameCount = SteppedCharacterAnimation.IdleFrameCount;
         public const int TurnFrameCount = SteppedCharacterAnimation.TurnFrameCount;
         public const int WalkFrameCount = SteppedCharacterAnimation.WalkFrameCount;
@@ -23,6 +24,7 @@ namespace UrbanWildlife.Humans
         public const int HumanWalkArtworkFrameCount = 6;
         public const int WalkerWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
         public const int WalkerSideWalkArtworkFrameCount = 4;
+        public const int WheelchairUserSideMoveArtworkFrameCount = 4;
         public const int DwellerWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
         public const int VisitorWalkArtworkFrameCount = HumanWalkArtworkFrameCount;
         public const int WalkPlaybackFrameCount = 4;
@@ -101,6 +103,8 @@ namespace UrbanWildlife.Humans
         public int WalkerCount => humans.Count(item => item.model.Archetype == HumanArchetype.Walker);
         public int DwellerCount => humans.Count(item => item.model.Archetype == HumanArchetype.Dweller);
         public int VisitorCount => humans.Count(item => item.model.Archetype == HumanArchetype.Visitor);
+        public int WheelchairUserCount => humans.Count(
+            item => item.model.Archetype == HumanArchetype.WheelchairUser);
         public int CompletedTrips => humans.Sum(item => item.completedTrips);
         public int SuccessfulAgentCount => humans.Count(item => item.completedTrips > 0);
         public int TracePointCount => humans.Sum(
@@ -304,7 +308,8 @@ namespace UrbanWildlife.Humans
             }
 
             Debug.Log(
-                $"Human run started: walkers={WalkerCount}, dwellers={DwellerCount}, visitors={VisitorCount}.",
+                $"Human run started: walkers={WalkerCount}, dwellers={DwellerCount}, " +
+                $"visitors={VisitorCount}, wheelchair_users={WheelchairUserCount}.",
                 this);
         }
 
@@ -373,7 +378,7 @@ namespace UrbanWildlife.Humans
                 TraceWidth,
                 0.13f,
                 TraceSampleDistance,
-                markStyle: P0TraceMarkStyle.HumanFootprint);
+                markStyle: TraceMarkStyleFor(human.model.Archetype));
             trace.TryAppend(position);
             trace.SetVisible(traceVisible);
             human.traceLines.Add(trace);
@@ -423,6 +428,13 @@ namespace UrbanWildlife.Humans
             return material;
         }
 
+        private static P0TraceMarkStyle TraceMarkStyleFor(HumanArchetype archetype)
+        {
+            return archetype == HumanArchetype.WheelchairUser
+                ? P0TraceMarkStyle.WheelchairTrack
+                : P0TraceMarkStyle.HumanFootprint;
+        }
+
         private static void DestroyObject(Object target)
         {
             if (target == null)
@@ -465,11 +477,9 @@ namespace UrbanWildlife.Humans
                     WalkingResourcePrefixFor(human.model.Archetype),
                     HumanWalkArtworkFrameCount,
                     WalkingResourceVersionFor(human.model.Archetype));
-                human.sideWalkingSprites = human.model.Archetype == HumanArchetype.Walker
-                    ? LoadActionSprites(
-                        "UrbanWildlife/Humans/walker-side-walk",
-                        WalkerSideWalkArtworkFrameCount)
-                    : new Sprite[0];
+                human.sideWalkingSprites = LoadActionSprites(
+                    SideMovingResourcePrefixFor(human.model.Archetype),
+                    SideMovingArtworkFrameCountFor(human.model.Archetype));
                 human.feedingSprites = LoadActionSprites(
                     FeedingResourcePrefixFor(human.model.Archetype),
                     VisitorFeedArtworkFrameCount);
@@ -533,8 +543,10 @@ namespace UrbanWildlife.Humans
 
             float elapsed = Mathf.Max(0f, Time.time - human.actionStartedAt);
             bool hasSideWalkingArtwork = action == CharacterAnimationAction.Walking &&
+                SideMovingArtworkFrameCountFor(human.model.Archetype) > 0 &&
                 human.sideWalkingSprites != null &&
-                human.sideWalkingSprites.Length == WalkerSideWalkArtworkFrameCount;
+                human.sideWalkingSprites.Length ==
+                    SideMovingArtworkFrameCountFor(human.model.Archetype);
             bool hasWalkingArtwork = action == CharacterAnimationAction.Walking &&
                 (hasSideWalkingArtwork ||
                 human.walkingSprites != null &&
@@ -735,6 +747,8 @@ namespace UrbanWildlife.Humans
                     return "UrbanWildlife/Humans/walker-topdown-v05";
                 case HumanArchetype.Dweller:
                     return "UrbanWildlife/Humans/dweller-topdown-v03";
+                case HumanArchetype.WheelchairUser:
+                    return "UrbanWildlife/Humans/wheelchair-user-side-idle-v01";
                 default:
                     return "UrbanWildlife/Humans/visitor-topdown-v05";
             }
@@ -748,6 +762,8 @@ namespace UrbanWildlife.Humans
                     return "UrbanWildlife/Humans/walker-walk-b-v01";
                 case HumanArchetype.Dweller:
                     return "UrbanWildlife/Humans/dweller-walk-b-v01";
+                case HumanArchetype.WheelchairUser:
+                    return "UrbanWildlife/Humans/wheelchair-user-side-move-02-v01";
                 default:
                     return "UrbanWildlife/Humans/visitor-walk-b-v01";
             }
@@ -768,8 +784,36 @@ namespace UrbanWildlife.Humans
                     return "UrbanWildlife/Humans/walker-walk";
                 case HumanArchetype.Dweller:
                     return "UrbanWildlife/Humans/dweller-walk";
+                case HumanArchetype.WheelchairUser:
+                    return string.Empty;
                 default:
                     return "UrbanWildlife/Humans/visitor-walk";
+            }
+        }
+
+        private static string SideMovingResourcePrefixFor(HumanArchetype archetype)
+        {
+            switch (archetype)
+            {
+                case HumanArchetype.Walker:
+                    return "UrbanWildlife/Humans/walker-side-walk";
+                case HumanArchetype.WheelchairUser:
+                    return "UrbanWildlife/Humans/wheelchair-user-side-move";
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static int SideMovingArtworkFrameCountFor(HumanArchetype archetype)
+        {
+            switch (archetype)
+            {
+                case HumanArchetype.Walker:
+                    return WalkerSideWalkArtworkFrameCount;
+                case HumanArchetype.WheelchairUser:
+                    return WheelchairUserSideMoveArtworkFrameCount;
+                default:
+                    return 0;
             }
         }
 
@@ -819,6 +863,8 @@ namespace UrbanWildlife.Humans
                     return WalkerDisplayLength;
                 case HumanArchetype.Dweller:
                     return DwellerDisplayLength;
+                case HumanArchetype.WheelchairUser:
+                    return WheelchairUserDisplayLength;
                 default:
                     return VisitorDisplayLength;
             }
@@ -849,6 +895,8 @@ namespace UrbanWildlife.Humans
                     return new Color(0.32f, 0.54f, 0.7f, 1f);
                 case HumanArchetype.Dweller:
                     return new Color(0.94f, 0.62f, 0.18f, 1f);
+                case HumanArchetype.WheelchairUser:
+                    return new Color(0.86f, 0.34f, 0.12f, 1f);
                 default:
                     return new Color(0.28f, 0.62f, 0.54f, 1f);
             }

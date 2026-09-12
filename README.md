@@ -57,15 +57,15 @@ urban-wildlife-tangible-unity/
 - [x] 完成 Camera 到 Game 的坐标映射（电子稿软件预验证）
 - [x] 输出统一数据包并完成电子夹具技术 Spike 演示
 - [x] 建立Unity 6工程并完成轮廓版JSON读取烟雾测试
-- [x] 接入Walker、Dweller、Visitor三类基础人类行为
+- [x] 接入Walker、Dweller、Visitor与Wheelchair User四类基础人类行为（各2名）
 - [x] 接入鸽子、松鼠、狐狸三种基础动物状态机
 - [x] 完成三种动物的手绘俯视Sprite与程序动画V0.1
-- [x] 完成手绘公园地图、三类人物Sprite与整体显示层V0.2
+- [x] 完成手绘公园地图、四类人物Sprite与整体显示层V0.2
 - [x] 完成人类与动物六类动作的8 FPS逐帧节奏样板
 - [x] 接入三种动物进食、Walker行走、Dweller坐下/起身与Visitor喂食的独立逐帧动画素材
 - [x] 将Unity底图更新为有红砖街区、围栏、路灯、城市铺装与管理型池塘的城市公园V0.3
 - [x] 移除广场与池塘的黄/蓝提示圈，以铺装、岸线与植被直接表达固定区域
-- [x] 完成三类人物的等高等基线6帧行走，并接入三种动物的前后肢交替行走帧
+- [x] 完成三类步行人物的等高等基线行走、Wheelchair User四帧推进，并接入三种动物的前后肢交替行走帧
 - [x] 完成Plan、Confirm、Run、Observe单周期与最小研究日志输出
 - [x] 将三轮升级为公园修复、周末压力与黄昏提案，并接入7–9只鸽子、3–4只松鼠和1–2只狐狸
 - [x] 接入Run前双项预测、Observe因果回顾以及包含预测和群体数量的研究日志
@@ -75,7 +75,7 @@ urban-wildlife-tangible-unity/
 - [x] 将连续色带升级为人类鞋印、鸽子鸟爪、松鼠小爪和狐狸大爪，并完成公园现场告示牌式UI
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 
-工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)、[`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md) 和 [`docs/devlog/2026-09-11.md`](docs/devlog/2026-09-11.md)。
+工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)、[`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md)、[`docs/devlog/2026-09-11.md`](docs/devlog/2026-09-11.md) 和 [`docs/devlog/2026-09-12.md`](docs/devlog/2026-09-12.md)。
 材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
 已确认的城市公园方向见 [`docs/images/concepts/art-direction-drafts-2026-09-10/option-h-urban-neighbourhood-park-v01.png`](docs/images/concepts/art-direction-drafts-2026-09-10/option-h-urban-neighbourhood-park-v01.png)；当前Unity使用不含固定人物、动物和路线的V0.3底图，动态内容仍由运行时生成。
 

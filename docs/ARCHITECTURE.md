@@ -139,9 +139,9 @@ Observed crossings, feeding, waiting and avoidance
 - `P0CycleScore`在Run中另行计算规划表现分，不改变Constraint Check。它以成功个体数而非事件总数归一化：人类40分、三物种各20分，四项封顶后合计100。
 - Constraint Check UI 只返回 `human_connected`、`animal_reachable`、`food_hotspot_valid` 和 `changes_used / changes_allowed`。
 - Constraint Check 不返回预测动物路线、拥堵量或最终行为；这些信息只能由 Run 结果和 Trace 呈现。
-- Run开始时，Human Route Planner把确认后的单条路径转为三类路线：Walker直接通行，Dweller在中央广场停留，Visitor绕行至Food Hotspot后回到主路。
+- Run开始时，Human Route Planner把确认后的单条路径转为四类路线：Walker直接通行，Dweller在中央广场停留，Visitor绕行至Food Hotspot后回到主路，Wheelchair User以较慢速度完整通行主路。
 - Human Agent State Machine只使用Waiting、Moving、Dwelling、Visiting与Finished等可记录状态；完成路线的代理在同一次Run中重新进入，以持续形成活动和干扰条件。
-- S001 V0.1使用2个Walker、2个Dweller和2个Visitor；数量、速度及停留时间属于可版本化的游戏参数，不作为真实人流预测。
+- S001 V0.2使用2个Walker、2个Dweller、2个Visitor和2个Wheelchair User；数量、速度及停留时间属于可版本化的游戏参数，不作为真实人流预测。
 - Animal Environment Planner把3个活动节点与2个Woodland分配给鸽子、松鼠和狐狸；每只动物由独立状态机处理发现、接近、进食、停留、回避和撤退，同群个体用确定性小范围偏移避免完全重叠。
 - 鸽子V0.1不因人类接近而回避；松鼠和狐狸按不同干扰半径撤回Woodland，松鼠进食后增加有上限的熟悉度。它们是为了形成可观察差异的设计抽象，不是生态预测模型。
 - P0使用同一张“周末公园重新规划”地图完成三轮递进Brief：公园修复、周末野餐压力和黄昏最终提案；每轮读取入口、广场、出口、主路径、Woodland 与活动节点的空间关系。
@@ -189,9 +189,9 @@ Observed crossings, feeding, waiting and avoidance
 - V0.2松鼠和狐狸通过透明轮廓顶点的宽高比进行显示层回归检查：松鼠使用宽圆C形侧尾，狐狸使用细长直尾、黑腿和白色尾尖；检查只保护地图尺寸下的物种可辨性，不参与行为判定。
 - 动物位置仍完全由状态机决定；表现层以8 FPS采样共用待机、转身、行走、进食、坐下和起身节奏。鸽子、松鼠和狐狸的Walking与Feeding各使用6张独立Sprite；行走帧直接绘制两腿或四肢的交替步态，启用时关闭整只动物的程序缩放和抬升，不改变生态逻辑。
 - S001环境显示层从`Resources/UrbanWildlife/Environment`加载3:2城市公园V0.3底图；红砖街区、铺装、围栏、路灯、植被和池塘只建立空间语境。入口/出口仍有运行时门体提示；广场与池塘不再叠加黄色或青色轮廓，规划判定始终读取场景JSON中的精确坐标，底图像素不参与规则判断。
-- 人类显示层从`Resources/UrbanWildlife/Humans`按Archetype加载透明Sprite。`HumanAgentStateMachine`继续决定位置和状态；Walker、Dweller和Visitor的Walking各使用6张独立帧，每组以角色参考帧统一高度、水平中心和鞋底基线。Dweller坐下/起身和Visitor喂食继续选择各自独立动作帧，其余动作保留共用离散关键帧与回退图。
+- 人类显示层从`Resources/UrbanWildlife/Humans`按Archetype加载透明Sprite。`HumanAgentStateMachine`继续决定位置和状态；Walker、Dweller和Visitor使用独立步行帧，Wheelchair User使用4张侧视推进帧。Dweller坐下/起身和Visitor喂食继续选择各自独立动作帧，其余动作保留共用离散关键帧与回退图。
 - Walker、Dweller与Visitor统一采用高角度斜俯视正脸Sprite，眼、鼻和嘴在地图尺寸下可读；脸与鞋尖均朝源图下方。P0HumanSimulation先加入固定180°朝向补偿，再按移动方向整体旋转Sprite，不单独改变脸、腿或脚。
-- 角色显示层以约1 Unity单位对应2米的代表性体长作为相对比例基准：Walker 0.89、Dweller 0.84、Visitor 0.85、鸽子0.30、松鼠0.44、狐狸0.72。后3项为地图可读性调整后的显示长度；该值只缩放Sprite，不进入路线速度、干扰半径、碰撞或生态判定。
+- 角色显示层以约1 Unity单位对应2米的代表性体长作为相对比例基准：Walker 0.89、Dweller 0.84、Visitor 0.85、Wheelchair User 0.80、鸽子0.30、松鼠0.44、狐狸0.72。该值只缩放Sprite，不进入路线速度、干扰半径、碰撞或生态判定。
 - `LayoutDebugView`把每次确认布局组织为7个语义根对象：1个地图、1条路径和5个Token；装饰子对象不再影响输入验收计数。运行期创建的Mesh和Material在重载布局时显式释放。
 - `LayoutDebugView`的V0.3装饰层包括Food活动点与中心铭牌、Woodland冠层/叶脉/木纹，以及入口和出口的双门柱与弧形门槛；其父级坐标继续由已确认布局和S001固定场景参数驱动。
 - Planned Human Path在视觉层中由同一识别Polyline实时生成暖灰砂砾步道：深色土肩、浅色石质路缘、砂砾表面和确定性碎石细节均作为路径根对象的子层。实体洋红带及HSV Mask保持不变，显示宽度不参与约束判定。

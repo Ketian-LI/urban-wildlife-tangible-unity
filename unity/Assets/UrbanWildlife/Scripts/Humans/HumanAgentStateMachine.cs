@@ -8,6 +8,7 @@ namespace UrbanWildlife.Humans
         Walker,
         Dweller,
         Visitor,
+        WheelchairUser,
     }
 
     public enum HumanActivityState

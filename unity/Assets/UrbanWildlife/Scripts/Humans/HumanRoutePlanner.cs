@@ -77,6 +77,17 @@ namespace UrbanWildlife.Humans
                     food.id));
             }
 
+            for (int index = 0; index < settings.wheelchair_user_count; index += 1)
+            {
+                plans.Add(new HumanRoutePlan(
+                    HumanArchetype.WheelchairUser,
+                    mainPath,
+                    -1,
+                    settings.wheelchair_user_speed_cm_per_second * settings.unity_units_per_cm,
+                    0f,
+                    spawnOrder++ * settings.spawn_interval_seconds));
+            }
+
             return plans.ToArray();
         }
 

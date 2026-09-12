@@ -7,6 +7,7 @@ namespace UrbanWildlife.Presentation
     public enum P0TraceMarkStyle
     {
         HumanFootprint,
+        WheelchairTrack,
         BirdTrack,
         SmallPaw,
         FoxPaw,
@@ -209,6 +210,8 @@ namespace UrbanWildlife.Presentation
         {
             switch (markStyle)
             {
+                case P0TraceMarkStyle.WheelchairTrack:
+                    return markSize * 0.78f;
                 case P0TraceMarkStyle.BirdTrack:
                     return markSize * 1.55f;
                 case P0TraceMarkStyle.SmallPaw:
@@ -231,6 +234,9 @@ namespace UrbanWildlife.Presentation
             float side = (stampIndex & 1) == 0 ? -1f : 1f;
             switch (markStyle)
             {
+                case P0TraceMarkStyle.WheelchairTrack:
+                    AddWheelchairTrack(vertices, triangles, position, direction);
+                    break;
                 case P0TraceMarkStyle.BirdTrack:
                     AddBirdTrack(vertices, triangles, position + right * side * markSize * 0.12f, direction);
                     break;
@@ -248,6 +254,28 @@ namespace UrbanWildlife.Presentation
                         direction,
                         side);
                     break;
+            }
+        }
+
+        private void AddWheelchairTrack(
+            List<Vector3> vertices,
+            List<int> triangles,
+            Vector2 position,
+            Vector2 direction)
+        {
+            Vector2 right = new Vector2(direction.y, -direction.x);
+            float wheelOffset = markSize * 0.34f;
+            float treadHalfWidth = markSize * 0.1f;
+            float treadThickness = markSize * 0.07f;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector2 contact = position + right * wheelOffset * side;
+                AddLine(
+                    vertices,
+                    triangles,
+                    contact - right * treadHalfWidth,
+                    contact + right * treadHalfWidth,
+                    treadThickness);
             }
         }
 

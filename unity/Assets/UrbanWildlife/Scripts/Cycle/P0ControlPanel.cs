@@ -353,7 +353,8 @@ namespace UrbanWildlife.Cycle
             {
                 GUILayout.Label(
                     $"PEOPLE  Walker {humanSimulation.WalkerCount} · Dweller {humanSimulation.DwellerCount} · " +
-                    $"Visitor {humanSimulation.VisitorCount} · Trips {humanSimulation.CompletedTrips}",
+                    $"Visitor {humanSimulation.VisitorCount}\n" +
+                    $"Wheelchair user {humanSimulation.WheelchairUserCount} · Trips {humanSimulation.CompletedTrips}",
                     bodyStyle);
             }
             if (animalSimulation != null && animalSimulation.AgentCount > 0)

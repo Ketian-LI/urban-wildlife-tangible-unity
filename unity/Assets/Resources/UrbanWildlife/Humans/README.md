@@ -2,6 +2,12 @@
 
 Generated on 2026-09-09 with the built-in image generation tool for the Unity P0 prototype.
 
+## Active V0.8 fourth archetype: Wheelchair User
+
+The fourth human archetype is an older Black British woman using a self-propelled manual wheelchair. She follows the complete main path at a slower prototype speed, making route continuity and clear passage visible without treating accessibility as a decorative costume change. The idle sprite and four right-facing movement frames use rust-orange, park green, muted sage and warm wood tones; runtime mirrors them for leftward movement and adds the same wooden tabletop-token rim as the other characters.
+
+Active assets are `wheelchair-user-side-idle-v01.png` and `wheelchair-user-side-move-01-v01.png` through `wheelchair-user-side-move-04-v01.png`. The movement loop is push, recover, push, recover. All five files are RGBA PNGs with genuine alpha transparency. Her Human Trace uses paired tyre impressions instead of the standard alternating shoe prints. This P0 representation does not yet model gradients, kerbs, minimum path width or wheelchair turning circles.
+
 ## Active V0.7 stabilized walking sequences
 
 Walker, Dweller and Visitor now each use six independent high-angle, front-readable walking frames. All frames in a role share a normalized character height, horizontal centre and shoe baseline, so adjacent poses no longer change the person's apparent size or flash vertically. Runtime uses `walker-walk-01-v02.png` through `walker-walk-06-v02.png`, plus the corresponding `dweller-walk-*-v01.png` and `visitor-walk-*-v01.png` sets, and disables procedural squash, stretch and lift while they play.

@@ -15,8 +15,8 @@
 | 0 | 对齐新版交互基线 | 移除 Run 前选择题和预测门槛；保留旧日志列以兼容已有记录 | 已完成 |
 | 1 | 城市片区数据底座 | 建立 Building、GreenPatch、Road、Pedestrian、Waste 与 CityState 数据模型；保留旧场景适配层 | 已完成 |
 | 2 | 五类实体 Token 与建设流程 | Apartment、Detached、Commercial、Community、Green Intervention；Scan City → Preview → Confirm Construction；New、Moved、Missing、Unchanged 差分 | 已完成 |
-| 3 | 道路与步行网络 | 为新建筑生成 Direct、Existing-network、Low-impact 三条候选机动车路线；自动基础步行接入；屏幕编辑额外 Footpath | 下一步 |
-| 4 | 人流与车辆 | 建筑 Origin/Destination、代表性 Trip、Walk/Drive、Destination Capacity、Crowding 与车辆代理 | 待开始 |
+| 3 | 道路与步行网络 | 为新建筑生成 Direct、Existing-network、Low-impact 三条候选机动车路线；自动基础步行接入；屏幕编辑额外 Footpath | 已完成 |
+| 4 | 人流与车辆 | 建筑 Origin/Destination、代表性 Trip、Walk/Drive、Destination Capacity、Crowding 与车辆代理 | 下一步 |
 | 5 | 城市环境压力 | 三类 Green Patch、Natural/Anthropogenic Food、Bin、Bench、Waste Capacity、Overflow 与局部 Disturbance | 待开始 |
 | 6 | 四物种与永久后果 | 鸽子、灰松鼠、狐狸、刺猬；Utility、性格、事件记忆、迁入迁出、真实碰撞 Roadkill | 待开始 |
 | 7 | 五阶段与策略反馈 | DP、施工与拆除、Quiet/Active/Peak/Late、五个 Development Phase、五维 City Balance Score | 待开始 |
@@ -52,6 +52,15 @@
 - New 生成 Proposed Construction；已确认 Token 被移动时必须先拆除，Missing 只提出 `Demolish?` 并阻止确认，不能自动删除城市对象；Unchanged 保持原状态。
 - `Confirm Construction` 只提交无冲突的 New 项，更新 CityState revision，并为新建筑建立 Waste 输出节点；对象继续保持 Proposed，等待批次 3 选择机动车道路后再进入施工阶段。
 - 脱敏电子夹具覆盖 Scan → Preview → Confirm、重复扫描、Moved 阻止、Missing 不自动删除、库存及稳定画面验证；本批完成数据与规则闭环，正式城市画面入口随道路批次接入。
+
+## 批次 3 验收
+
+- 每栋需要机动车接入且尚未选路的 Proposed Building 自动获得 Direct、Existing-network、Low-impact 三个候选；候选连接最近合理的既有 Vehicle Road，而不是地图中心。
+- Direct 优先最短连接，Existing-network 连接到最近既有网络端点，Low-impact 使用绿地代价采样选择绕行侧；候选同时公开预计长度、敏感绿地影响和交通压力，供后续 UI 比较。
+- 所有新建筑必须各选一条机动车候选后才能确认；确认只提交被选路线，未选候选不进入 CityState。机动车接入与步行接入分别保存，不再把同一条线兼作两个网络。
+- 每栋需要步行接入的新建筑自动获得 Basic Building Access；额外 Footpath 支持在屏幕 Preview 中新增、修改与删除，并以 `ScreenEdited` 标注，实体输入不读取道路或步行彩带。
+- 路网确认作为一次事务更新 Building 引用与 CityState revision。屏幕 Footpath 删除时同步清除 Building 引用；验证失败不会部分写入城市。
+- 当前路线生成器是可重复的几何投影与代价采样 V0.1；更复杂的隐藏 Grid/A*、施工时间与 DP 花费在后续批次接入，不提前声称为真实交通规划算法。
 
 ## 每批通用完成条件
 

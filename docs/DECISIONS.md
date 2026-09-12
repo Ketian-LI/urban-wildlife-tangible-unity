@@ -89,6 +89,10 @@
 | D081 | 新城市运行时采用 `CityState` V0.1 作为 Building、GreenPatch、VehicleRoad、PedestrianLink 与 WasteSystem 的共享快照；VehicleRoad 与 PedestrianLink 分开存储，GreenPatch 必须保留 Natural Food。迁移期由只读 `LegacyParkCityAdapter` 并行生成 CityState，不直接改写旧 P0 行为 | 数据底座与正式扫描已实现，旧适配层待城市运行时场景切换 |
 | D082 | 正式城市实体库存固定为Apartment 100–102、Detached House 110–113、Commercial 120–121、Community Facility 130–131、Green Intervention 140–142，共14件；城市扫描使用独立`city_token_scan` V0.1契约并要求稳定帧、校准ID、位置、角度和置信度 | 已实现，实体Marker字典待制作与实拍验证 |
 | D083 | 城市扫描以最近一次确认快照为基准，位置变化容差为归一化0.01、角度容差为5°；New可进入Proposed Construction，Moved和Missing阻止确认，Missing只询问拆除且不自动删除，Unchanged不产生建设事务 | 已实现；正式拆除流程在后续批次接入 |
+| D084 | 每栋新建筑固定生成Direct、Existing-network、Low-impact三条机动车候选并连接最近合理既有网络；选择前显示预计长度、敏感绿地影响与交通压力，只有选中的BuildingAccess Road进入CityState | 已实现几何/代价采样V0.1，待Play Mode UI和预测试比较三方案可读性 |
+| D085 | 基础步行接入由系统自动生成，机动车与步行网络分开存储；额外Footpath只在屏幕Preview中新增、修改或删除并标记为ScreenEdited，正式城市输入不再使用道路彩带 | 已实现数据与事务规则，DP和施工时间待后续批次 |
+| D084 | 每栋需要机动车接入的新建筑固定提供Direct、Existing-network、Low-impact三条路线候选；必须逐栋选择后才确认，候选连接最近既有Vehicle Road并公开长度、敏感绿地影响和交通压力，不使用实体绳带 | V0.1已实现；预测试复核三方案是否形成真实取舍 |
+| D085 | Pedestrian Network与Vehicle Road完全分离；每栋新建筑自动生成Basic Building Access，额外Footpath只在屏幕Preview中新增、调整或删除，并以ScreenEdited记录来源 | 已实现数据与事务层；正式画面编辑器待城市UI批次接入 |
 
 ## 待确定顺序
 

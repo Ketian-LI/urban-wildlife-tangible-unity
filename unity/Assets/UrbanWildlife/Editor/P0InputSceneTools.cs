@@ -15,6 +15,7 @@ using UrbanWildlife.Logging;
 using UrbanWildlife.Presentation;
 using UrbanWildlife.City;
 using UrbanWildlife.Construction;
+using UrbanWildlife.Networks;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -337,6 +338,153 @@ namespace UrbanWildlife.EditorTools
                 "missing_requires_demolish=True no_auto_delete=True proposed_buildings=4 " +
                 $"proposed_green=1 rejects_wrong_id_type={rejectedWrongTokenType} " +
                 $"rejects_unstable={rejectedUnstableCityScan}");
+
+            CityNetworkPlanningManager networkPlanning =
+                new CityNetworkPlanningManager(confirmedCity);
+            CityNetworkPlanPreview networkPreview = networkPlanning.BeginRouteSelection();
+            bool threeOptionsPerBuilding = networkPreview.road_choices.All(choice =>
+                choice.candidates.Length == 3 &&
+                choice.candidates.Any(candidate =>
+                    candidate.route_option == CityRoadRouteOption.Direct) &&
+                choice.candidates.Any(candidate =>
+                    candidate.route_option == CityRoadRouteOption.ExistingNetwork) &&
+                choice.candidates.Any(candidate =>
+                    candidate.route_option == CityRoadRouteOption.LowImpact));
+            bool lowImpactHasDetour = networkPreview.road_choices.All(choice =>
+            {
+                CityRoadCandidate candidate = choice.candidates.Single(item =>
+                    item.route_option == CityRoadRouteOption.LowImpact);
+                return candidate.points_norm.Length == 3 &&
+                       candidate.estimated_length_units > 0f &&
+                       candidate.estimated_green_impact_units >= 0f;
+            });
+            if (networkPreview.RequiredRoadChoiceCount != 4 ||
+                networkPreview.automatic_pedestrian_links.Length != 4 ||
+                networkPreview.CanConfirm || !threeOptionsPerBuilding || !lowImpactHasDetour ||
+                networkPlanning.ConfirmNetworkPlan(out _))
+            {
+                throw new InvalidOperationException(
+                    "Road planning must offer three options per building and block incomplete choices.");
+            }
+
+            foreach (CityRoadChoiceSet choice in networkPreview.road_choices)
+            {
+                CityBuilding building = confirmedCity.buildings.Single(item =>
+                    item.id == choice.building_id);
+                CityRoadRouteOption option;
+                switch (building.type)
+                {
+                    case CityBuildingType.Apartment:
+                        option = CityRoadRouteOption.Direct;
+                        break;
+                    case CityBuildingType.DetachedHouse:
+                        option = CityRoadRouteOption.ExistingNetwork;
+                        break;
+                    default:
+                        option = CityRoadRouteOption.LowImpact;
+                        break;
+                }
+                if (!networkPlanning.SelectRoadOption(building.id, option, out string roadError))
+                {
+                    throw new InvalidOperationException($"Could not select {option}: {roadError}");
+                }
+            }
+
+            const string extraFootpathId = "screen-footpath-smoke";
+            const string commercialBuildingId = "building-token-120";
+            bool rejectedUnknownFootpathBuilding = !networkPlanning.UpsertExtraFootpath(
+                "screen-footpath-invalid",
+                new[] { new[] { 0.2f, 0.55f }, new[] { 0.4f, 0.62f } },
+                new[] { "missing-building" },
+                true,
+                out _);
+            if (!networkPlanning.UpsertExtraFootpath(
+                    extraFootpathId,
+                    new[] { new[] { 0.3f, 0.55f }, new[] { 0.5f, 0.64f } },
+                    new[] { commercialBuildingId },
+                    true,
+                    out string footpathError) ||
+                !networkPlanning.UpsertExtraFootpath(
+                    extraFootpathId,
+                    new[]
+                    {
+                        new[] { 0.3f, 0.55f },
+                        new[] { 0.4f, 0.6f },
+                        new[] { 0.5f, 0.64f },
+                    },
+                    new[] { commercialBuildingId },
+                    true,
+                    out footpathError) ||
+                networkPreview.screen_edited_extra_footpaths.Length != 1 ||
+                networkPreview.screen_edited_extra_footpaths[0].points_norm.Length != 3 ||
+                !networkPlanning.RemoveExtraFootpath(extraFootpathId, out footpathError) ||
+                networkPreview.screen_edited_extra_footpaths.Length != 0 ||
+                !networkPlanning.UpsertExtraFootpath(
+                    extraFootpathId,
+                    new[]
+                    {
+                        new[] { 0.3f, 0.55f },
+                        new[] { 0.4f, 0.6f },
+                        new[] { 0.5f, 0.64f },
+                    },
+                    new[] { commercialBuildingId },
+                    true,
+                    out footpathError) || !rejectedUnknownFootpathBuilding ||
+                !networkPreview.CanConfirm)
+            {
+                throw new InvalidOperationException(
+                    $"Screen Footpath add/edit/delete Preview failed: {footpathError}");
+            }
+
+            if (!networkPlanning.ConfirmNetworkPlan(out string networkError))
+            {
+                throw new InvalidOperationException($"Network confirmation failed: {networkError}");
+            }
+            CityState networkCity = networkPlanning.CurrentState;
+            CityVehicleRoad[] accessRoads = networkCity.vehicle_roads.Where(road =>
+                road.role == CityVehicleRoadRole.BuildingAccess).ToArray();
+            CityPedestrianLink[] basicAccessLinks = networkCity.pedestrian_links.Where(link =>
+                link.type == CityPedestrianLinkType.BasicBuildingAccess).ToArray();
+            CityPedestrianLink screenFootpath = networkCity.pedestrian_links.Single(link =>
+                link.id == extraFootpathId);
+            bool everyNewBuildingConnected = networkCity.buildings
+                .Where(building => building.source_token_id >= 100 &&
+                                   building.source_token_id < 140)
+                .All(building => building.vehicle_road_ids.Length == 1 &&
+                                 building.pedestrian_link_ids.Length >= 1);
+            if (networkCity.revision != confirmedCity.revision + 1 || accessRoads.Length != 4 ||
+                basicAccessLinks.Length != 4 ||
+                accessRoads.Count(road => road.route_option == CityRoadRouteOption.Direct) != 1 ||
+                accessRoads.Count(road => road.route_option == CityRoadRouteOption.ExistingNetwork) != 1 ||
+                accessRoads.Count(road => road.route_option == CityRoadRouteOption.LowImpact) != 2 ||
+                basicAccessLinks.Any(link => link.source != CityNetworkSource.AutoGenerated) ||
+                screenFootpath.source != CityNetworkSource.ScreenEdited ||
+                screenFootpath.type != CityPedestrianLinkType.ExtraFootpath ||
+                !everyNewBuildingConnected || !CityStateValidator.Validate(networkCity).IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Confirmed roads and pedestrian links are not independent valid networks.");
+            }
+
+            CityNetworkPlanPreview deletionPreview = networkPlanning.BeginRouteSelection();
+            if (deletionPreview.RequiredRoadChoiceCount != 0 || deletionPreview.CanConfirm ||
+                !networkPlanning.RemoveExtraFootpath(extraFootpathId, out _) ||
+                !deletionPreview.CanConfirm ||
+                !networkPlanning.ConfirmNetworkPlan(out _) ||
+                networkPlanning.CurrentState.pedestrian_links.Any(link =>
+                    link.id == extraFootpathId) ||
+                networkPlanning.CurrentState.buildings.Any(building =>
+                    building.pedestrian_link_ids.Contains(extraFootpathId)) ||
+                !CityStateValidator.Validate(networkPlanning.CurrentState).IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Deleting a screen Footpath did not remove its network references transactionally.");
+            }
+            Debug.Log(
+                "UNITY_CITY_NETWORK_SMOKE_OK proposed_buildings=4 route_candidates=3_each " +
+                "selected=Direct/ExistingNetwork/LowImpact automatic_pedestrian_links=4 " +
+                "vehicle_and_pedestrian_separate=True screen_footpath_add_edit_delete=True " +
+                "physical_road_ribbon=False city_state_valid=True");
 
             LayoutToken repairedFood10 = Array.Find(baselinePacket.tokens, token => token.id == 10);
             LayoutToken repairedFood12 = Array.Find(baselinePacket.tokens, token => token.id == 12);

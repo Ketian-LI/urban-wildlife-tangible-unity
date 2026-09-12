@@ -76,7 +76,9 @@ urban-wildlife-tangible-unity/
 - [x] 建立 CityState V0.1 城市数据底座、验证器、JSON Schema 与旧 S001 适配层
 - [x] 建立14件五类城市Token库存与 Scan City → Preview → Confirm Construction 规则闭环
 - [x] 接入 New、Moved、Missing、Unchanged 差分；Missing 只请求拆除确认且不自动删除
-- [ ] 为新建筑生成三条机动车道路候选并自动建立基础步行接入
+- [x] 为新建筑生成Direct、Existing-network、Low-impact三条机动车道路候选并自动建立基础步行接入
+- [x] 支持在屏幕Preview中新增、修改和删除额外Footpath；机动车道路不再读取实体彩带
+- [ ] 接入由建筑Origin/Destination产生的代表性人类Trip和车辆Trip
 - [x] 接入跨周期滚动记忆：活动节点回访、松鼠熟悉度保留、谨慎度变化与可见日志
 - [x] 接入按成功个体比例计算的100分规划表现分，并在Run实时更新、Observe冻结记录
 - [x] 接入实时Human/Animal/Combined Trace、上一轮淡化叠加以及轨迹距离日志

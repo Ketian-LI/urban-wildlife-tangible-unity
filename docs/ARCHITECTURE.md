@@ -28,7 +28,13 @@
 
 `city_token_scan` V0.1 是正式城市输入契约，JSON Schema 位于 `data/schemas/city_token_scan_v0.1.schema.json`。库存为 Apartment 100–102、Detached House 110–113、Commercial 120–121、Community Facility 130–131、Green Intervention 140–142，共14件；Unity同时校验ID/类型配对、校准坐标、稳定画面、角度、置信度和每类数量上限。
 
-摄像头不逐帧直接改写城市。玩家触发 `Scan City` 后，`CityTokenDiffer` 将扫描与最近确认 Token 快照比较为 New、Moved、Missing、Unchanged；位置变化超过归一化0.01或角度变化超过5°才算Moved。`CityConstructionManager` 把New转换为Proposed Building或GreenPatch并检查边界与建筑占地重叠；Moved和Missing会阻止确认，Missing只显示拆除请求语义，不删除数据。成功 `Confirm Construction` 是一次事务：只追加New对象、建筑Waste输出节点并把CityState revision加一。道路尚未确认，因此这些对象继续处于Proposed；批次3完成路线选择后再推进施工状态。
+摄像头不逐帧直接改写城市。玩家触发 `Scan City` 后，`CityTokenDiffer` 将扫描与最近确认 Token 快照比较为 New、Moved、Missing、Unchanged；位置变化超过归一化0.01或角度变化超过5°才算Moved。`CityConstructionManager` 把New转换为Proposed Building或GreenPatch并检查边界与建筑占地重叠；Moved和Missing会阻止确认，Missing只显示拆除请求语义，不删除数据。成功 `Confirm Construction` 是一次事务：只追加New对象、建筑Waste输出节点并把CityState revision加一。选定道路后建筑与网络仍保持Proposed；后续施工时间与DP批次负责推进状态。
+
+### 机动车与步行网络规划
+
+`CityRoadCandidateGenerator` 为每栋尚未接入机动车网络的 Proposed Building 生成三条独立候选：Direct投影到最近的既有道路段，Existing-network连接最近的既有网络端点，Low-impact在直连两侧建立绕行点，并以Woodland/ShrubGarden采样代价选择影响较低的一侧。候选公开长度、敏感绿地影响与按建筑Vehicle Demand标定的交通压力。该实现是确定性的几何/代价采样V0.1，不宣称等同真实交通模型；需要更复杂地图时可将内部求解器替换为隐藏Grid+A*，而不改变候选数据接口。
+
+`CityNetworkPlanningManager` 在Route Selection Preview中要求每栋建筑选且只选一个机动车候选。确认后只把选择结果写为`BuildingAccess` VehicleRoad，并更新Building引用。Pedestrian Network使用独立数组：系统同时为每栋新建筑生成最近既有人行网络的`BasicBuildingAccess`；玩家可在屏幕中新增、调整或删除`ScreenEdited ExtraFootpath`。确认是原子事务，删除ExtraFootpath时同步移除建筑引用；任何State验证失败都保留上一版CityState。正式输入中没有机动车或步行彩带字段。
 
 ## 已确定的实体输入基线
 
@@ -69,6 +75,10 @@ Unity Input Manager
    └─ CityTokenScanReader → Scan City → Difference Preview
                                       ↓ Confirm Construction
                                  Proposed CityState
+                                      ↓ Route Selection Preview
+                         ┌────────────┴────────────┐
+                         ↓                         ↓
+             selected VehicleRoad       automatic/screen PedestrianLink
                               ↓
                  Building / GreenPatch / Networks / Waste
                               ↓

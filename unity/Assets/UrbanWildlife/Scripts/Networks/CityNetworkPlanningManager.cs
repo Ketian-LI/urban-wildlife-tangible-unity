@@ -175,6 +175,7 @@ namespace UrbanWildlife.Networks
                 width_units = 1.6f,
                 step_free_accessible = stepFreeAccessible,
                 connected_building_ids = buildingIds,
+                connected_link_ids = Array.Empty<string>(),
             };
             int existingIndex = editableExtraFootpaths.FindIndex(link => link.id == id);
             if (existingIndex >= 0)
@@ -293,6 +294,7 @@ namespace UrbanWildlife.Networks
                 speed_units_per_second = 7f,
                 traffic_load = candidate.estimated_traffic_pressure,
                 connected_building_ids = new[] { candidate.building_id },
+                connected_road_ids = new[] { candidate.connection_road_id },
             };
         }
 
@@ -408,6 +410,7 @@ namespace UrbanWildlife.Networks
                 width_units = link.width_units,
                 step_free_accessible = link.step_free_accessible,
                 connected_building_ids = (link.connected_building_ids ?? Array.Empty<string>()).ToArray(),
+                connected_link_ids = (link.connected_link_ids ?? Array.Empty<string>()).ToArray(),
             };
         }
 

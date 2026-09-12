@@ -95,6 +95,7 @@ namespace UrbanWildlife.Networks
                 width_units = 1.8f,
                 step_free_accessible = true,
                 connected_building_ids = new[] { building.id },
+                connected_link_ids = new[] { connection.RoadId },
             };
         }
 

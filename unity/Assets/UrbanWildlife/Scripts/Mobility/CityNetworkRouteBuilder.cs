@@ -1,0 +1,184 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UrbanWildlife.City;
+
+namespace UrbanWildlife.Mobility
+{
+    public static class CityNetworkRouteBuilder
+    {
+        public static float[][] Build(
+            CityState city,
+            CityBuilding origin,
+            CityBuilding destination,
+            CityTravelMode mode)
+        {
+            if (city?.bounds == null || origin == null || destination == null)
+            {
+                throw new ArgumentException("A city, origin and destination are required.");
+            }
+
+            Dictionary<string, NetworkLine> network = mode == CityTravelMode.Drive
+                ? VehicleNetwork(city)
+                : PedestrianNetwork(city);
+            string[] originReferences = mode == CityTravelMode.Drive
+                ? origin.vehicle_road_ids
+                : origin.pedestrian_link_ids;
+            string[] destinationReferences = mode == CityTravelMode.Drive
+                ? destination.vehicle_road_ids
+                : destination.pedestrian_link_ids;
+            NetworkLine originLine = FirstReferenced(network, originReferences, origin.id, mode);
+            NetworkLine destinationLine = FirstReferenced(
+                network,
+                destinationReferences,
+                destination.id,
+                mode);
+
+            List<float[]> route = new List<float[]> { ClonePoint(origin.position_norm) };
+            AppendOriented(route, originLine.Points, city.bounds);
+
+            string originConnectorId = originLine.ConnectedLineIds.FirstOrDefault() ?? originLine.Id;
+            string destinationConnectorId = destinationLine.ConnectedLineIds.FirstOrDefault() ??
+                                            destinationLine.Id;
+            if (network.TryGetValue(originConnectorId, out NetworkLine originConnector))
+            {
+                AppendOriented(route, originConnector.Points, city.bounds);
+            }
+            if (destinationConnectorId != originConnectorId &&
+                network.TryGetValue(destinationConnectorId, out NetworkLine destinationConnector))
+            {
+                AppendOriented(route, destinationConnector.Points, city.bounds);
+            }
+
+            bool destinationLineAlreadyAdded = destinationLine.Id == originLine.Id ||
+                                               destinationLine.Id == originConnectorId ||
+                                               destinationLine.Id == destinationConnectorId;
+            if (!destinationLineAlreadyAdded)
+            {
+                AppendOriented(route, destinationLine.Points, city.bounds);
+            }
+            AppendDistinct(route, destination.position_norm);
+            float[][] result = route.ToArray();
+            if (result.Length < 2)
+            {
+                throw new InvalidOperationException("Network route contains fewer than two points.");
+            }
+            return result;
+        }
+
+        public static float Length(float[][] points, CityBounds bounds)
+        {
+            if (points == null || points.Length < 2 || bounds == null)
+            {
+                return 0f;
+            }
+            float length = 0f;
+            for (int index = 1; index < points.Length; index += 1)
+            {
+                length += Distance(points[index - 1], points[index], bounds);
+            }
+            return length;
+        }
+
+        private static Dictionary<string, NetworkLine> VehicleNetwork(CityState city)
+        {
+            return (city.vehicle_roads ?? Array.Empty<CityVehicleRoad>())
+                .Where(road => road?.construction_state == CityConstructionState.Existing &&
+                               road.points_norm != null && road.points_norm.Length >= 2)
+                .ToDictionary(
+                    road => road.id,
+                    road => new NetworkLine(road.id, road.points_norm, road.connected_road_ids));
+        }
+
+        private static Dictionary<string, NetworkLine> PedestrianNetwork(CityState city)
+        {
+            return (city.pedestrian_links ?? Array.Empty<CityPedestrianLink>())
+                .Where(link => link?.construction_state == CityConstructionState.Existing &&
+                               link.points_norm != null && link.points_norm.Length >= 2)
+                .ToDictionary(
+                    link => link.id,
+                    link => new NetworkLine(link.id, link.points_norm, link.connected_link_ids));
+        }
+
+        private static NetworkLine FirstReferenced(
+            IReadOnlyDictionary<string, NetworkLine> network,
+            IEnumerable<string> references,
+            string buildingId,
+            CityTravelMode mode)
+        {
+            foreach (string reference in references ?? Array.Empty<string>())
+            {
+                if (network.TryGetValue(reference, out NetworkLine line))
+                {
+                    return line;
+                }
+            }
+            throw new InvalidOperationException(
+                $"Building {buildingId} has no valid {mode} network reference.");
+        }
+
+        private static void AppendOriented(
+            List<float[]> route,
+            float[][] points,
+            CityBounds bounds)
+        {
+            float[] current = route[route.Count - 1];
+            bool reverse = Distance(current, points[points.Length - 1], bounds) <
+                           Distance(current, points[0], bounds);
+            if (reverse)
+            {
+                for (int index = points.Length - 1; index >= 0; index -= 1)
+                {
+                    AppendDistinct(route, points[index]);
+                }
+            }
+            else
+            {
+                foreach (float[] point in points)
+                {
+                    AppendDistinct(route, point);
+                }
+            }
+        }
+
+        private static void AppendDistinct(List<float[]> route, float[] point)
+        {
+            if (route.Count > 0)
+            {
+                float[] previous = route[route.Count - 1];
+                if (Math.Abs(previous[0] - point[0]) <= 0.0001f &&
+                    Math.Abs(previous[1] - point[1]) <= 0.0001f)
+                {
+                    return;
+                }
+            }
+            route.Add(ClonePoint(point));
+        }
+
+        private static float Distance(float[] first, float[] second, CityBounds bounds)
+        {
+            float x = (first[0] - second[0]) * bounds.width_units;
+            float y = (first[1] - second[1]) * bounds.height_units;
+            return (float)Math.Sqrt(x * x + y * y);
+        }
+
+        private static float[] ClonePoint(float[] point)
+        {
+            return (float[])point.Clone();
+        }
+
+        private sealed class NetworkLine
+        {
+            public NetworkLine(string id, float[][] points, IEnumerable<string> connectedLineIds)
+            {
+                Id = id;
+                Points = points.Select(ClonePoint).ToArray();
+                ConnectedLineIds = (connectedLineIds ?? Array.Empty<string>()).ToArray();
+            }
+
+            public string Id { get; }
+            public float[][] Points { get; }
+            public string[] ConnectedLineIds { get; }
+        }
+    }
+}

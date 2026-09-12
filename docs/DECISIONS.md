@@ -91,8 +91,8 @@
 | D083 | 城市扫描以最近一次确认快照为基准，位置变化容差为归一化0.01、角度容差为5°；New可进入Proposed Construction，Moved和Missing阻止确认，Missing只询问拆除且不自动删除，Unchanged不产生建设事务 | 已实现；正式拆除流程在后续批次接入 |
 | D084 | 每栋新建筑固定生成Direct、Existing-network、Low-impact三条机动车候选并连接最近合理既有网络；选择前显示预计长度、敏感绿地影响与交通压力，只有选中的BuildingAccess Road进入CityState | 已实现几何/代价采样V0.1，待Play Mode UI和预测试比较三方案可读性 |
 | D085 | 基础步行接入由系统自动生成，机动车与步行网络分开存储；额外Footpath只在屏幕Preview中新增、修改或删除并标记为ScreenEdited，正式城市输入不再使用道路彩带 | 已实现数据与事务规则，DP和施工时间待后续批次 |
-| D084 | 每栋需要机动车接入的新建筑固定提供Direct、Existing-network、Low-impact三条路线候选；必须逐栋选择后才确认，候选连接最近既有Vehicle Road并公开长度、敏感绿地影响和交通压力，不使用实体绳带 | V0.1已实现；预测试复核三方案是否形成真实取舍 |
-| D085 | Pedestrian Network与Vehicle Road完全分离；每栋新建筑自动生成Basic Building Access，额外Footpath只在屏幕Preview中新增、调整或删除，并以ScreenEdited记录来源 | 已实现数据与事务层；正式画面编辑器待城市UI批次接入 |
+| D086 | 城市人口以代表性Trip呈现，默认最多24个、接口上限30个；住宅Housing Capacity与Origin Rate决定数量，每个代理保存represented_people，避免将人口一比一显示为NPC | 已实现确定性V0.1，待正式城市Play Mode视觉调参 |
+| D087 | 目的地选择读取Weight、距离、Comfortable Capacity与Crowd Penalty；Walk与Drive分别使用PedestrianLink和VehicleRoad，且只有Drive Trip生成可追溯的Vehicle Agent，不制作随机背景交通 | 已实现规则与往返模拟，待城市UI批次接入表现层 |
 
 ## 待确定顺序
 

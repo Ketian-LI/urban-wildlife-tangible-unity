@@ -135,6 +135,16 @@ namespace UrbanWildlife.City
                     $"Vehicle road {road.id}",
                     "building",
                     errors);
+                ValidateReferences(
+                    road.connected_road_ids,
+                    roadIds,
+                    $"Vehicle road {road.id}",
+                    "vehicle road",
+                    errors);
+                if ((road.connected_road_ids ?? Array.Empty<string>()).Contains(road.id))
+                {
+                    errors.Add($"Vehicle road {road.id} cannot connect to itself.");
+                }
             }
 
             foreach (CityPedestrianLink link in links.Where(item => item != null))
@@ -150,6 +160,16 @@ namespace UrbanWildlife.City
                     $"Pedestrian link {link.id}",
                     "building",
                     errors);
+                ValidateReferences(
+                    link.connected_link_ids,
+                    linkIds,
+                    $"Pedestrian link {link.id}",
+                    "pedestrian link",
+                    errors);
+                if ((link.connected_link_ids ?? Array.Empty<string>()).Contains(link.id))
+                {
+                    errors.Add($"Pedestrian link {link.id} cannot connect to itself.");
+                }
             }
 
             ValidateWaste(state.waste, buildingIds, errors);

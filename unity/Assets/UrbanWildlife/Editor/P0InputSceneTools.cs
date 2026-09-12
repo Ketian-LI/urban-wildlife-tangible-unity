@@ -16,6 +16,7 @@ using UrbanWildlife.Presentation;
 using UrbanWildlife.City;
 using UrbanWildlife.Construction;
 using UrbanWildlife.Networks;
+using UrbanWildlife.Mobility;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -485,6 +486,94 @@ namespace UrbanWildlife.EditorTools
                 "selected=Direct/ExistingNetwork/LowImpact automatic_pedestrian_links=4 " +
                 "vehicle_and_pedestrian_separate=True screen_footpath_add_edit_delete=True " +
                 "physical_road_ribbon=False city_state_valid=True");
+
+            CityState mobilityCity = networkPlanning.CurrentState;
+            CityMobilityPlan beforeConstructionMobility = CityTripPlanner.CreatePlan(mobilityCity);
+            if (beforeConstructionMobility.RepresentativeAgentCount != 0)
+            {
+                throw new InvalidOperationException(
+                    "Proposed housing must not generate trips before construction is complete.");
+            }
+
+            CityBuilding[] mobilityBuildings = mobilityCity.buildings
+                .Where(building => building.source_token_id >= 100 &&
+                                   building.source_token_id < 140)
+                .ToArray();
+            foreach (CityBuilding building in mobilityBuildings)
+            {
+                building.construction_state = CityConstructionState.Existing;
+            }
+            foreach (CityVehicleRoad road in mobilityCity.vehicle_roads)
+            {
+                road.construction_state = CityConstructionState.Existing;
+            }
+            foreach (CityPedestrianLink link in mobilityCity.pedestrian_links)
+            {
+                link.construction_state = CityConstructionState.Existing;
+            }
+            CityBuilding[] mobilityDestinations = mobilityCity.buildings
+                .Where(building =>
+                    (building.type == CityBuildingType.Commercial ||
+                     building.type == CityBuildingType.CommunityFacility) &&
+                    building.human_destination_weight > 0f)
+                .ToArray();
+            foreach (CityBuilding destination in mobilityDestinations)
+            {
+                destination.comfortable_capacity = 1;
+            }
+
+            CityMobilityPlan mobilityPlan = CityTripPlanner.CreatePlan(mobilityCity);
+            bool routesComplete = mobilityPlan.trips.All(trip =>
+                trip.route_points_norm.Length >= 2 &&
+                trip.route_distance_units > 0f);
+            bool destinationsSpread = mobilityPlan.trips
+                .Select(trip => trip.destination_building_id)
+                .Distinct()
+                .Count() >= 2;
+            int assignedPopulation = mobilityPlan.destination_loads.Sum(load =>
+                load.assigned_people);
+            if (mobilityPlan.RepresentativeAgentCount != 6 ||
+                mobilityPlan.RepresentedPopulation != 72 ||
+                assignedPopulation != 72 ||
+                mobilityPlan.WalkTripCount == 0 || mobilityPlan.DriveTripCount == 0 ||
+                !mobilityPlan.HasCrowding || !destinationsSpread || !routesComplete)
+            {
+                throw new InvalidOperationException(
+                    "Representative trips, route modes or destination crowding are invalid.");
+            }
+
+            CityMobilitySimulation mobilitySimulation = new CityMobilitySimulation(
+                mobilityPlan,
+                mobilityCity.bounds);
+            mobilitySimulation.Tick(0.1f);
+            bool gradualSpawn = mobilitySimulation.SpawnedTripCount == 1;
+            mobilitySimulation.Tick(CityTripPlanner.DefaultDepartureIntervalSeconds);
+            gradualSpawn &= mobilitySimulation.SpawnedTripCount == 2;
+            bool mobilitySawDwelling = false;
+            bool mobilitySawReturning = false;
+            for (int step = 0; step < 1200 && !mobilitySimulation.AllComplete; step += 1)
+            {
+                mobilitySimulation.Tick(0.5f);
+                mobilitySawDwelling |= mobilitySimulation.AgentStates.Contains(
+                    CityTripMotionState.Dwelling);
+                mobilitySawReturning |= mobilitySimulation.AgentStates.Contains(
+                    CityTripMotionState.Returning);
+            }
+            if (!gradualSpawn || !mobilitySawDwelling || !mobilitySawReturning ||
+                !mobilitySimulation.AllComplete ||
+                mobilitySimulation.CompletedTripCount != mobilityPlan.RepresentativeAgentCount ||
+                mobilitySimulation.SpawnedVehicleAgentCount != mobilityPlan.DriveTripCount ||
+                mobilitySimulation.PeakActiveVehicleCount == 0 ||
+                mobilitySimulation.ActiveVehicleAgents.Length != 0)
+            {
+                throw new InvalidOperationException(
+                    "Mobility simulation did not complete outbound, dwell and return states.");
+            }
+            Debug.Log(
+                "UNITY_CITY_MOBILITY_SMOKE_OK origins=2 representative_agents=6 " +
+                "represented_population=72 walk_and_drive=True destinations_spread=True " +
+                "crowd_penalty=True gradual_spawn=True drive_creates_vehicle=True " +
+                "outbound_dwell_return=True random_background_vehicles=False");
 
             LayoutToken repairedFood10 = Array.Find(baselinePacket.tokens, token => token.id == 10);
             LayoutToken repairedFood12 = Array.Find(baselinePacket.tokens, token => token.id == 12);

@@ -38,7 +38,7 @@
   -quit -logFile ".\data\raw\unity-smoke.log"
 ```
 
-成功日志包含输入、城市建设、路网、约束、人类、动物、研究日志、回合、轨迹和UI标记。其中关键标记为 `UNITY_CITY_CONSTRUCTION_SMOKE_OK inventory=14 types=5`、`UNITY_CITY_NETWORK_SMOKE_OK proposed_buildings=4 route_candidates=3_each`、`UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11`、`UNITY_OPTIONAL_PREDICTION_SCHEMA_SMOKE_OK required=0`、`UNITY_CYCLE_MEMORY_SMOKE_OK`、`UNITY_SCORE_SMOKE_OK`、`UNITY_TRACE_SMOKE_OK` 与 `UNITY_RESEARCH_LOG_SMOKE_OK`。
+成功日志包含输入、城市建设、路网、城市出行、约束、人类、动物、研究日志、回合、轨迹和UI标记。其中关键标记为 `UNITY_CITY_CONSTRUCTION_SMOKE_OK inventory=14 types=5`、`UNITY_CITY_NETWORK_SMOKE_OK proposed_buildings=4 route_candidates=3_each`、`UNITY_CITY_MOBILITY_SMOKE_OK origins=2 representative_agents=6 represented_population=72`、`UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11`、`UNITY_OPTIONAL_PREDICTION_SCHEMA_SMOKE_OK required=0`、`UNITY_CYCLE_MEMORY_SMOKE_OK`、`UNITY_SCORE_SMOKE_OK`、`UNITY_TRACE_SMOKE_OK` 与 `UNITY_RESEARCH_LOG_SMOKE_OK`。
 
 ## 已实现组件
 
@@ -49,6 +49,9 @@
 - `Construction/`：比较最近确认快照，输出New/Moved/Missing/Unchanged Preview，验证建筑占地，并只把可确认的New项目追加为Proposed Construction；Missing不自动删除。
 - `Networks/CityRoadCandidateGenerator.cs`：把新建筑投影到最近既有机动车/步行网络，生成Direct、Existing-network、Low-impact三种候选及自动Basic Building Access。
 - `Networks/CityNetworkPlanningManager.cs`：要求每栋建筑选一条机动车路线，管理屏幕额外Footpath的新增、修改与删除，并用单次事务更新路网和建筑引用。
+- `Mobility/CityTripPlanner.cs`：从已建住宅生成最多24个代表性居民，按权重、距离与拥挤惩罚选择目的地，并在独立网络间选择Walk或Drive。
+- `Mobility/CityNetworkRouteBuilder.cs`：沿Building Access与主网络拼接归一化路线，步行和机动车路线互不混用。
+- `Mobility/CityTripAgent.cs` 与 `CityMobilitySimulation.cs`：分批生成Trip，运行Outbound、Dwelling、Returning、Complete状态；只有Drive Trip产生Vehicle Agent。
 - `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
 - `P0ElectronicDemoInput.cs`：在材料到货前，从脱敏夹具原子生成带新时间戳、Session和Cycle的电子演示包；不产生实体识别已经通过的主张。
@@ -78,5 +81,5 @@
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。
-- 城市Token与路网批次已完成数据、差分、占地、三候选选路、自动步行接入和屏幕Footpath事务；正式城市可视化、由建筑产生的人流/车流、拥挤、施工计时与DP仍未接入当前Play Mode，属于后续批次。
+- 城市Token、路网和出行批次已完成数据、差分、占地、三候选选路、独立步行接入、代表性人流/车辆、拥挤分流与往返模拟；正式城市可视化、环境压力、施工计时与DP仍未接入当前Play Mode，属于后续批次。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

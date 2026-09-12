@@ -153,6 +153,7 @@ namespace UrbanWildlife.City
         public float speed_units_per_second;
         public float traffic_load;
         public string[] connected_building_ids = Array.Empty<string>();
+        public string[] connected_road_ids = Array.Empty<string>();
     }
 
     [Serializable]
@@ -166,6 +167,7 @@ namespace UrbanWildlife.City
         public float width_units;
         public bool step_free_accessible;
         public string[] connected_building_ids = Array.Empty<string>();
+        public string[] connected_link_ids = Array.Empty<string>();
     }
 
     [Serializable]

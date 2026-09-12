@@ -36,6 +36,12 @@
 
 `CityNetworkPlanningManager` 在Route Selection Preview中要求每栋建筑选且只选一个机动车候选。确认后只把选择结果写为`BuildingAccess` VehicleRoad，并更新Building引用。Pedestrian Network使用独立数组：系统同时为每栋新建筑生成最近既有人行网络的`BasicBuildingAccess`；玩家可在屏幕中新增、调整或删除`ScreenEdited ExtraFootpath`。确认是原子事务，删除ExtraFootpath时同步移除建筑引用；任何State验证失败都保留上一版CityState。正式输入中没有机动车或步行彩带字段。
 
+### 代表性人流与车辆
+
+`CityTripPlanner` 只读取 `Existing` Building。住宅的 Housing Capacity 与 Human Origin Rate 决定代表性居民数量，默认最多24个且公开每个代理代表的人数；Commercial 与 Community Facility 作为目的地。目的地效用由 Destination Weight、归一化距离、稳定微扰和预计 Crowd Penalty 组成，Capacity 以代表人口而非屏幕代理数量计算。
+
+`CityNetworkRouteBuilder` 通过建筑接入线的 `connected_road_ids` 或 `connected_link_ids` 拼接主网络：Walk只查询PedestrianLink，Drive只查询VehicleRoad。`CityTripAgent` 使用同一路线完成Outbound、目的地Dwelling和反向Returning。`CityMobilitySimulation` 按1.5秒间隔生成代理；Drive状态才公开对应Vehicle Agent，因此车辆数量可追溯到具体Trip，不存在随机背景交通。当前公式和速度是确定性玩法V0.1，不是人口或交通预测模型。
+
 ## 已确定的实体输入基线
 
 - 60 × 90 cm 黑色磁吸板，横向平放。
@@ -80,8 +86,10 @@ Unity Input Manager
                          ↓                         ↓
              selected VehicleRoad       automatic/screen PedestrianLink
                               ↓
-                 Building / GreenPatch / Networks / Waste
-                              ↓
+                  Building / GreenPatch / Networks / Waste
+                               ↓
+              Representative Trip / Walk / Drive / Crowd
+                               ↓
 Environment, Human NPC, Vehicle and Animal systems
                  ↓
 Trace renderer and Research Logger

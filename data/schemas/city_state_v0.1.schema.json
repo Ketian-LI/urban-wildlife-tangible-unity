@@ -169,7 +169,8 @@
         "width_units",
         "speed_units_per_second",
         "traffic_load",
-        "connected_building_ids"
+        "connected_building_ids",
+        "connected_road_ids"
       ],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
@@ -181,7 +182,8 @@
         "width_units": { "type": "number", "exclusiveMinimum": 0 },
         "speed_units_per_second": { "type": "number", "exclusiveMinimum": 0 },
         "traffic_load": { "$ref": "#/$defs/unitValue" },
-        "connected_building_ids": { "type": "array", "items": { "type": "string" } }
+        "connected_building_ids": { "type": "array", "items": { "type": "string" } },
+        "connected_road_ids": { "type": "array", "items": { "type": "string" } }
       }
     },
     "pedestrianLink": {
@@ -194,7 +196,8 @@
         "points_norm",
         "width_units",
         "step_free_accessible",
-        "connected_building_ids"
+        "connected_building_ids",
+        "connected_link_ids"
       ],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
@@ -204,7 +207,8 @@
         "points_norm": { "$ref": "#/$defs/polyline" },
         "width_units": { "type": "number", "exclusiveMinimum": 0 },
         "step_free_accessible": { "type": "boolean" },
-        "connected_building_ids": { "type": "array", "items": { "type": "string" } }
+        "connected_building_ids": { "type": "array", "items": { "type": "string" } },
+        "connected_link_ids": { "type": "array", "items": { "type": "string" } }
       }
     },
     "wasteSystem": {

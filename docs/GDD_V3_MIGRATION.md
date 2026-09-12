@@ -16,8 +16,8 @@
 | 1 | 城市片区数据底座 | 建立 Building、GreenPatch、Road、Pedestrian、Waste 与 CityState 数据模型；保留旧场景适配层 | 已完成 |
 | 2 | 五类实体 Token 与建设流程 | Apartment、Detached、Commercial、Community、Green Intervention；Scan City → Preview → Confirm Construction；New、Moved、Missing、Unchanged 差分 | 已完成 |
 | 3 | 道路与步行网络 | 为新建筑生成 Direct、Existing-network、Low-impact 三条候选机动车路线；自动基础步行接入；屏幕编辑额外 Footpath | 已完成 |
-| 4 | 人流与车辆 | 建筑 Origin/Destination、代表性 Trip、Walk/Drive、Destination Capacity、Crowding 与车辆代理 | 下一步 |
-| 5 | 城市环境压力 | 三类 Green Patch、Natural/Anthropogenic Food、Bin、Bench、Waste Capacity、Overflow 与局部 Disturbance | 待开始 |
+| 4 | 人流与车辆 | 建筑 Origin/Destination、代表性 Trip、Walk/Drive、Destination Capacity、Crowding 与车辆代理 | 已完成 |
+| 5 | 城市环境压力 | 三类 Green Patch、Natural/Anthropogenic Food、Bin、Bench、Waste Capacity、Overflow 与局部 Disturbance | 下一步 |
 | 6 | 四物种与永久后果 | 鸽子、灰松鼠、狐狸、刺猬；Utility、性格、事件记忆、迁入迁出、真实碰撞 Roadkill | 待开始 |
 | 7 | 五阶段与策略反馈 | DP、施工与拆除、Quiet/Active/Peak/Late、五个 Development Phase、五维 City Balance Score | 待开始 |
 | 8 | Trace、事件与最终界面 | Human/Animal/Combined Trace、City Feed、阶段 Before/After、City Report、完整研究日志与城市 UI | 待开始 |
@@ -61,6 +61,14 @@
 - 每栋需要步行接入的新建筑自动获得 Basic Building Access；额外 Footpath 支持在屏幕 Preview 中新增、修改与删除，并以 `ScreenEdited` 标注，实体输入不读取道路或步行彩带。
 - 路网确认作为一次事务更新 Building 引用与 CityState revision。屏幕 Footpath 删除时同步清除 Building 引用；验证失败不会部分写入城市。
 - 当前路线生成器是可重复的几何投影与代价采样 V0.1；更复杂的隐藏 Grid/A*、施工时间与 DP 花费在后续批次接入，不提前声称为真实交通规划算法。
+
+## 批次 4 验收
+
+- 只有 `Existing` 住宅生成出行；Apartment 与 Detached House 按 Housing Capacity 和 Human Origin Rate 生成代表性居民，而不是把每个市民都画成一个 NPC。默认上限为24，接口强制不超过30。
+- 每个 Trip 固定保存 Origin、Destination、Walk/Drive、代表人数、出发时间、停留时间与完整路网路线；代表性居民按1.5秒间隔进入，完成 Outbound → Dwelling → Returning → Complete。
+- 目的地选择同时读取 Destination Weight、距离、Comfortable Capacity 和已分配代表人口；超过舒适容量后产生 Crowd Penalty，使后续居民倾向其他商业或社区设施。
+- Walk 只使用 PedestrianLink，Drive 只使用 VehicleRoad；两套网络的接入线显式引用主网络。Drive Trip 才会产生 Vehicle Agent，车辆沿道路往返，不生成随机背景车。
+- 当前人口、速度、容量、权重与选择公式均为确定性 V0.1 游戏参数，用于验证城市因果闭环，不表示真实伦敦人口或交通预测；正式可视化随城市运行场景批次接入。
 
 ## 每批通用完成条件
 

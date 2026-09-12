@@ -38,13 +38,15 @@
   -quit -logFile ".\data\raw\unity-smoke.log"
 ```
 
-成功日志包含输入、约束、人类、动物、研究日志、回合、轨迹和UI标记。其中关键标记为 `UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11`、`UNITY_OPTIONAL_PREDICTION_SCHEMA_SMOKE_OK required=0`、`UNITY_CYCLE_MEMORY_SMOKE_OK`、`UNITY_SCORE_SMOKE_OK`、`UNITY_TRACE_SMOKE_OK` 与 `UNITY_RESEARCH_LOG_SMOKE_OK`。
+成功日志包含输入、城市建设、约束、人类、动物、研究日志、回合、轨迹和UI标记。其中关键标记为 `UNITY_CITY_CONSTRUCTION_SMOKE_OK inventory=14 types=5`、`UNITY_ANIMAL_ROUTE_SMOKE_OK species=3 agents=11 feeding_agents=11`、`UNITY_OPTIONAL_PREDICTION_SCHEMA_SMOKE_OK required=0`、`UNITY_CYCLE_MEMORY_SMOKE_OK`、`UNITY_SCORE_SMOKE_OK`、`UNITY_TRACE_SMOKE_OK` 与 `UNITY_RESEARCH_LOG_SMOKE_OK`。
 
 ## 已实现组件
 
 - `CityStateModels.cs`：统一保存四类核心 Building、三类 GreenPatch、独立 VehicleRoad/PedestrianLink 网络与 WasteSystem。
 - `CityStateValidator.cs`：验证城市状态版本、ID、坐标、数值、引用关系和 Natural Food 保留原则。
 - `LegacyParkCityAdapter.cs`：在不改变现有 P0 行为的情况下，把旧 S001 布局旁路映射为 CityState；正式城市输入接入后移除该过渡职责。
+- `CityTokenScanModels.cs`、`CityTokenInventory.cs` 与 `CityTokenScanReader.cs`：定义五类14件实体库存，读取并验证稳定的城市扫描、校准信息、Token位置、角度、置信度及ID/类型对应关系。
+- `Construction/`：比较最近确认快照，输出New/Moved/Missing/Unchanged Preview，验证建筑占地，并只把可确认的New项目追加为Proposed Construction；Missing不自动删除。
 - `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
 - `P0ElectronicDemoInput.cs`：在材料到货前，从脱敏夹具原子生成带新时间戳、Session和Cycle的电子演示包；不产生实体识别已经通过的主张。
@@ -74,4 +76,5 @@
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。
+- 城市Token建设批次当前完成数据、差分、占地规则与确认事务；城市建筑的正式可视化、三条机动车道路候选、自动步行接入和施工计时尚未接入当前Play Mode，属于下一批工作。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

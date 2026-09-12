@@ -1,0 +1,68 @@
+{
+  "schema_version": "0.1",
+  "packet_type": "city_token_scan",
+  "timestamp_ms": 1789236000000,
+  "timestamp_utc": "2026-09-12T18:00:00Z",
+  "scan_id": "city-scan-smoke-001",
+  "session_id": "city-session-smoke",
+  "development_phase": 1,
+  "calibration_id": "calibration-smoke-001",
+  "coordinate_system": {
+    "origin": "top_left",
+    "x_axis": "right",
+    "y_axis": "down",
+    "range": [0, 1],
+    "unity_plane_mapping": "x_norm -> Unity X; y_norm -> Unity Z"
+  },
+  "capture": {
+    "mode": "image_input",
+    "stable": true
+  },
+  "recognition": {
+    "marker_backend": "aruco",
+    "marker_family": "DICT_4X4_1000",
+    "token_config_version": "city-tokens-0.1"
+  },
+  "token_states": [
+    {
+      "id": 100,
+      "type": "Apartment",
+      "x_norm": 0.18,
+      "y_norm": 0.20,
+      "rotation_deg": 0,
+      "confidence": 0.98
+    },
+    {
+      "id": 110,
+      "type": "DetachedHouse",
+      "x_norm": 0.82,
+      "y_norm": 0.82,
+      "rotation_deg": 12,
+      "confidence": 0.96
+    },
+    {
+      "id": 120,
+      "type": "Commercial",
+      "x_norm": 0.78,
+      "y_norm": 0.50,
+      "rotation_deg": -8,
+      "confidence": 0.97
+    },
+    {
+      "id": 130,
+      "type": "CommunityFacility",
+      "x_norm": 0.25,
+      "y_norm": 0.52,
+      "rotation_deg": 20,
+      "confidence": 0.95
+    },
+    {
+      "id": 140,
+      "type": "GreenIntervention",
+      "x_norm": 0.55,
+      "y_norm": 0.78,
+      "rotation_deg": 0,
+      "confidence": 0.99
+    }
+  ]
+}

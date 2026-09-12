@@ -14,6 +14,7 @@ using UrbanWildlife.Animals;
 using UrbanWildlife.Logging;
 using UrbanWildlife.Presentation;
 using UrbanWildlife.City;
+using UrbanWildlife.Construction;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -212,6 +213,130 @@ namespace UrbanWildlife.EditorTools
                 "green_patches=3 patch_types=3 vehicle_roads=1 pedestrian_links=1 " +
                 "waste_sources=3 natural_food=True legacy_adapter=True json_round_trip=True " +
                 "rejects_missing_natural_food=True rejects_missing_network_reference=True");
+
+            string cityScanPath = Path.GetFullPath(Path.Combine(
+                Application.dataPath,
+                "../../data/examples/city_scan_new_v0.1.json"));
+            if (!File.Exists(cityScanPath))
+            {
+                throw new FileNotFoundException("City Token scan fixture is missing.", cityScanPath);
+            }
+            string cityScanJson = File.ReadAllText(cityScanPath);
+            if (!CityTokenScanReader.TryParseAndValidate(
+                    cityScanJson,
+                    -1,
+                    out CityTokenScanPacket cityScan,
+                    out string cityScanError))
+            {
+                throw new InvalidOperationException($"City Token scan fixture failed: {cityScanError}");
+            }
+            if (CityTokenInventory.TotalAvailable != 14 ||
+                CityTokenInventory.MaximumFor(CityPhysicalTokenType.Apartment) != 3 ||
+                CityTokenInventory.MaximumFor(CityPhysicalTokenType.DetachedHouse) != 4 ||
+                CityTokenInventory.MaximumFor(CityPhysicalTokenType.Commercial) != 2 ||
+                CityTokenInventory.MaximumFor(CityPhysicalTokenType.CommunityFacility) != 2 ||
+                CityTokenInventory.MaximumFor(CityPhysicalTokenType.GreenIntervention) != 3)
+            {
+                throw new InvalidOperationException("The physical city Token inventory is not 3/4/2/2/3.");
+            }
+
+            CityTokenScanPacket wrongTypeScan = JsonConvert.DeserializeObject<CityTokenScanPacket>(cityScanJson);
+            wrongTypeScan.token_states[0].type = CityPhysicalTokenType.Commercial;
+            bool rejectedWrongTokenType = !CityTokenScanReader.TryParseAndValidate(
+                JsonConvert.SerializeObject(wrongTypeScan),
+                -1,
+                out _,
+                out _);
+            CityTokenScanPacket unstableCityScan = JsonConvert.DeserializeObject<CityTokenScanPacket>(cityScanJson);
+            unstableCityScan.capture.stable = false;
+            bool rejectedUnstableCityScan = !CityTokenScanReader.TryParseAndValidate(
+                JsonConvert.SerializeObject(unstableCityScan),
+                -1,
+                out _,
+                out _);
+            if (!rejectedWrongTokenType || !rejectedUnstableCityScan)
+            {
+                throw new InvalidOperationException(
+                    "City Token reader accepted a wrong ID/type pairing or an unstable frame.");
+            }
+
+            CityConstructionManager construction = new CityConstructionManager(legacyCity);
+            CityConstructionPreview newPreview = construction.ScanCity(cityScan);
+            if (newPreview.NewCount != 5 || newPreview.MovedCount != 0 ||
+                newPreview.MissingCount != 0 || newPreview.UnchangedCount != 0 ||
+                !newPreview.CanConfirmConstruction ||
+                construction.CurrentPhase != CityConstructionFlowPhase.Preview)
+            {
+                throw new InvalidOperationException(
+                    "New city construction did not produce a confirmable Preview.");
+            }
+            if (!construction.ConfirmConstruction(out string constructionError))
+            {
+                throw new InvalidOperationException(
+                    $"New city construction did not complete Preview → Confirm: {constructionError}");
+            }
+            CityState confirmedCity = construction.CurrentState;
+            bool proposedObjectsRetained = confirmedCity.buildings.Count(building =>
+                                               building.construction_state == CityConstructionState.Proposed) == 4 &&
+                                           confirmedCity.green_patches.Count(patch =>
+                                               patch.construction_state == CityConstructionState.Proposed) == 1;
+            if (confirmedCity.revision != legacyCity.revision + 1 ||
+                confirmedCity.buildings.Length != legacyCity.buildings.Length + 4 ||
+                confirmedCity.green_patches.Length != legacyCity.green_patches.Length + 1 ||
+                confirmedCity.waste.nodes.Length != legacyCity.waste.nodes.Length + 4 ||
+                construction.ConfirmedTokens.Length != 5 || !proposedObjectsRetained ||
+                !CityStateValidator.Validate(confirmedCity).IsValid ||
+                construction.CurrentPhase != CityConstructionFlowPhase.Planning)
+            {
+                throw new InvalidOperationException("Confirmed city construction produced an invalid CityState.");
+            }
+
+            CityTokenScanPacket unchangedScan = JsonConvert.DeserializeObject<CityTokenScanPacket>(cityScanJson);
+            unchangedScan.scan_id = "city-scan-smoke-unchanged";
+            unchangedScan.timestamp_ms += 1;
+            CityConstructionPreview unchangedPreview = construction.ScanCity(unchangedScan);
+            if (unchangedPreview.UnchangedCount != 5 || unchangedPreview.NewCount != 0 ||
+                unchangedPreview.CanConfirmConstruction ||
+                construction.ConfirmConstruction(out _))
+            {
+                throw new InvalidOperationException("An unchanged scan incorrectly created construction.");
+            }
+
+            CityTokenScanPacket movedScan = JsonConvert.DeserializeObject<CityTokenScanPacket>(cityScanJson);
+            movedScan.scan_id = "city-scan-smoke-moved";
+            movedScan.timestamp_ms += 2;
+            movedScan.token_states[0].x_norm += 0.04f;
+            CityConstructionPreview movedPreview = construction.ScanCity(movedScan);
+            if (movedPreview.MovedCount != 1 || !movedPreview.HasBlockingChanges ||
+                construction.ConfirmConstruction(out _))
+            {
+                throw new InvalidOperationException("A moved built Token did not block confirmation.");
+            }
+
+            CityTokenScanPacket missingScan = JsonConvert.DeserializeObject<CityTokenScanPacket>(cityScanJson);
+            missingScan.scan_id = "city-scan-smoke-missing";
+            missingScan.timestamp_ms += 3;
+            missingScan.token_states = missingScan.token_states.Take(4).ToArray();
+            CityConstructionPreview missingPreview = construction.ScanCity(missingScan);
+            CityTokenChange missingChange = missingPreview.changes.Single(change =>
+                change.change_kind == CityTokenChangeKind.Missing);
+            bool greenStillPresent = construction.CurrentState.green_patches.Any(patch =>
+                patch.id == "green-intervention-token-140");
+            if (missingPreview.MissingCount != 1 || !missingChange.blocks_confirmation ||
+                !missingChange.requires_demolition_confirmation ||
+                construction.ConfirmConstruction(out _) || !greenStillPresent ||
+                construction.CurrentState.revision != confirmedCity.revision)
+            {
+                throw new InvalidOperationException(
+                    "Missing Token handling must ask Demolish? without deleting the city object.");
+            }
+            construction.CancelPreview();
+            Debug.Log(
+                "UNITY_CITY_CONSTRUCTION_SMOKE_OK inventory=14 types=5 " +
+                "scan_preview_confirm=True new=5 unchanged=5 moved_blocked=True " +
+                "missing_requires_demolish=True no_auto_delete=True proposed_buildings=4 " +
+                $"proposed_green=1 rejects_wrong_id_type={rejectedWrongTokenType} " +
+                $"rejects_unstable={rejectedUnstableCityScan}");
 
             LayoutToken repairedFood10 = Array.Find(baselinePacket.tokens, token => token.id == 10);
             LayoutToken repairedFood12 = Array.Find(baselinePacket.tokens, token => token.id == 12);

@@ -24,6 +24,12 @@
 
 `CityStateValidator` 在状态进入后续模拟前检查 schema、唯一 ID、归一化坐标、网络几何、建筑引用与数值范围，并要求至少一块 GreenPatch 保留 Natural Food。迁移期间，`LegacyParkCityAdapter` 只在旧 S001 约束检查旁路生成兼容 CityState；旧 Human/Animal 系统继续读取原 P0 数据，不会被未完成的城市功能打断。
 
+### 城市 Token 扫描与建设事务
+
+`city_token_scan` V0.1 是正式城市输入契约，JSON Schema 位于 `data/schemas/city_token_scan_v0.1.schema.json`。库存为 Apartment 100–102、Detached House 110–113、Commercial 120–121、Community Facility 130–131、Green Intervention 140–142，共14件；Unity同时校验ID/类型配对、校准坐标、稳定画面、角度、置信度和每类数量上限。
+
+摄像头不逐帧直接改写城市。玩家触发 `Scan City` 后，`CityTokenDiffer` 将扫描与最近确认 Token 快照比较为 New、Moved、Missing、Unchanged；位置变化超过归一化0.01或角度变化超过5°才算Moved。`CityConstructionManager` 把New转换为Proposed Building或GreenPatch并检查边界与建筑占地重叠；Moved和Missing会阻止确认，Missing只显示拆除请求语义，不删除数据。成功 `Confirm Construction` 是一次事务：只追加New对象、建筑Waste输出节点并把CityState revision加一。道路尚未确认，因此这些对象继续处于Proposed；批次3完成路线选择后再推进施工状态。
+
 ## 已确定的实体输入基线
 
 - 60 × 90 cm 黑色磁吸板，横向平放。
@@ -59,7 +65,10 @@ Versioned input packet
                  ↓
 Unity Input Manager
    ├─ Legacy P0 systems（迁移期间继续运行）
-   └─ LegacyParkCityAdapter → CityState V0.1
+   ├─ LegacyParkCityAdapter → CityState V0.1
+   └─ CityTokenScanReader → Scan City → Difference Preview
+                                      ↓ Confirm Construction
+                                 Proposed CityState
                               ↓
                  Building / GreenPatch / Networks / Waste
                               ↓

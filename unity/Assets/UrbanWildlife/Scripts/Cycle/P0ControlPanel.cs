@@ -140,7 +140,7 @@ namespace UrbanWildlife.Cycle
             DrawScenarioBrief();
             if (cycle.Phase != P0Phase.Observe)
             {
-                DrawMemoryContext(running);
+                DrawMemoryContext(running || cycle.Phase == P0Phase.Confirm);
             }
 
             if (cycle.Phase == P0Phase.Run || cycle.Phase == P0Phase.Observe)

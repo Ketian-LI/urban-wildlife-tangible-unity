@@ -1095,7 +1095,8 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_UI_SMOKE_OK phase=Plan predictions_required=2 space_actions=Confirm/StartRun " +
                 "trace_modes=3 park_notice_style=True split_screen=True map_unobscured=True " +
-                "typography=serif_display/sans_interface information_cards=True round_progress=3");
+                "typography=hierarchical_display/interface information_cards=True round_progress=3 " +
+                "confirm_memory=compact");
         }
 
         private static float TightSpriteAspect(Sprite sprite)

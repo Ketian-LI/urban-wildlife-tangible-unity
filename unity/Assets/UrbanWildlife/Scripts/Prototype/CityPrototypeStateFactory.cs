@@ -135,6 +135,13 @@ namespace UrbanWildlife.Prototype
                 Patch("rain-garden", CityGreenPatchType.ShrubGarden, false, 0.34f, 0.60f, 0.49f, 0.88f, 0.62f, 0.58f, 0.18f),
             };
 
+            CityAmenity[] amenities =
+            {
+                Amenity("bench-park-01", CityAmenityType.Bench, 0.30f, 0.67f, 10f, 0.55f, 0f, 0f),
+                Amenity("bin-main-01", CityAmenityType.Bin, 0.31f, 0.50f, 15f, 0.08f, 2.35f, 0.68f),
+                Amenity("bin-east-01", CityAmenityType.Bin, 0.76f, 0.52f, 15f, 0.08f, 2.25f, 0.68f),
+            };
+
             CityWasteNode[] wasteNodes = buildings.Select(building => new CityWasteNode
             {
                 id = $"waste-{building.id}",
@@ -156,6 +163,7 @@ namespace UrbanWildlife.Prototype
                 green_patches = patches,
                 vehicle_roads = roads.ToArray(),
                 pedestrian_links = links.ToArray(),
+                amenities = amenities,
                 waste = new CityWasteSystem
                 {
                     total_demand = buildings.Sum(building => building.waste_output),
@@ -237,6 +245,29 @@ namespace UrbanWildlife.Prototype
                 human_disturbance = disturbance,
                 patch_size_units = (maxX - minX) * 90f * (maxY - minY) * 60f,
                 connected_patch_ids = Array.Empty<string>(),
+            };
+        }
+
+        private static CityAmenity Amenity(
+            string id,
+            CityAmenityType type,
+            float x,
+            float y,
+            float radius,
+            float activity,
+            float capacity,
+            float exposureReduction)
+        {
+            return new CityAmenity
+            {
+                id = id,
+                type = type,
+                construction_state = CityConstructionState.Existing,
+                position_norm = new[] { x, y },
+                service_radius_units = radius,
+                human_activity_weight = activity,
+                waste_capacity = capacity,
+                food_exposure_reduction = exposureReduction,
             };
         }
 

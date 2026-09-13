@@ -53,10 +53,12 @@ namespace UrbanWildlife.City
             CityGreenPatch[] patches = state.green_patches ?? Array.Empty<CityGreenPatch>();
             CityVehicleRoad[] roads = state.vehicle_roads ?? Array.Empty<CityVehicleRoad>();
             CityPedestrianLink[] links = state.pedestrian_links ?? Array.Empty<CityPedestrianLink>();
+            CityAmenity[] amenities = state.amenities ?? Array.Empty<CityAmenity>();
             ValidateUniqueIds(buildings.Select(item => item?.id), "building", errors);
             ValidateUniqueIds(patches.Select(item => item?.id), "green patch", errors);
             ValidateUniqueIds(roads.Select(item => item?.id), "vehicle road", errors);
             ValidateUniqueIds(links.Select(item => item?.id), "pedestrian link", errors);
+            ValidateUniqueIds(amenities.Select(item => item?.id), "amenity", errors);
 
             HashSet<string> buildingIds = new HashSet<string>(
                 buildings.Where(item => item != null && !string.IsNullOrWhiteSpace(item.id))
@@ -169,6 +171,26 @@ namespace UrbanWildlife.City
                 if ((link.connected_link_ids ?? Array.Empty<string>()).Contains(link.id))
                 {
                     errors.Add($"Pedestrian link {link.id} cannot connect to itself.");
+                }
+            }
+
+            foreach (CityAmenity amenity in amenities.Where(item => item != null))
+            {
+                ValidatePoint(amenity.position_norm, $"Amenity {amenity.id} position", errors);
+                if (!Positive(amenity.service_radius_units) ||
+                    !UnitValue(amenity.human_activity_weight) ||
+                    !NonNegative(amenity.waste_capacity) ||
+                    !UnitValue(amenity.food_exposure_reduction))
+                {
+                    errors.Add($"Amenity {amenity.id} has invalid service or pressure values.");
+                }
+                if (amenity.type == CityAmenityType.Bin && amenity.waste_capacity <= 0f)
+                {
+                    errors.Add($"Bin {amenity.id} must provide positive waste capacity.");
+                }
+                if (amenity.type == CityAmenityType.Bench && amenity.waste_capacity > 0f)
+                {
+                    errors.Add($"Bench {amenity.id} cannot provide waste capacity.");
                 }
             }
 

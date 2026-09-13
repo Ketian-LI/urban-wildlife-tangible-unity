@@ -17,6 +17,11 @@ using UrbanWildlife.City;
 using UrbanWildlife.Construction;
 using UrbanWildlife.Networks;
 using UrbanWildlife.Mobility;
+using UrbanWildlife.Environmental;
+using UrbanWildlife.Ecology;
+using UrbanWildlife.Prototype;
+using UrbanWildlife.Strategy;
+using UrbanWildlife.Reporting;
 
 namespace UrbanWildlife.EditorTools
 {
@@ -215,6 +220,399 @@ namespace UrbanWildlife.EditorTools
                 "green_patches=3 patch_types=3 vehicle_roads=1 pedestrian_links=1 " +
                 "waste_sources=3 natural_food=True legacy_adapter=True json_round_trip=True " +
                 "rejects_missing_natural_food=True rejects_missing_network_reference=True");
+
+            CityState environmentCity = CityPrototypeStateFactory.Create();
+            CityEnvironmentSimulation environment = new CityEnvironmentSimulation(
+                environmentCity,
+                new CityEnvironmentConfiguration { overflow_grace_seconds = 2f });
+            CityEnvironmentSnapshot baselineEnvironment = environment.Snapshot;
+            bool baselineHasNaturalFood = baselineEnvironment.food_sources.Any(source =>
+                source.kind == CityFoodSourceKind.Natural && source.availability > 0f);
+            bool baselineHasHumanFood = baselineEnvironment.food_sources.Any(source =>
+                source.kind == CityFoodSourceKind.Anthropogenic && source.availability > 0f);
+            environment.Tick(3f, 2f);
+            CityEnvironmentSnapshot peakEnvironment = environment.Snapshot;
+            bool overflowCreatesFood = peakEnvironment.food_sources.Any(source =>
+                source.kind == CityFoodSourceKind.Anthropogenic && source.caused_by_overflow);
+            int binCount = environmentCity.waste.nodes.Count(node =>
+                node.type == CityWasteNodeType.Bin);
+            if (environmentCity.amenities.Length != 3 || binCount != 2 ||
+                !baselineHasNaturalFood || !baselineHasHumanFood ||
+                baselineEnvironment.overflow_active || baselineEnvironment.waste_capacity <= 0f ||
+                !peakEnvironment.overflow_active || peakEnvironment.waste_utilisation <= 1f ||
+                peakEnvironment.patch_pressures.Length != environmentCity.green_patches.Length ||
+                environmentCity.waste.litter_hotspots.Length == 0 || !overflowCreatesFood ||
+                environmentCity.waste.nodes.Where(node => node.type == CityWasteNodeType.Bin)
+                    .Any(node => !Mathf.Approximately(node.fill_ratio, 1f)))
+            {
+                throw new InvalidOperationException(
+                    "City environment pressure, waste overflow or two-source food smoke check failed.");
+            }
+            float originalBenchCapacity = environmentCity.amenities[0].waste_capacity;
+            environmentCity.amenities[0].waste_capacity = 1f;
+            bool rejectedBenchCapacity = !CityStateValidator.Validate(environmentCity).IsValid;
+            environmentCity.amenities[0].waste_capacity = originalBenchCapacity;
+            if (!rejectedBenchCapacity || !CityStateValidator.Validate(environmentCity).IsValid)
+            {
+                throw new InvalidOperationException("Amenity validation did not enforce the Bench/Bin contract.");
+            }
+            Debug.Log(
+                "UNITY_CITY_ENVIRONMENT_SMOKE_OK amenities=3 bins=2 natural_food=True " +
+                "anthropogenic_food=True sustained_overflow=True litter_hotspots=True " +
+                "patch_pressure=True bench_bin_contract=True");
+
+            CityWildlifeSimulation wildlife = new CityWildlifeSimulation(environmentCity);
+            wildlife.Tick(0f, peakEnvironment, Array.Empty<CityVehicleAgent>());
+            CityWildlifeAgent pigeon = wildlife.Snapshot.agents.First(agent =>
+                agent.species == CityWildlifeSpecies.Pigeon);
+            CityWildlifeAgent hedgehog = wildlife.Snapshot.agents.First(agent =>
+                agent.species == CityWildlifeSpecies.Hedgehog);
+            for (int index = 0; index < 12; index += 1)
+            {
+                wildlife.Remember(
+                    hedgehog,
+                    index % 2 == 0 ? CityWildlifeMemoryType.Threat : CityWildlifeMemoryType.Resource,
+                    $"memory-{index}",
+                    hedgehog.position_norm,
+                    0.45f + index * 0.03f,
+                    index % 2 == 0);
+            }
+            if (hedgehog.memories.Length != 8)
+            {
+                throw new InvalidOperationException("City wildlife memory did not retain the configured 6-10 event window.");
+            }
+            float positiveBefore = hedgehog.memories.First(memory => !memory.negative).strength;
+            float negativeBefore = hedgehog.memories.First(memory => memory.negative).strength;
+            wildlife.AdvanceCycle();
+            float positiveAfter = hedgehog.memories.First(memory => !memory.negative).strength;
+            float negativeAfter = hedgehog.memories.First(memory => memory.negative).strength;
+            if ((positiveBefore - positiveAfter) <= (negativeBefore - negativeAfter))
+            {
+                throw new InvalidOperationException("Negative wildlife memory must decay more slowly than positive memory.");
+            }
+
+            CityVehicleAgent collisionVehicle = new CityVehicleAgent
+            {
+                id = "vehicle-collision-smoke",
+                source_trip_id = "trip-collision-smoke",
+                state = CityTripMotionState.Outbound,
+                position_norm = (float[])hedgehog.position_norm.Clone(),
+                speed_units_per_second = 7f,
+            };
+            wildlife.Tick(0f, peakEnvironment, new[] { collisionVehicle });
+            if (hedgehog.life_state != CityWildlifeLifeState.Dead ||
+                wildlife.Snapshot.roadkill_events != 1 ||
+                !wildlife.Snapshot.permanent_outcomes.Any(outcome =>
+                    outcome.type == CityWildlifeOutcomeType.Roadkill &&
+                    outcome.cause_id == collisionVehicle.id))
+            {
+                throw new InvalidOperationException("Ground-animal roadkill did not require a traceable vehicle collision.");
+            }
+
+            CityWildlifeSimulation pigeonCollision = new CityWildlifeSimulation(
+                environmentCity,
+                pigeonCount: 1,
+                squirrelCount: 0,
+                foxCount: 0,
+                hedgehogCount: 0);
+            CityWildlifeAgent airbornePigeon = pigeonCollision.Snapshot.agents[0];
+            collisionVehicle.position_norm = (float[])airbornePigeon.position_norm.Clone();
+            pigeonCollision.Tick(0f, peakEnvironment, new[] { collisionVehicle });
+            if (airbornePigeon.life_state != CityWildlifeLifeState.Active ||
+                pigeonCollision.Snapshot.roadkill_events != 0 ||
+                wildlife.Profile(CityWildlifeSpecies.Pigeon).ground_collision_vulnerable ||
+                !wildlife.Profile(CityWildlifeSpecies.Hedgehog).ground_collision_vulnerable)
+            {
+                throw new InvalidOperationException("Pigeon flight or ground-species roadkill vulnerability is invalid.");
+            }
+
+            CityWildlifeSimulation migration = new CityWildlifeSimulation(
+                environmentCity,
+                new CityWildlifeConfiguration
+                {
+                    migration_utility_threshold = 10f,
+                    migration_grace_seconds = 0f,
+                },
+                pigeonCount: 0,
+                squirrelCount: 1,
+                foxCount: 0,
+                hedgehogCount: 0);
+            migration.Tick(0f, peakEnvironment, Array.Empty<CityVehicleAgent>());
+            if (migration.Snapshot.migrated_count != 1 ||
+                !migration.Snapshot.permanent_outcomes.Any(outcome =>
+                    outcome.type == CityWildlifeOutcomeType.MigratedOut))
+            {
+                throw new InvalidOperationException("Persistent low utility did not produce a permanent migration outcome.");
+            }
+            if (!migration.TryAddImmigrant(CityWildlifeSpecies.GreySquirrel, peakEnvironment, -100f) ||
+                !migration.Snapshot.permanent_outcomes.Any(outcome =>
+                    outcome.type == CityWildlifeOutcomeType.MigratedIn))
+            {
+                throw new InvalidOperationException("Suitable habitat did not support a traceable migration-in outcome.");
+            }
+            if (wildlife.Snapshot.agents.Length != 15 ||
+                wildlife.Snapshot.agents.Select(agent => agent.species).Distinct().Count() != 4 ||
+                wildlife.Snapshot.feeding_events <= 0 || string.IsNullOrWhiteSpace(pigeon.target_patch_id))
+            {
+                throw new InvalidOperationException("Four-species utility or feeding simulation is incomplete.");
+            }
+            Debug.Log(
+                "UNITY_CITY_WILDLIFE_SMOKE_OK species=4 agents=15 utility=True memories=8 " +
+                "negative_decay_slower=True migration_in_out=True permanent_outcomes=True " +
+                "roadkill=vehicle_collision_only pigeon_excluded=True obstacle_detour=True");
+
+            CityState strategyCity = CityPrototypeStateFactory.Create();
+            CityBuilding plannedBuilding = strategyCity.buildings.First();
+            plannedBuilding.construction_state = CityConstructionState.Proposed;
+            CityStrategySimulation strategy = new CityStrategySimulation(strategyCity);
+            if (!strategy.TryQueueProject(
+                    CityStrategyActionType.ConstructBuilding,
+                    plannedBuilding.id,
+                    out string strategyConstructionError) ||
+                strategyConstructionError != null || strategy.DevelopmentPoints != 15 ||
+                plannedBuilding.construction_state != CityConstructionState.UnderConstruction ||
+                strategy.Snapshot.projects.Length != 1 ||
+                strategy.Snapshot.active_construction_disturbance <= 0f ||
+                strategy.Snapshot.active_access_obstruction <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"DP construction project did not start correctly: {strategyConstructionError}");
+            }
+            strategy.AdvanceTimeBlock();
+            if (plannedBuilding.construction_state != CityConstructionState.UnderConstruction ||
+                strategy.Snapshot.projects[0].remaining_time_blocks != 1)
+            {
+                throw new InvalidOperationException("Construction did not retain its multi-block delay.");
+            }
+            strategy.AdvanceTimeBlock();
+            if (plannedBuilding.construction_state != CityConstructionState.Existing ||
+                strategy.Snapshot.projects[0].state != CityStrategyProjectState.Complete)
+            {
+                throw new InvalidOperationException("Construction did not complete into Existing state.");
+            }
+
+            CityEnvironmentSimulation strategyEnvironment = new CityEnvironmentSimulation(strategyCity);
+            CityWildlifeSimulation strategyWildlife = new CityWildlifeSimulation(
+                strategyCity,
+                pigeonCount: 1,
+                squirrelCount: 0,
+                foxCount: 0,
+                hedgehogCount: 0);
+            CityWildlifeAgent persistentMemoryAgent = strategyWildlife.Snapshot.agents[0];
+            CityBuilding demolitionTarget = strategyCity.buildings.Last();
+            strategyWildlife.Remember(
+                persistentMemoryAgent,
+                CityWildlifeMemoryType.HumanFood,
+                demolitionTarget.id,
+                demolitionTarget.position_norm,
+                0.9f,
+                false);
+            demolitionTarget.construction_state = CityConstructionState.DemolitionProposed;
+            if (!strategy.TryQueueProject(
+                    CityStrategyActionType.Demolish,
+                    demolitionTarget.id,
+                    out string strategyDemolitionError) || strategyDemolitionError != null)
+            {
+                throw new InvalidOperationException($"Approved demolition did not start: {strategyDemolitionError}");
+            }
+            strategy.AdvanceTimeBlock();
+            if (strategyCity.buildings.Any(building => building.id == demolitionTarget.id) ||
+                !persistentMemoryAgent.memories.Any(memory => memory.location_id == demolitionTarget.id) ||
+                !CityStateValidator.Validate(strategyCity).IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Demolition did not remove the target transactionally or incorrectly erased wildlife memory.");
+            }
+
+            strategyEnvironment.Tick(0f, 1f);
+            strategy.UpdateFeedback(strategyEnvironment.Snapshot, strategyWildlife.Snapshot);
+            CityBalanceScore balance = strategy.Snapshot.balance;
+            float expectedBalance = (balance.development + balance.accessibility +
+                                     balance.waste_management + balance.habitat_connectivity +
+                                     balance.wildlife_safety) / 5f;
+            if (!Mathf.Approximately(balance.total, expectedBalance) ||
+                new[]
+                {
+                    balance.development,
+                    balance.accessibility,
+                    balance.waste_management,
+                    balance.habitat_connectivity,
+                    balance.wildlife_safety,
+                }.Any(value => value < 0f || value > 100f))
+            {
+                throw new InvalidOperationException("Five-dimensional City Balance is not equally weighted or bounded.");
+            }
+
+            while (strategy.Phase != CityDevelopmentPhase.Redevelopment)
+            {
+                strategy.AdvanceTimeBlock();
+            }
+            if (Enum.GetValues(typeof(CityDevelopmentPhase)).Length != 5 ||
+                Enum.GetValues(typeof(CityTimeBlock)).Length != 4 ||
+                strategy.CompletedPhaseCount != 4 ||
+                strategy.DevelopmentPoints != 45 ||
+                !CityStrategySimulation.AllowedTimeScales.SequenceEqual(new[] { 0f, 1f, 2f }))
+            {
+                throw new InvalidOperationException("Five phases, four time blocks, DP grants or time controls are invalid.");
+            }
+
+            CityGreenPatch protectedPatch = strategyCity.green_patches.First();
+            foreach (CityGreenPatch patch in strategyCity.green_patches)
+            {
+                patch.natural_food_value = patch == protectedPatch ? 0.5f : 0f;
+            }
+            protectedPatch.construction_state = CityConstructionState.DemolitionProposed;
+            bool rejectedLastNaturalFood = !strategy.TryQueueProject(
+                CityStrategyActionType.Demolish,
+                protectedPatch.id,
+                out string naturalFoodError);
+            if (!rejectedLastNaturalFood || string.IsNullOrWhiteSpace(naturalFoodError))
+            {
+                throw new InvalidOperationException("The final Natural Food patch could be demolished.");
+            }
+            Debug.Log(
+                "UNITY_CITY_STRATEGY_SMOKE_OK phases=5 time_blocks=Quiet/Active/Peak/Late " +
+                "time_scales=Pause/1x/2x dp=True construction_delay=True demolition=True " +
+                "construction_pressure=True natural_food_protected=True persistent_memory=True " +
+                "city_balance=5x20 formula=city-balance-v0.1");
+
+            CityState reportingCity = CityPrototypeStateFactory.Create();
+            CityEnvironmentSimulation reportingEnvironment = new CityEnvironmentSimulation(
+                reportingCity,
+                new CityEnvironmentConfiguration { overflow_grace_seconds = 0f });
+            CityMobilityPlan reportingPlan = CityTripPlanner.CreatePlan(reportingCity);
+            CityMobilitySimulation reportingMobility = new CityMobilitySimulation(
+                reportingPlan,
+                reportingCity.bounds);
+            CityWildlifeSimulation reportingWildlife = new CityWildlifeSimulation(reportingCity);
+            CityStrategySimulation reportingStrategy = new CityStrategySimulation(reportingCity);
+            CityObservationTracker observation = new CityObservationTracker();
+            observation.BeginPhase(reportingStrategy.Snapshot);
+            reportingMobility.Tick(2f);
+            reportingEnvironment.Tick(2f, 2f);
+            reportingWildlife.Tick(
+                0f,
+                reportingEnvironment.Snapshot,
+                Array.Empty<CityVehicleAgent>());
+            reportingStrategy.UpdateFeedback(
+                reportingEnvironment.Snapshot,
+                reportingWildlife.Snapshot);
+            observation.Capture(
+                2f,
+                reportingMobility,
+                reportingEnvironment.Snapshot,
+                reportingWildlife.Snapshot,
+                reportingStrategy.Snapshot);
+
+            CityWildlifeAgent reportingHedgehog = reportingWildlife.Snapshot.agents.First(agent =>
+                agent.species == CityWildlifeSpecies.Hedgehog);
+            CityVehicleAgent reportingCollision = new CityVehicleAgent
+            {
+                id = "vehicle-reporting-collision",
+                source_trip_id = "trip-reporting-collision",
+                state = CityTripMotionState.Outbound,
+                position_norm = (float[])reportingHedgehog.position_norm.Clone(),
+                speed_units_per_second = 7f,
+            };
+            reportingWildlife.Tick(
+                0f,
+                reportingEnvironment.Snapshot,
+                new[] { reportingCollision });
+
+            CityAmenity reportingBench = reportingCity.amenities.First(item =>
+                item.type == CityAmenityType.Bench);
+            reportingBench.construction_state = CityConstructionState.Proposed;
+            if (!reportingStrategy.TryQueueProject(
+                    CityStrategyActionType.InstallBench,
+                    reportingBench.id,
+                    out string reportingProjectError))
+            {
+                throw new InvalidOperationException($"Reporting project setup failed: {reportingProjectError}");
+            }
+            reportingStrategy.AdvanceTimeBlock();
+            reportingStrategy.UpdateFeedback(
+                reportingEnvironment.Snapshot,
+                reportingWildlife.Snapshot);
+            observation.Capture(
+                1f,
+                reportingMobility,
+                reportingEnvironment.Snapshot,
+                reportingWildlife.Snapshot,
+                reportingStrategy.Snapshot);
+
+            CityTracePoint[] humanTrace = observation.Trace(CityTraceDisplayMode.HumanTrace);
+            CityTracePoint[] animalTrace = observation.Trace(CityTraceDisplayMode.AnimalTrace);
+            CityTracePoint[] combinedTrace = observation.Trace(CityTraceDisplayMode.CombinedTrace);
+            CityPhaseReport phaseReport = observation.BuildPhaseReport(
+                reportingStrategy.Snapshot,
+                reportingWildlife.Snapshot);
+            if (humanTrace.Length == 0 || animalTrace.Length == 0 ||
+                combinedTrace.Length != humanTrace.Length + animalTrace.Length ||
+                !humanTrace.Any(point => point.mark == CityTraceMark.Footprint) ||
+                !animalTrace.Any(point => point.mark == CityTraceMark.BirdTrack) ||
+                !animalTrace.Any(point => point.mark == CityTraceMark.HedgehogTrack) ||
+                !observation.Snapshot.city_feed.Any(entry =>
+                    entry.type == CityFeedEventType.WasteOverflow) ||
+                !observation.Snapshot.city_feed.Any(entry =>
+                    entry.type == CityFeedEventType.Feeding) ||
+                !observation.Snapshot.city_feed.Any(entry =>
+                    entry.type == CityFeedEventType.Roadkill) ||
+                !observation.Snapshot.city_feed.Any(entry =>
+                    entry.type == CityFeedEventType.ProjectCompleted) ||
+                phaseReport.before == null || phaseReport.after == null || phaseReport.change == null)
+            {
+                throw new InvalidOperationException(
+                    "City traces, City Feed or phase Before/After report is incomplete.");
+            }
+
+            string cityLogSmokeRoot = Path.Combine(
+                Path.GetTempPath(),
+                "urban-wildlife-city-logger-smoke",
+                Guid.NewGuid().ToString("N"));
+            try
+            {
+                CityResearchLogRecord cityRecord = observation.BuildResearchRecord(
+                    "city:smoke",
+                    reportingEnvironment.Snapshot,
+                    reportingWildlife.Snapshot,
+                    reportingStrategy.Snapshot,
+                    note: "comma, quote \"checked\"");
+                CityResearchLogWriter cityWriter = new CityResearchLogWriter(
+                    cityLogSmokeRoot,
+                    cityRecord.session_id);
+                cityWriter.Append(cityRecord);
+                string[] cityJsonLines = File.ReadAllLines(cityWriter.JsonlPath);
+                string[] cityCsvLines = File.ReadAllLines(cityWriter.CsvPath);
+                CityResearchLogRecord parsedCityRecord = cityJsonLines.Length == 1
+                    ? JsonConvert.DeserializeObject<CityResearchLogRecord>(cityJsonLines[0])
+                    : null;
+                if (parsedCityRecord == null || parsedCityRecord.session_id != "city:smoke" ||
+                    parsedCityRecord.roadkill_events != 1 ||
+                    parsedCityRecord.human_trace_points != humanTrace.Length ||
+                    parsedCityRecord.animal_trace_points != animalTrace.Length ||
+                    cityCsvLines.Length != 2 ||
+                    !cityCsvLines[1].Contains("\"comma, quote \"\"checked\"\"\"") ||
+                    !CityResearchLogWriter.CsvHeader.Contains("habitat_connectivity") ||
+                    !CityResearchLogWriter.CsvHeader.Contains("roadkill_events") ||
+                    CityResearchLogWriter.CsvHeader.Contains("participant") ||
+                    cityJsonLines[0].Contains("participant"))
+                {
+                    throw new InvalidOperationException(
+                        "City JSONL/CSV logging, trace counters or privacy contract failed.");
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(cityLogSmokeRoot))
+                {
+                    Directory.Delete(cityLogSmokeRoot, true);
+                }
+            }
+            Debug.Log(
+                "UNITY_CITY_OBSERVATION_SMOKE_OK traces=Human/Animal/Combined " +
+                "marks=Footprint/VehicleTyre/BirdTrack/SmallPaw/FoxPaw/HedgehogTrack " +
+                "city_feed=overflow/crowding/feeding/migration/roadkill/project/balance " +
+                "phase_report=Before/After jsonl=True csv=True participant_fields=0");
 
             string cityScanPath = Path.GetFullPath(Path.Combine(
                 Application.dataPath,

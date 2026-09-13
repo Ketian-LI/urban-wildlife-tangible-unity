@@ -7,6 +7,7 @@ tmp/
 
 # Local capture and private research data
 data/raw/
+data/logs/
 data/private/
 data/interviews/
 data/consent/

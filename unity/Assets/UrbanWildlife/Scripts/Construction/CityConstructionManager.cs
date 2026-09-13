@@ -175,6 +175,7 @@ namespace UrbanWildlife.Construction
                     .ToArray(),
                 vehicle_roads = current.vehicle_roads ?? Array.Empty<CityVehicleRoad>(),
                 pedestrian_links = current.pedestrian_links ?? Array.Empty<CityPedestrianLink>(),
+                amenities = current.amenities ?? Array.Empty<CityAmenity>(),
                 waste = new CityWasteSystem
                 {
                     total_demand = currentWaste.total_demand +

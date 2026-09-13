@@ -17,10 +17,10 @@
 | 2 | 五类实体 Token 与建设流程 | Apartment、Detached、Commercial、Community、Green Intervention；Scan City → Preview → Confirm Construction；New、Moved、Missing、Unchanged 差分 | 已完成 |
 | 3 | 道路与步行网络 | 为新建筑生成 Direct、Existing-network、Low-impact 三条候选机动车路线；自动基础步行接入；屏幕编辑额外 Footpath | 已完成 |
 | 4 | 人流与车辆 | 建筑 Origin/Destination、代表性 Trip、Walk/Drive、Destination Capacity、Crowding 与车辆代理 | 已完成 |
-| 5 | 城市环境压力 | 三类 Green Patch、Natural/Anthropogenic Food、Bin、Bench、Waste Capacity、Overflow 与局部 Disturbance | 下一步 |
-| 6 | 四物种与永久后果 | 鸽子、灰松鼠、狐狸、刺猬；Utility、性格、事件记忆、迁入迁出、真实碰撞 Roadkill | 待开始 |
-| 7 | 五阶段与策略反馈 | DP、施工与拆除、Quiet/Active/Peak/Late、五个 Development Phase、五维 City Balance Score | 待开始 |
-| 8 | Trace、事件与最终界面 | Human/Animal/Combined Trace、City Feed、阶段 Before/After、City Report、完整研究日志与城市 UI | 待开始 |
+| 5 | 城市环境压力 | 三类 Green Patch、Natural/Anthropogenic Food、Bin、Bench、Waste Capacity、Overflow 与局部 Disturbance | 已完成 |
+| 6 | 四物种与永久后果 | 鸽子、灰松鼠、狐狸、刺猬；Utility、性格、事件记忆、迁入迁出、真实碰撞 Roadkill | 机制已完成；最终动画待换皮 |
+| 7 | 五阶段与策略反馈 | DP、施工与拆除、Quiet/Active/Peak/Late、五个 Development Phase、五维 City Balance Score | 机制已完成 |
+| 8 | Trace、事件与最终界面 | Human/Animal/Combined Trace、City Feed、阶段 Before/After、City Report、完整研究日志与城市 UI | 数据/日志已完成；最终界面待完善 |
 
 ## P0 边界
 
@@ -74,7 +74,16 @@
 
 - 在批次5前建立独立城市场景，避免已完成规则长期停留在不可见后台；旧公园Vertical Slice继续保留，城市场景不破坏回归底座。
 - 左侧地图与右侧城市信息栏采用77/23固定分屏，UI不再覆盖地图。视觉层参考明亮城市规划桌游：浅蓝水岸、浅绿公共空间、浅灰道路、米白步行道及柔和建筑分类色。场景实时显示6栋建筑、机动车与步行网络、11名代表性居民、Drive车辆及目的地压力，并提供暂停、重启与Footpath显隐检查。
-- 此检查点是规则和画面集成样板，不提前声称完成Scan City正式UI、最终建筑美术、环境压力、动物或五阶段循环。
+- 此检查点已接入环境压力、四物种、五阶段、城市平衡与观察数据；动物仍以机制检查Token显示，Trace、City Feed和报告尚未完成最终视觉呈现。Scan City正式UI与最终建筑/角色美术仍不标记为完成。
+
+## 批次 5–8 机制验收
+
+- 环境层把Natural Food与Anthropogenic Food分开，Bin提供容量并降低附近暴露食物，Bench增加局部人类活动；只有需求持续超过容量才生成Overflow与Litter Hotspot。
+- 城市动物层默认演示8只鸽子、4只灰松鼠、2只狐狸和1只刺猬。Utility读取食物、庇护、人类干扰、交通风险、路程与正负记忆；记忆保留6–10条，负面记忆衰减更慢。
+- Migration、死亡和Roadkill作为永久事件保存。Roadkill只由带ID的Vehicle Agent与地面动物实际距离碰撞触发；鸽子不进入地面碰撞判定，拆除设施不会删除动物记忆。
+- 策略层使用DP和Time Block推进施工/拆除，速度只允许Pause、1x、2x；五阶段为Population Growth、Public Life、Waste Pressure、Mobility Pressure、Redevelopment。
+- City Balance由Development、Accessibility、Waste Management、Habitat Connectivity、Wildlife Safety五项等权20%组成；最后一个Natural Food Patch禁止拆除。
+- 观察层分开采样Human、Animal与Combined Trace，记录City Feed，输出阶段Before/After和JSONL/CSV城市日志；正式UI图形、轨迹印记渲染与最终视觉换皮仍属于表现层工作。
 
 ## 每批通用完成条件
 

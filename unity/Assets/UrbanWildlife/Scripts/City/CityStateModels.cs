@@ -77,6 +77,13 @@ namespace UrbanWildlife.City
         Bin,
     }
 
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum CityAmenityType
+    {
+        Bench,
+        Bin,
+    }
+
     [Serializable]
     public sealed class CityState
     {
@@ -89,6 +96,7 @@ namespace UrbanWildlife.City
         public CityGreenPatch[] green_patches = Array.Empty<CityGreenPatch>();
         public CityVehicleRoad[] vehicle_roads = Array.Empty<CityVehicleRoad>();
         public CityPedestrianLink[] pedestrian_links = Array.Empty<CityPedestrianLink>();
+        public CityAmenity[] amenities = Array.Empty<CityAmenity>();
         public CityWasteSystem waste = new CityWasteSystem();
     }
 
@@ -179,6 +187,19 @@ namespace UrbanWildlife.City
         public bool overflow_active;
         public CityWasteNode[] nodes = Array.Empty<CityWasteNode>();
         public CityLitterHotspot[] litter_hotspots = Array.Empty<CityLitterHotspot>();
+    }
+
+    [Serializable]
+    public sealed class CityAmenity
+    {
+        public string id;
+        public CityAmenityType type;
+        public CityConstructionState construction_state;
+        public float[] position_norm;
+        public float service_radius_units;
+        public float human_activity_weight;
+        public float waste_capacity;
+        public float food_exposure_reduction;
     }
 
     [Serializable]

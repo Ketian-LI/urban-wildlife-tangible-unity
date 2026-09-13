@@ -89,6 +89,7 @@ namespace UrbanWildlife.City
                 green_patches = patches,
                 vehicle_roads = new[] { road },
                 pedestrian_links = new[] { pedestrian },
+                amenities = Array.Empty<CityAmenity>(),
                 waste = new CityWasteSystem
                 {
                     total_demand = totalDemand,

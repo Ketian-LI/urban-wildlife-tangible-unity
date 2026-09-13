@@ -83,6 +83,15 @@ namespace UrbanWildlife.EditorTools
             if (prototype == null || prototype.GeneratedBuildingCount != 6 ||
                 prototype.GeneratedVehicleRoadCount != 8 ||
                 prototype.GeneratedPedestrianLinkCount != 8 ||
+                prototype.GeneratedAmenityCount != 3 ||
+                prototype.FoodSourceCount < 2 ||
+                prototype.WildlifeAgentCount != 15 ||
+                prototype.WildlifeSpeciesCount != 4 ||
+                prototype.DevelopmentPhaseCount != 5 ||
+                prototype.CityBalanceTotal <= 0f ||
+                prototype.HumanTracePointCount <= 0 ||
+                prototype.AnimalTracePointCount <= 0 ||
+                prototype.CityFeedCount <= 0 ||
                 prototype.RepresentativeAgentCount != 11 ||
                 prototype.RepresentedPopulation != 132 ||
                 prototype.VehicleTripCount <= 0 ||
@@ -93,6 +102,11 @@ namespace UrbanWildlife.EditorTools
                     $"City prototype scene failed its visual integration contract: " +
                     $"prototype={prototype != null}, buildings={prototype?.GeneratedBuildingCount}, " +
                     $"roads={prototype?.GeneratedVehicleRoadCount}, links={prototype?.GeneratedPedestrianLinkCount}, " +
+                    $"amenities={prototype?.GeneratedAmenityCount}, food={prototype?.FoodSourceCount}, " +
+                    $"wildlife={prototype?.WildlifeAgentCount}, species={prototype?.WildlifeSpeciesCount}, " +
+                    $"phases={prototype?.DevelopmentPhaseCount}, balance={prototype?.CityBalanceTotal}, " +
+                    $"humanTrace={prototype?.HumanTracePointCount}, animalTrace={prototype?.AnimalTracePointCount}, " +
+                    $"feed={prototype?.CityFeedCount}, " +
                     $"agents={prototype?.RepresentativeAgentCount}, population={prototype?.RepresentedPopulation}, " +
                     $"vehicles={prototype?.VehicleTripCount}, viewport={separateViewport}.");
             }
@@ -101,6 +115,8 @@ namespace UrbanWildlife.EditorTools
                 "Generated City Prototype/Buildings",
                 "Generated City Prototype/Vehicle road network",
                 "Generated City Prototype/Pedestrian link network",
+                "Generated City Prototype/Digital amenities",
+                "Generated City Prototype/City wildlife agents",
                 "Generated City Prototype/Representative mobility agents",
             };
             if (requiredObjects.Any(path => prototype.transform.Find(path) == null))
@@ -109,8 +125,12 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True buildings=6 vehicle_roads=8 " +
-                "pedestrian_links=8 representative_agents=11 represented_population=132 " +
-                "walk_and_drive=True live_vehicle_agents=True no_questionnaire=True");
+                "pedestrian_links=8 amenities=3 food_sources=True waste_pressure=True " +
+                "wildlife_agents=15 species=4 utility_targets=True " +
+                "development_phases=5 city_balance=True dp=True time_blocks=4 " +
+                "human_animal_combined_trace=True city_feed=True phase_report=True " +
+                "representative_agents=11 represented_population=132 walk_and_drive=True " +
+                "live_vehicle_agents=True max_speed=2x no_questionnaire=True");
         }
     }
 }

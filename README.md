@@ -80,15 +80,20 @@ urban-wildlife-tangible-unity/
 - [x] 支持在屏幕Preview中新增、修改和删除额外Footpath；机动车道路不再读取实体彩带
 - [x] 接入由建筑Origin/Destination产生的代表性人类Trip和车辆Trip、容量拥挤分流与往返状态
 - [x] 建立独立 `City_Prototype` 可视化场景，将左侧完整地图与右侧固定信息栏分屏，并接入建筑、双路网、居民和车辆实时检查
+- [x] 接入自然/人类食物、长椅/垃圾桶、容量超载、垃圾热点与局部干扰的城市环境压力闭环
+- [x] 接入鸽子、灰松鼠、狐狸、刺猬四物种 Utility、6–10条事件记忆、迁入迁出及车辆实际碰撞 Roadkill
+- [x] 接入 DP、施工/拆除时长、Quiet/Active/Peak/Late、五个发展阶段与五维 City Balance
+- [x] 建立城市 Human/Animal/Combined Trace、City Feed、阶段 Before/After 报告及隐私安全 JSONL/CSV 日志框架
 - [x] 接入跨周期滚动记忆：活动节点回访、松鼠熟悉度保留、谨慎度变化与可见日志
 - [x] 接入按成功个体比例计算的100分规划表现分，并在Run实时更新、Observe冻结记录
 - [x] 接入实时Human/Animal/Combined Trace、上一轮淡化叠加以及轨迹距离日志
 - [x] 将连续色带升级为人类鞋印、鸽子鸟爪、松鼠小爪和狐狸大爪，并完成公园现场告示牌式UI
 - [ ] 用固定俯拍、实体板和实物Token完成Vertical Slice现场验证
 
-工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)、[`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md)、[`docs/devlog/2026-09-11.md`](docs/devlog/2026-09-11.md) 和 [`docs/devlog/2026-09-12.md`](docs/devlog/2026-09-12.md)。
+工作记录见 [`docs/devlog/2026-09-07.md`](docs/devlog/2026-09-07.md)、[`docs/devlog/2026-09-08.md`](docs/devlog/2026-09-08.md)、[`docs/devlog/2026-09-09.md`](docs/devlog/2026-09-09.md)、[`docs/devlog/2026-09-10.md`](docs/devlog/2026-09-10.md)、[`docs/devlog/2026-09-11.md`](docs/devlog/2026-09-11.md)、[`docs/devlog/2026-09-12.md`](docs/devlog/2026-09-12.md) 和 [`docs/devlog/2026-09-13.md`](docs/devlog/2026-09-13.md)。
 材料到货前的完整软件演示步骤见 [`docs/VERTICAL_SLICE_CHECKLIST.md`](docs/VERTICAL_SLICE_CHECKLIST.md)。
 已确认的城市公园方向见 [`docs/images/concepts/art-direction-drafts-2026-09-10/option-h-urban-neighbourhood-park-v01.png`](docs/images/concepts/art-direction-drafts-2026-09-10/option-h-urban-neighbourhood-park-v01.png)；当前Unity使用不含固定人物、动物和路线的V0.3底图，动态内容仍由运行时生成。
+新版城市最终视觉基准另见 [`docs/visual-concepts/city-visual-direction-v02-soft-isometric.png`](docs/visual-concepts/city-visual-direction-v02-soft-isometric.png)：柔和等距微缩城市、圆润低多边形、薄荷绿/粉蓝/暖白与轻柔阴影。当前阶段先完成机制；概念图中的新增建筑不会在 Scan → Preview → Confirm → 选路 → 施工完成前出现在正式地图。
 
 ## 第一天交付
 

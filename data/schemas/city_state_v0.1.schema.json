@@ -13,6 +13,7 @@
     "green_patches",
     "vehicle_roads",
     "pedestrian_links",
+    "amenities",
     "waste"
   ],
   "properties": {
@@ -36,6 +37,10 @@
     "pedestrian_links": {
       "type": "array",
       "items": { "$ref": "#/$defs/pedestrianLink" }
+    },
+    "amenities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/amenity" }
     },
     "waste": { "$ref": "#/$defs/wasteSystem" }
   },
@@ -209,6 +214,29 @@
         "step_free_accessible": { "type": "boolean" },
         "connected_building_ids": { "type": "array", "items": { "type": "string" } },
         "connected_link_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "amenity": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "construction_state",
+        "position_norm",
+        "service_radius_units",
+        "human_activity_weight",
+        "waste_capacity",
+        "food_exposure_reduction"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["Bench", "Bin"] },
+        "construction_state": { "$ref": "#/$defs/constructionState" },
+        "position_norm": { "$ref": "#/$defs/point" },
+        "service_radius_units": { "type": "number", "exclusiveMinimum": 0 },
+        "human_activity_weight": { "$ref": "#/$defs/unitValue" },
+        "waste_capacity": { "$ref": "#/$defs/nonNegative" },
+        "food_exposure_reduction": { "$ref": "#/$defs/unitValue" }
       }
     },
     "wasteSystem": {

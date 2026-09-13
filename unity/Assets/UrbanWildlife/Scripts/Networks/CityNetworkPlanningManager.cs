@@ -351,6 +351,7 @@ namespace UrbanWildlife.Networks
                     .Concat(selectedRoads)
                     .ToArray(),
                 pedestrian_links = preservedLinks.Concat(basicLinks).Concat(extras).ToArray(),
+                amenities = current.amenities ?? Array.Empty<CityAmenity>(),
                 waste = current.waste,
             };
         }

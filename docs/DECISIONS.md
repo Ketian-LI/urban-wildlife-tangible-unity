@@ -95,6 +95,11 @@
 | D087 | 目的地选择读取Weight、距离、Comfortable Capacity与Crowd Penalty；Walk与Drive分别使用PedestrianLink和VehicleRoad，且只有Drive Trip生成可追溯的Vehicle Agent，不制作随机背景交通 | 已实现规则与往返模拟，待城市UI批次接入表现层 |
 | D088 | 在环境压力批次前先建立独立`City_Prototype`集成场景；左侧29%为固定规划告示栏、右侧71%为完整地图视口，旧P0场景保留回归。样板需实时呈现Building、双路网、代表性居民、车辆和Crowding，但不冒充最终城市美术 | 已实现并通过场景集成烟雾测试 |
 | D089 | `City_Prototype`视觉改为左侧77%完整地图、右侧23%固定信息栏，并采用明亮城市规划桌游语言；继续保持正俯视以匹配实体板坐标，不加入直接放置动物的工具 | 已实现，替代D088的分屏方向与视觉基调 |
+| D090 | 最终城市视觉基准锁定为柔和等距微缩城市：圆润低多边形、薄荷绿/粉蓝/暖白、干净白色卡片与轻柔阴影；现阶段先完成机制，概念图建筑只作风格参考，新规划建筑必须经过Scan、Preview、Confirm、选路和施工后才显示 | 已确定；最终资产待制作 |
+| D091 | 环境压力通过独立中介层计算Natural/Anthropogenic Food、Bench活动、Bin容量与暴露食物降低；垃圾需求持续超载才产生Overflow与Litter Hotspot，不使用随机热点 | 已实现，参数待预测试 |
+| D092 | 城市动物统一以Utility选择Green Patch，保留8条事件记忆且负面衰减更慢；迁入迁出、死亡和实际车辆碰撞Roadkill持久保存，鸽子排除地面碰撞，设施拆除不清空记忆 | 已实现机制，动画与参数待预测试 |
+| D093 | 策略时间只提供Pause/1x/2x；施工与拆除消耗DP并跨Time Block完成，五阶段固定为Population Growth、Public Life、Waste Pressure、Mobility Pressure、Redevelopment；City Balance五维各占20% | 已实现机制，UI待完善 |
+| D094 | 城市观察层分开保存Human、Animal与Combined Trace，City Feed事件去重，阶段报告比较Before/After；城市JSONL/CSV不含参与者身份字段 | 数据与日志已实现，最终轨迹/UI待完善 |
 
 ## 待确定顺序
 

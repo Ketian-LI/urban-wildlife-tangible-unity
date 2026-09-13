@@ -46,6 +46,14 @@
 
 `City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的6建筑演示状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧77%的地图视口，右侧23%由固定城市信息栏占用，两者不遮挡。场景采用明亮、低饱和、可分类的城市规划桌游语言，但继续保持正俯视，以便屏幕坐标与实体板坐标一致；当前仍是程序化集成原型，不代表最终插画资产。
 
+`CityEnvironmentSimulation` 是Building与动物之间的环境中介层：它同步建筑垃圾输出和Bin容量，按持续超载时间生成Litter Hotspot，并分别公开Natural/Anthropogenic Food。局部Green Patch压力聚合建筑、Bench、道路交通与垃圾影响，避免动物直接读取视觉对象。
+
+`CityWildlifeSimulation`为鸽子、灰松鼠、狐狸和刺猬提供独立权重Profile。每次决策从食物、庇护、正负记忆、人类干扰、交通、旅行成本计算Patch Utility；代理只在现有Green Patch间决策，基础移动会避开现有建筑占地和地图边缘。地面物种Roadkill必须匹配具体Vehicle Agent碰撞，迁入、迁出与死亡进入不可逆Outcome列表；设施拆除不持有或清除动物记忆。
+
+`CityStrategySimulation`管理DP、施工/拆除项目、四个日内Time Block和五个Development Phase。项目开始后转为UnderConstruction/Demolishing，经过规定Time Block才完成；City Balance五维等权计算，最后一个Natural Food Patch受到硬约束保护。暂停与运行速度只允许0、1、2倍。
+
+`CityObservationTracker`从Mobility与Wildlife公开快照采样Human/Animal/Combined Trace，去重生成Overflow、Crowding、Feeding、Migration、Roadkill、Project Completed和Balance Warning事件。阶段报告冻结Before/After五维分数；`CityResearchLogWriter`输出不含参与者身份字段的JSONL与CSV。最终UI只消费这些快照，不反向修改模拟状态。
+
 ## 已确定的实体输入基线
 
 - 60 × 90 cm 黑色磁吸板，横向平放。

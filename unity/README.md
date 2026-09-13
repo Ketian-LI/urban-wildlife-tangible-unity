@@ -2,7 +2,7 @@
 
 这是可直接由 Unity Hub 打开的Unity 6工程，项目路径为仓库中的 `unity/`，编辑器版本固定为 `6000.3.4f1`。
 
-当前保留两个场景：`Assets/Scenes/P0_InputSpike.unity` 是旧公园回归底座；`Assets/Scenes/City_Prototype.unity` 是新版城市整合场景，优先用于检查建筑、双路网、代表性居民与车辆。
+当前保留两个场景：`Assets/Scenes/P0_InputSpike.unity` 是旧公园回归底座；`Assets/Scenes/City_Prototype.unity` 是新版城市整合场景，优先用于检查建筑、双路网、代表性居民/车辆、环境压力、四物种、五阶段与城市观察数据。
 
 不要提交 `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 或本机构建输出。
 
@@ -17,7 +17,7 @@
 
 ## 打开和验证
 
-如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为固定城市信息栏，不发生遮挡；面板可暂停、重启Trip或隐藏Footpath。场景会循环演示6栋建筑、8条机动车路段、8条步行连接和11名代表性居民（代表132人），Drive Trip才生成车辆。当前视觉采用明亮城市规划桌游方向：浅蓝水岸、浅绿公共空间、浅灰道路、米白步行道和柔和建筑分类色。
+如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为固定城市信息栏，不发生遮挡；面板可暂停、重启Trip或隐藏Footpath。场景会循环演示6栋既有基线建筑、8条机动车路段、8条步行连接、11名代表性居民（代表132人）和15只四物种动物；Drive Trip才生成车辆。信息栏实时显示两类食物、Waste、Overflow、干扰、DP、阶段、City Balance和轨迹计数。概念图中的新建筑不是开局内容，正式规划对象仍须完成Scan → Preview → Confirm → 选路 → 施工后才显示。
 
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
@@ -54,7 +54,11 @@
 - `Mobility/CityTripPlanner.cs`：从已建住宅生成最多24个代表性居民，按权重、距离与拥挤惩罚选择目的地，并在独立网络间选择Walk或Drive。
 - `Mobility/CityNetworkRouteBuilder.cs`：沿Building Access与主网络拼接归一化路线，步行和机动车路线互不混用。
 - `Mobility/CityTripAgent.cs` 与 `CityMobilitySimulation.cs`：分批生成Trip，运行Outbound、Dwelling、Returning、Complete状态；只有Drive Trip产生Vehicle Agent。
-- `Prototype/CityPrototypeStateFactory.cs` 与 `CityPrototypeDemo.cs`：提供可重复的城市整合夹具和实时表现层；分屏显示6栋建筑、两级机动车道路、独立步行网络、人流、车辆与目的地压力。
+- `Environmental/`：同步Building与Bin垃圾节点，生成两类食物、持续Overflow、Litter Hotspot和Green Patch局部压力。
+- `Ecology/`：提供四物种Profile、Utility选点、6–10条事件记忆、基础占地避让、迁入迁出及实际Vehicle碰撞Roadkill。
+- `Strategy/`：管理DP、施工/拆除项目、四个Time Block、五个Development Phase和五维等权City Balance。
+- `Reporting/`：采样Human/Animal/Combined Trace，生成City Feed与阶段Before/After报告，并输出城市JSONL/CSV日志。
+- `Prototype/CityPrototypeStateFactory.cs` 与 `CityPrototypeDemo.cs`：提供可重复的城市整合夹具和实时表现层；分屏显示既有基线建筑、双路网、人流、车辆、环境压力、四物种和阶段反馈。
 - `CityPrototypeSceneTools.cs`：用菜单创建、打开并自动验证 `City_Prototype` 场景，不替换旧P0回归场景。
 - `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
@@ -85,5 +89,5 @@
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。
-- 城市Token、路网和出行批次已完成数据、差分、占地、三候选选路、独立步行接入、代表性人流/车辆、拥挤分流与往返模拟；正式城市可视化、环境压力、施工计时与DP仍未接入当前Play Mode，属于后续批次。
+- 城市Token、路网、出行、环境压力、四物种、施工计时、DP、五阶段、City Balance、Trace/Feed/Report数据与城市日志均已接入机制框架和自动验证；当前Play Mode中的建筑、设施和动物仍是程序化检查物，Scan City正式控制面板、轨迹印记渲染、City Feed/Report最终界面及统一等距美术仍待完成。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

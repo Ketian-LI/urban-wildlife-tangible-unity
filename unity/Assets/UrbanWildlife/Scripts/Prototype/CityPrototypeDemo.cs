@@ -1,8 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UrbanWildlife.City;
+using UrbanWildlife.Ecology;
+using UrbanWildlife.Environmental;
 using UrbanWildlife.Mobility;
+using UrbanWildlife.Strategy;
+using UrbanWildlife.Reporting;
 
 namespace UrbanWildlife.Prototype
 {
@@ -11,7 +16,7 @@ namespace UrbanWildlife.Prototype
     {
         private const float MapWidth = 12f;
         private const float MapHeight = 8f;
-        private const float RuntimeSpeed = 4f;
+        private const float RuntimeSpeed = 2f;
 
         private sealed class ActorView
         {
@@ -24,12 +29,19 @@ namespace UrbanWildlife.Prototype
         private CityState city;
         private CityMobilityPlan plan;
         private CityMobilitySimulation mobility;
+        private CityEnvironmentSimulation environment;
+        private CityWildlifeSimulation wildlife;
+        private CityStrategySimulation strategy;
+        private CityObservationTracker observation;
         private ActorView[] actorViews = Array.Empty<ActorView>();
+        private readonly Dictionary<string, GameObject> wildlifeViews =
+            new Dictionary<string, GameObject>();
         private GameObject generatedRoot;
         private GameObject pedestrianRoot;
         private bool paused;
         private bool showPedestrianNetwork = true;
         private float completeElapsed;
+        private float simulationElapsed;
         private GUIStyle panelStyle;
         private GUIStyle titleStyle;
         private GUIStyle headingStyle;
@@ -40,9 +52,25 @@ namespace UrbanWildlife.Prototype
         public int GeneratedBuildingCount { get; private set; }
         public int GeneratedVehicleRoadCount { get; private set; }
         public int GeneratedPedestrianLinkCount { get; private set; }
+        public int GeneratedAmenityCount { get; private set; }
         public int RepresentativeAgentCount => plan?.RepresentativeAgentCount ?? 0;
         public int RepresentedPopulation => plan?.RepresentedPopulation ?? 0;
         public int VehicleTripCount => plan?.DriveTripCount ?? 0;
+        public int FoodSourceCount => environment?.Snapshot?.food_sources?.Length ?? 0;
+        public bool OverflowActive => environment?.Snapshot?.overflow_active ?? false;
+        public int WildlifeAgentCount => wildlife?.Snapshot?.agents?.Length ?? 0;
+        public int ActiveWildlifeCount => wildlife?.Snapshot?.active_count ?? 0;
+        public int WildlifeSpeciesCount => wildlife?.Snapshot?.agents?
+            .Select(agent => agent.species).Distinct().Count() ?? 0;
+        public int DevelopmentPhaseCount => strategy == null
+            ? 0
+            : Enum.GetValues(typeof(CityDevelopmentPhase)).Length;
+        public float CityBalanceTotal => strategy?.Snapshot?.balance?.total ?? 0f;
+        public int HumanTracePointCount => observation?
+            .Trace(CityTraceDisplayMode.HumanTrace).Length ?? 0;
+        public int AnimalTracePointCount => observation?
+            .Trace(CityTraceDisplayMode.AnimalTrace).Length ?? 0;
+        public int CityFeedCount => observation?.Snapshot?.city_feed?.Length ?? 0;
 
         private void OnEnable()
         {
@@ -68,7 +96,21 @@ namespace UrbanWildlife.Prototype
                 return;
             }
             mobility.Tick(Time.deltaTime * RuntimeSpeed);
+            simulationElapsed += Time.deltaTime * RuntimeSpeed;
+            environment?.Tick(Time.deltaTime * RuntimeSpeed, ActivityMultiplier());
+            wildlife?.Tick(
+                Time.deltaTime * RuntimeSpeed,
+                environment.Snapshot,
+                mobility.ActiveVehicleAgents);
+            strategy?.Tick(Time.deltaTime * RuntimeSpeed, environment.Snapshot, wildlife.Snapshot);
+            observation?.Capture(
+                Time.deltaTime * RuntimeSpeed,
+                mobility,
+                environment.Snapshot,
+                wildlife.Snapshot,
+                strategy.Snapshot);
             UpdateActors();
+            UpdateWildlife();
             if (mobility.AllComplete)
             {
                 completeElapsed += Time.deltaTime;
@@ -85,7 +127,16 @@ namespace UrbanWildlife.Prototype
             city = CityPrototypeStateFactory.Create();
             plan = CityTripPlanner.CreatePlan(city);
             mobility = new CityMobilitySimulation(plan, city.bounds);
+            environment = new CityEnvironmentSimulation(city, new CityEnvironmentConfiguration
+            {
+                overflow_grace_seconds = 4f,
+            });
+            wildlife = new CityWildlifeSimulation(city);
+            strategy = new CityStrategySimulation(city);
+            observation = new CityObservationTracker();
+            observation.BeginPhase(strategy.Snapshot);
             completeElapsed = 0f;
+            simulationElapsed = 0f;
             paused = false;
 
             generatedRoot = new GameObject("Generated City Prototype");
@@ -98,12 +149,31 @@ namespace UrbanWildlife.Prototype
             BuildGreenPatches();
             BuildNetworks();
             BuildBuildings();
+            BuildAmenities();
+            BuildWildlife();
             BuildActors();
             if (advancePreview)
             {
                 mobility.Tick(8f);
+                environment.Tick(8f, 1f);
+                wildlife.Tick(8f, environment.Snapshot, Array.Empty<CityVehicleAgent>());
+                strategy.UpdateFeedback(environment.Snapshot, wildlife.Snapshot);
+                observation.Capture(
+                    8f,
+                    mobility,
+                    environment.Snapshot,
+                    wildlife.Snapshot,
+                    strategy.Snapshot);
                 UpdateActors();
+                UpdateWildlife();
             }
+        }
+
+        private float ActivityMultiplier()
+        {
+            // A compact Quiet -> Active -> Peak -> Late loop for the integration scene.
+            float phase = simulationElapsed / 18f * Mathf.PI * 2f;
+            return 0.75f + 0.65f * (0.5f + 0.5f * Mathf.Sin(phase - Mathf.PI * 0.5f));
         }
 
         private void ConfigureCamera()
@@ -275,6 +345,51 @@ namespace UrbanWildlife.Prototype
             GeneratedBuildingCount = city.buildings.Length;
         }
 
+        private void BuildAmenities()
+        {
+            GameObject root = ChildRoot("Digital amenities");
+            CityAmenity[] activeAmenities = (city.amenities ?? Array.Empty<CityAmenity>())
+                .Where(item => item != null &&
+                               item.construction_state == CityConstructionState.Existing)
+                .ToArray();
+            foreach (CityAmenity amenity in activeAmenities)
+            {
+                Vector3 position = ToWorld(amenity.position_norm, 0.12f);
+                if (amenity.type == CityAmenityType.Bench)
+                {
+                    GameObject seat = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    seat.name = amenity.id;
+                    seat.transform.SetParent(root.transform, false);
+                    seat.transform.localPosition = position;
+                    seat.transform.localScale = new Vector3(0.48f, 0.09f, 0.18f);
+                    RemoveCollider(seat);
+                    SetMaterial(seat, new Color(0.66f, 0.43f, 0.24f, 1f));
+
+                    for (int side = -1; side <= 1; side += 2)
+                    {
+                        GameObject leg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        leg.name = side < 0 ? "West leg" : "East leg";
+                        leg.transform.SetParent(seat.transform, false);
+                        leg.transform.localPosition = new Vector3(side * 0.30f, -0.60f, 0f);
+                        leg.transform.localScale = new Vector3(0.10f, 1.1f, 0.55f);
+                        RemoveCollider(leg);
+                        SetMaterial(leg, new Color(0.21f, 0.34f, 0.35f, 1f));
+                    }
+                }
+                else
+                {
+                    GameObject bin = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    bin.name = amenity.id;
+                    bin.transform.SetParent(root.transform, false);
+                    bin.transform.localPosition = position;
+                    bin.transform.localScale = new Vector3(0.13f, 0.16f, 0.13f);
+                    RemoveCollider(bin);
+                    SetMaterial(bin, new Color(0.18f, 0.49f, 0.43f, 1f));
+                }
+            }
+            GeneratedAmenityCount = activeAmenities.Length;
+        }
+
         private void BuildActors()
         {
             GameObject root = ChildRoot("Representative mobility agents");
@@ -293,6 +408,79 @@ namespace UrbanWildlife.Prototype
                 human.SetActive(false);
                 vehicle.SetActive(false);
                 actorViews[index] = new ActorView { human = human, vehicle = vehicle };
+            }
+        }
+
+        private void BuildWildlife()
+        {
+            wildlifeViews.Clear();
+            GameObject root = ChildRoot("City wildlife agents");
+            foreach (CityWildlifeAgent agent in wildlife.Snapshot.agents)
+            {
+                GameObject token = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                token.name = agent.id;
+                token.transform.SetParent(root.transform, false);
+                token.transform.localScale = new Vector3(0.16f, 0.035f, 0.16f);
+                RemoveCollider(token);
+                SetMaterial(token, WildlifeColour(agent.species));
+                CreateLabel(
+                    token.transform,
+                    WildlifeLabel(agent.species),
+                    new Vector3(0f, 0.7f, 0f),
+                    0.11f);
+                wildlifeViews.Add(agent.id, token);
+            }
+            UpdateWildlife();
+        }
+
+        private void UpdateWildlife()
+        {
+            if (wildlife?.Snapshot?.agents == null)
+            {
+                return;
+            }
+            foreach (CityWildlifeAgent agent in wildlife.Snapshot.agents)
+            {
+                if (!wildlifeViews.TryGetValue(agent.id, out GameObject view))
+                {
+                    continue;
+                }
+                bool active = agent.life_state == CityWildlifeLifeState.Active;
+                view.SetActive(active);
+                if (active)
+                {
+                    view.transform.localPosition = ToWorld(agent.position_norm, 0.15f);
+                }
+            }
+        }
+
+        private static Color WildlifeColour(CityWildlifeSpecies species)
+        {
+            switch (species)
+            {
+                case CityWildlifeSpecies.Pigeon:
+                    return new Color(0.38f, 0.52f, 0.63f, 1f);
+                case CityWildlifeSpecies.GreySquirrel:
+                    return new Color(0.78f, 0.47f, 0.22f, 1f);
+                case CityWildlifeSpecies.Fox:
+                    return new Color(0.85f, 0.34f, 0.16f, 1f);
+                default:
+                    return new Color(0.38f, 0.31f, 0.27f, 1f);
+            }
+        }
+
+        private static string WildlifeLabel(CityWildlifeSpecies species)
+        {
+            switch (species)
+            {
+                case CityWildlifeSpecies.Pigeon:
+                    return "P";
+                case CityWildlifeSpecies.GreySquirrel:
+                    return "S";
+                case CityWildlifeSpecies.Fox:
+                    return "F";
+                default:
+                    return "H";
             }
         }
 
@@ -392,15 +580,53 @@ namespace UrbanWildlife.Prototype
             GUILayout.Label("RIVERSIDE WILDLIFE DISTRICT", headingStyle);
             GUILayout.Label("LIVE CITY", titleStyle);
             GUILayout.Label("A shared city for people and wildlife", bodyStyle);
+            if (strategy?.Snapshot != null)
+            {
+                GUILayout.Label(
+                    $"{strategy.Snapshot.phase}  ·  {strategy.Snapshot.time_block}",
+                    headingStyle);
+                GUILayout.Label(
+                    $"DP {strategy.Snapshot.development_points}  ·  Balance {strategy.Snapshot.balance.total:0}",
+                    metricStyle);
+            }
             GUILayout.Space(18f);
 
-            GUILayout.Label(paused ? "PAUSED" : "LIVE MOBILITY  ·  ×4", headingStyle);
+            GUILayout.Label(paused ? "PAUSED" : "LIVE CITY  ·  ×2", headingStyle);
             GUILayout.Space(8f);
             GUILayout.Label($"Active residents  {mobility.ActiveHumanAgentCount}/{plan.RepresentativeAgentCount}", metricStyle);
             GUILayout.Label($"Represented people  {plan.RepresentedPopulation}", metricStyle);
             GUILayout.Label($"Walk / Drive  {plan.WalkTripCount} / {plan.DriveTripCount}", metricStyle);
             GUILayout.Label($"Active vehicles  {mobility.ActiveVehicleAgents.Length}", metricStyle);
             GUILayout.Label($"Completed returns  {mobility.CompletedTripCount}", metricStyle);
+            if (environment?.Snapshot != null)
+            {
+                CityEnvironmentSnapshot snapshot = environment.Snapshot;
+                GUILayout.Space(12f);
+                GUILayout.Label("CITY ENVIRONMENT", headingStyle);
+                GUILayout.Label($"Natural food  {snapshot.natural_food_total:0.00}", metricStyle);
+                GUILayout.Label($"Human food  {snapshot.anthropogenic_food_total:0.00}", metricStyle);
+                GUILayout.Label(
+                    $"Waste  {snapshot.waste_demand:0.0} / {snapshot.waste_capacity:0.0}",
+                    metricStyle);
+                GUILayout.Label(
+                    snapshot.overflow_active ? "● OVERFLOW · litter hotspot" : "● Waste contained",
+                    bodyStyle);
+                GUILayout.Label($"Mean disturbance  {snapshot.average_disturbance:0.00}", bodyStyle);
+            }
+            if (wildlife?.Snapshot != null)
+            {
+                GUILayout.Space(12f);
+                GUILayout.Label("URBAN WILDLIFE", headingStyle);
+                GUILayout.Label(
+                    $"Active  {wildlife.Snapshot.active_count}  ·  Feeding  {wildlife.Snapshot.feeding_events}",
+                    metricStyle);
+                GUILayout.Label(
+                    $"Migrated  {wildlife.Snapshot.migrated_count}  ·  Roadkill  {wildlife.Snapshot.roadkill_events}",
+                    bodyStyle);
+                GUILayout.Label(
+                    $"Traces  H {HumanTracePointCount}  ·  A {AnimalTracePointCount}",
+                    bodyStyle);
+            }
             GUILayout.Space(16f);
 
             GUILayout.Label("MAP KEY", headingStyle);

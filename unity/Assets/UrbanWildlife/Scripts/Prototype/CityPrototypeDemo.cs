@@ -21,6 +21,8 @@ namespace UrbanWildlife.Prototype
         private const float MapWidth = 12f;
         private const float MapHeight = 8f;
         private const float RuntimeSpeed = 2f;
+        private const string CityTreeResourcePath =
+            "UrbanWildlife/Environment/tree-citybuilder-default-v01";
 
         [SerializeField]
         [Tooltip("Path relative to Unity Assets, or an absolute path.")]
@@ -1287,23 +1289,27 @@ namespace UrbanWildlife.Prototype
         {
             GameObject tree = new GameObject(name);
             tree.transform.SetParent(parent, false);
-            tree.transform.localPosition = ToWorld(normalized, 0.08f);
+            tree.transform.localPosition = ToWorld(normalized, 0.095f);
 
-            GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            trunk.name = "Trunk";
-            trunk.transform.SetParent(tree.transform, false);
-            trunk.transform.localPosition = new Vector3(0f, 0.14f * scale, 0f);
-            trunk.transform.localScale = new Vector3(0.06f * scale, 0.14f * scale, 0.06f * scale);
-            RemoveCollider(trunk);
-            SetMaterial(trunk, new Color(0.55f, 0.38f, 0.22f, 1f));
+            Sprite sprite = Resources.Load<Sprite>(CityTreeResourcePath);
+            if (sprite == null)
+            {
+                Debug.LogWarning($"City tree sprite was not found at Resources/{CityTreeResourcePath}.");
+                return;
+            }
 
-            GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            canopy.name = "Canopy";
-            canopy.transform.SetParent(tree.transform, false);
-            canopy.transform.localPosition = new Vector3(0f, 0.36f * scale, 0f);
-            canopy.transform.localScale = new Vector3(0.34f, 0.24f, 0.30f) * scale;
-            RemoveCollider(canopy);
-            SetMaterial(canopy, new Color(0.25f, 0.57f, 0.39f, 1f));
+            GameObject artwork = new GameObject("Tree artwork");
+            artwork.transform.SetParent(tree.transform, false);
+            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            artwork.transform.localPosition = Vector3.zero;
+            float targetHeight = 1.02f * scale;
+            float artworkScale = targetHeight / Mathf.Max(0.001f, sprite.bounds.size.y);
+            float mirror = name.GetHashCode() % 2 == 0 ? 1f : -1f;
+            artwork.transform.localScale = new Vector3(artworkScale * mirror, artworkScale, artworkScale);
+
+            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = 14;
         }
 
         private GameObject ChildRoot(string name)

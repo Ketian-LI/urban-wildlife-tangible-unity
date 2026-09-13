@@ -1,5 +1,21 @@
 # S001 Illustrated Environment
 
+## Soft city-builder tree V0.1
+
+`tree-citybuilder-default-v01.png` is the first approved modular tree asset for the
+GDD V3 city map. It follows the selected soft isometric planning-game direction:
+rounded three-lobed foliage, a compact readable silhouette, gentle yellow-green to
+teal shading, and a simple warm-brown trunk. `CityPrototypeDemo` renders the same
+sprite at several scales and mirrors selected instances to reduce repetition.
+
+The image is presentation-only. Tree placement and movement obstacles continue to
+come from simulation data rather than the sprite pixels. The approved style board is
+archived at `docs/visual-concepts/tree-style-board-approved-v01.png`.
+
+Generation prompt summary: extract one clean Default tree from the approved style
+board as a transparent Unity sprite; exclude UI, labels, variants, people, animals,
+buildings, and backgrounds.
+
 ## V0.3 urban-neighbourhood park
 
 Generated on 2026-09-10 with the built-in image generation tool and integrated as `park-board-s001-v03.png`. This version establishes an unmistakable London neighbourhood setting through red-brick housing, perimeter pavement and kerbs, black municipal railings and lamps, maintained planting, a civic stone plaza and a managed wildlife pond. It intentionally excludes people, animals, benches and the planned route because Unity supplies those as live layers.

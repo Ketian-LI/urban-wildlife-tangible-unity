@@ -17,7 +17,7 @@
 
 ## 打开和验证
 
-如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为可滚动的固定城市信息栏，不发生遮挡。视觉端生成 `data/raw/city-token-scans/latest_city_scan.json` 后，点击 **LOAD LATEST CAMERA SCAN** 即可把稳定相机帧送入Preview；文件不存在、时间戳过旧或内容无效时保持当前城市不变。点击 **SCAN CITY · ELECTRONIC TEST** 仍可依次检查Preview、三种道路候选、DP提交、Pause/1x/2x与跨Time Block施工；电子夹具只是实体板到货前的替代输入。Preview与施工中只显示青色占地/线路提示，第二个施工时段完成后才生成正式城市对象。地图会滚动保留最多900个人类鞋印、车辆双轮迹、鸟爪、松鼠小爪、狐狸大爪和刺猬短点印；右侧可切换People/Wildlife/All，并查看最新City Feed与阶段Balance变化。场景基线仍有6栋既有建筑、8条机动车路段、8条步行连接、11名代表性居民（代表132人）和15只四物种动物；Drive Trip才生成车辆。
+如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为可滚动的固定城市信息栏，不发生遮挡。地图使用6 × 4、共24个逻辑规划单元；90 × 60 cm实体板上每格对应15 × 15 cm，Unity以5 cm半径把连续Token坐标吸附到最近单元中心，同格内的位置抖动不会算作Moved。视觉端生成 `data/raw/city-token-scans/latest_city_scan.json` 后，点击 **LOAD LATEST CAMERA SCAN** 即可把稳定相机帧送入Preview；文件不存在、时间戳过旧或内容无效时保持当前城市不变。点击 **SCAN CITY · ELECTRONIC TEST** 仍可依次检查Preview、三种道路候选、DP提交、Pause/1x/2x与跨Time Block施工；电子夹具只是实体板到货前的替代输入。Preview与施工中只显示青色占地/线路提示，第二个施工时段完成后才生成正式城市对象。地图会滚动保留最多900个人类鞋印、车辆双轮迹、鸟爪、松鼠小爪、狐狸大爪和刺猬短点印；右侧可切换People/Wildlife/All，并查看最新City Feed与阶段Balance变化。场景基线包含6栋既有建筑、7格初始林地（5格核心＋2格碎片）、1格水体、1格广场、1格公共绿地与8格开放地，Open Land与Woodland共15个规划候选；11枚建筑Token与3枚Green Intervention作为备选库存，玩家建筑同时上限为9个。Drive Trip才生成车辆。
 
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
@@ -45,6 +45,7 @@
 ## 已实现组件
 
 - `CityStateModels.cs`：统一保存四类核心 Building、三类 GreenPatch、独立 VehicleRoad/PedestrianLink 网络与 WasteSystem。
+- `CityGridModels.cs` 与 `CityGridResolver.cs`：保存6 × 4规划单元、土地覆盖和跨周期林地历史，把连续Token坐标吸附到最近单元，并以四邻接提供后续通行和栖息地连接基础。
 - `CityStateValidator.cs`：验证城市状态版本、ID、坐标、数值、引用关系和 Natural Food 保留原则。
 - `LegacyParkCityAdapter.cs`：在不改变现有 P0 行为的情况下，把旧 S001 布局旁路映射为 CityState；正式城市输入接入后移除该过渡职责。
 - `CityTokenScanModels.cs`、`CityTokenInventory.cs` 与 `CityTokenScanReader.cs`：定义五类14件实体库存，读取并验证稳定的城市扫描、校准信息、Token位置、角度、置信度及ID/类型对应关系。
@@ -90,7 +91,7 @@
 
 - Unity已完成可测试的逐帧动画节奏样板、角色标志性动作和实时Trace。三类步行人物以4 FPS播放交替行走姿态，Wheelchair User以4 FPS播放4帧推进循环；三种动物各有6帧独立行走与进食，Dweller有4帧坐下并可反向起身，Visitor有6帧喂食。待机与转身仍使用共用离散关键帧；无障碍坡度、道路宽度碰撞、拥堵寻路和压力区域自动分类尚未实现。
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
-- 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
+- 新城市底座已采用24格规划状态，但旧S001的Animal Reachable仍只适用于单一内部池塘：人类路径增加成本但不封路；正式城市动物移动需要继续接入四邻接网格寻路与每格容量。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。
 - 城市Token、路网、出行、环境压力、四物种、施工计时、DP、五阶段、City Balance、Trace/Feed/Report数据与城市日志均已接入机制框架和自动验证；正式城市扫描现在已具备Python稳定帧生成、原子收件箱、Unity二次验证和手动Preview入口。实体相机参数仍需材料到货后实拍锁定。城市轨迹、City Feed和阶段快照已有可操作原型，但当前建筑、设施、动物和界面仍是程序化检查物，统一等距美术与最终排版仍待完成。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

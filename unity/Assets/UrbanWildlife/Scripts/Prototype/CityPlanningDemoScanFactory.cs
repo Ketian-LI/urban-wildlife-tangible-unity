@@ -31,24 +31,31 @@ namespace UrbanWildlife.Prototype
         public static CityTokenScanPacket CreateElectronicSample(CityState city, long timestampMs)
         {
             List<CityTokenState> tokens = ConfirmedTokensFrom(city).ToList();
-            AddIfAvailable(tokens, new CityTokenState
-            {
-                id = 102,
-                type = CityPhysicalTokenType.Apartment,
-                x_norm = 0.50f,
-                y_norm = 0.20f,
-                rotation_deg = 0f,
-                confidence = 0.99f,
-            });
-            AddIfAvailable(tokens, new CityTokenState
-            {
-                id = 140,
-                type = CityPhysicalTokenType.GreenIntervention,
-                x_norm = 0.58f,
-                y_norm = 0.64f,
-                rotation_deg = 0f,
-                confidence = 0.99f,
-            });
+            CityPlanningGrid grid = city?.planning_grid;
+            CityGridCell[] availableCells = grid == null
+                ? null
+                : (grid.cells ?? Array.Empty<CityGridCell>())
+                    .Where(IsAvailablePlanningCell)
+                    .OrderBy(cell => cell.row)
+                    .ThenBy(cell => cell.col)
+                    .ToArray();
+            int nextCellIndex = 0;
+            AddElectronicSampleIfAvailable(
+                tokens,
+                102,
+                CityPhysicalTokenType.Apartment,
+                availableCells,
+                ref nextCellIndex,
+                0.25f,
+                0.125f);
+            AddElectronicSampleIfAvailable(
+                tokens,
+                140,
+                CityPhysicalTokenType.GreenIntervention,
+                availableCells,
+                ref nextCellIndex,
+                0.25f,
+                0.375f);
             DateTimeOffset time = DateTimeOffset.FromUnixTimeMilliseconds(timestampMs);
             return new CityTokenScanPacket
             {
@@ -84,12 +91,54 @@ namespace UrbanWildlife.Prototype
             };
         }
 
-        private static void AddIfAvailable(List<CityTokenState> tokens, CityTokenState candidate)
+        private static void AddElectronicSampleIfAvailable(
+            List<CityTokenState> tokens,
+            int id,
+            CityPhysicalTokenType type,
+            CityGridCell[] availableCells,
+            ref int nextCellIndex,
+            float fallbackX,
+            float fallbackY)
         {
-            if (tokens.All(token => token.id != candidate.id))
+            if (tokens.Any(token => token.id == id))
             {
-                tokens.Add(candidate);
+                return;
             }
+
+            float x = fallbackX;
+            float y = fallbackY;
+            if (availableCells != null)
+            {
+                if (nextCellIndex >= availableCells.Length)
+                {
+                    return;
+                }
+                CityGridCell cell = availableCells[nextCellIndex];
+                nextCellIndex += 1;
+                x = cell.center_norm[0];
+                y = cell.center_norm[1];
+            }
+
+            tokens.Add(new CityTokenState
+            {
+                id = id,
+                type = type,
+                x_norm = x,
+                y_norm = y,
+                rotation_deg = 0f,
+                confidence = 0.99f,
+            });
+        }
+
+        private static bool IsAvailablePlanningCell(CityGridCell cell)
+        {
+            return cell != null &&
+                   cell.buildable &&
+                   !cell.fixed_feature &&
+                   string.IsNullOrWhiteSpace(cell.occupant_id) &&
+                   string.IsNullOrWhiteSpace(cell.habitat_patch_id) &&
+                   cell.center_norm != null &&
+                   cell.center_norm.Length >= 2;
         }
 
         private static CityPhysicalTokenType TokenType(CityBuildingType type)

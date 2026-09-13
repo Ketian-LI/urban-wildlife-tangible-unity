@@ -175,6 +175,10 @@ namespace UrbanWildlife.Strategy
                     error = "The last Natural Food patch cannot be demolished.";
                     return false;
                 }
+                if (!CanReleaseDemolitionPlanningCell(targetId, out error))
+                {
+                    return false;
+                }
                 return true;
             }
             if (state != CityConstructionState.Proposed)
@@ -234,6 +238,7 @@ namespace UrbanWildlife.Strategy
         {
             if (project.action_type == CityStrategyActionType.Demolish)
             {
+                ReleaseDemolitionPlanningCell(project.target_id);
                 RemoveTarget(project.target_id);
             }
             else
@@ -255,6 +260,57 @@ namespace UrbanWildlife.Strategy
             if (link != null) { link.construction_state = state; return; }
             CityAmenity amenity = city.amenities.FirstOrDefault(item => item.id == targetId);
             if (amenity != null) amenity.construction_state = state;
+        }
+
+        private bool CanReleaseDemolitionPlanningCell(string targetId, out string error)
+        {
+            error = null;
+            string cellId = DemolitionPlanningCellId(targetId);
+            if (city.planning_grid == null || string.IsNullOrWhiteSpace(cellId))
+            {
+                return true;
+            }
+
+            CityGridCell cell = CityGridResolver.GetCell(city.planning_grid, cellId);
+            if (cell == null)
+            {
+                error = $"Grid cell '{cellId}' does not exist.";
+                return false;
+            }
+            if (cell.fixed_feature)
+            {
+                error = $"Fixed grid cell {cell.id} cannot be released.";
+                return false;
+            }
+            return true;
+        }
+
+        private void ReleaseDemolitionPlanningCell(string targetId)
+        {
+            string cellId = DemolitionPlanningCellId(targetId);
+            if (city.planning_grid == null || string.IsNullOrWhiteSpace(cellId))
+            {
+                return;
+            }
+            if (!CityGridResolver.TryReleaseCell(
+                    city.planning_grid,
+                    cellId,
+                    city.revision + 1,
+                    out string error))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot demolish {targetId}: {error}");
+            }
+        }
+
+        private string DemolitionPlanningCellId(string targetId)
+        {
+            CityBuilding building = city.buildings.FirstOrDefault(item => item.id == targetId);
+            if (building != null)
+            {
+                return building.planning_cell_id;
+            }
+            return city.green_patches.FirstOrDefault(item => item.id == targetId)?.planning_cell_id;
         }
 
         private void RemoveTarget(string targetId)

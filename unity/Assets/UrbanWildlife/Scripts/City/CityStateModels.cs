@@ -92,6 +92,7 @@ namespace UrbanWildlife.City
         public int revision;
         public string source_contract;
         public CityBounds bounds;
+        public CityPlanningGrid planning_grid;
         public CityBuilding[] buildings = Array.Empty<CityBuilding>();
         public CityGreenPatch[] green_patches = Array.Empty<CityGreenPatch>();
         public CityVehicleRoad[] vehicle_roads = Array.Empty<CityVehicleRoad>();
@@ -113,6 +114,7 @@ namespace UrbanWildlife.City
     {
         public string id;
         public int source_token_id = -1;
+        public string planning_cell_id;
         public CityBuildingType type;
         public CityConstructionState construction_state;
         public float[] position_norm;
@@ -137,6 +139,7 @@ namespace UrbanWildlife.City
     {
         public string id;
         public int source_token_id = -1;
+        public string planning_cell_id;
         public CityGreenPatchType type;
         public CityConstructionState construction_state;
         public bool public_park;

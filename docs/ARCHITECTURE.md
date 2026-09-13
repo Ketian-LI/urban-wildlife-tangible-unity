@@ -1,6 +1,6 @@
 # Technical Architecture V0.1
 
-更新日期：2026-09-12
+更新日期：2026-09-13
 
 ## 软件基线
 
@@ -24,13 +24,21 @@
 
 `CityStateValidator` 在状态进入后续模拟前检查 schema、唯一 ID、归一化坐标、网络几何、建筑引用与数值范围，并要求至少一块 GreenPatch 保留 Natural Food。迁移期间，`LegacyParkCityAdapter` 只在旧 S001 约束检查旁路生成兼容 CityState；旧 Human/Animal 系统继续读取原 P0 数据，不会被未完成的城市功能打断。
 
+### 6 × 4 城市规划网格
+
+正式城市地图在 90 × 60 cm 板面上使用 6 列 × 4 行、共 24 个逻辑单元，每格对应 15 × 15 cm。界面仍显示连续的柔和城市地图，不绘制醒目的棋盘线；Plan 与 Preview 阶段只用轻微描边、悬停和状态色提示单元边界。摄像头仍输出连续归一化坐标，Unity 才把 Token 中心吸附到最近单元中心；默认吸附半径为 5 cm，一格只允许一个占用对象，水体、广场或公共绿地等固定单元拒绝建设。
+
+初始地图基线由 6 个既有建筑单元、7 个 Woodland 单元（5格相邻核心林地＋2格碎片林地）、1 个 Water 单元、1 个 Civic Plaza 单元、1 个 Public Green 单元和 8 个 Open Land 单元组成；Open Land 与 Woodland 合计 15 个规划候选。玩家有 11 枚建筑 Token 作为备选库存和 3 枚 Green Intervention，但玩家建筑同时上限为 9 个，每个规划周期仍受变更预算约束，避免把 24 格一次填满。上下左右四邻接是路径与生态连通的基础，不能穿过水体、建筑或从障碍物角落斜切。
+
+`CityPlanningGrid` 与 `CityGridCell` 保存行列、归一化中心与尺寸、基线/当前土地覆盖、建设许可、固定状态、建筑或栖息地引用以及最后变更 revision。建筑放入 Woodland 时，单元切换为 Building 并永久保留 `was_woodland = true`；建筑拆除后先进入 Disturbed，而不是立即恢复林地，后续 Green Intervention 才能推进 Recovering。该状态随 `CityState` revision 跨周期保留。初始动物优先从 Woodland 生成并按相邻栖息地容量活动；鸽子可使用开放地和广场资源，但地面物种不会把水体或建筑当作可通行表面。
+
 ### 城市 Token 扫描与建设事务
 
 `city_token_scan` V0.1 是正式城市输入契约，JSON Schema 位于 `data/schemas/city_token_scan_v0.1.schema.json`。库存为 Apartment 100–102、Detached House 110–113、Commercial 120–121、Community Facility 130–131、Green Intervention 140–142，共14件；Unity同时校验ID/类型配对、校准坐标、稳定画面、角度、置信度和每类数量上限。
 
 `vision/build_city_token_scan.py`使用独立的`DICT_4X4_1000`城市字典和四角ID 0–3，在稳定门控后把五类 Marker 转为0–1坐标；未知、重复、越界或缺少四角时不更新收件箱。输出先写临时文件再原子替换`data/raw/city-token-scans/latest_city_scan.json`。Unity的`CityTokenScanFileSource`只负责完整读取，`CityPlanningWorkflow`随后再次验证版本、时间戳、稳定状态和库存，成功后也只进入Preview。
 
-摄像头不逐帧直接改写城市。玩家触发 `Scan City` 后，`CityTokenDiffer` 将扫描与最近确认 Token 快照比较为 New、Moved、Missing、Unchanged；位置变化超过归一化0.01或角度变化超过5°才算Moved。`CityConstructionManager` 把New转换为Proposed Building或GreenPatch并检查边界与建筑占地重叠；Moved和Missing会阻止确认，Missing只显示拆除请求语义，不删除数据。成功 `Confirm Construction` 是一次事务：只追加New对象、建筑Waste输出节点并把CityState revision加一。选定道路后建筑与网络仍保持Proposed；后续施工时间与DP批次负责推进状态。
+摄像头不逐帧直接改写城市。玩家触发 `Scan City` 后，Unity先把连续坐标以5 cm半径吸附到最近规划单元，再由`CityTokenDiffer`将结果与最近确认Token快照比较为New、Moved、Missing、Unchanged；原始坐标在同一单元内的识别抖动不算Moved，只有吸附后的单元ID改变才算位置移动，角度变化仍沿用5°阈值。`CityConstructionManager` 把New转换为Proposed Building或GreenPatch并检查单元占用；Moved和Missing会阻止确认，Missing只显示拆除请求语义，不删除数据。成功 `Confirm Construction` 是一次事务：只追加New对象、建筑Waste输出节点并把CityState revision加一。选定道路后建筑与网络仍保持Proposed；后续施工时间与DP批次负责推进状态。
 
 ### 机动车与步行网络规划
 

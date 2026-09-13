@@ -22,6 +22,7 @@
     "revision": { "type": "integer", "minimum": 0 },
     "source_contract": { "type": "string", "minLength": 1 },
     "bounds": { "$ref": "#/$defs/bounds" },
+    "planning_grid": { "$ref": "#/$defs/planningGrid" },
     "buildings": {
       "type": "array",
       "items": { "$ref": "#/$defs/building" }
@@ -61,6 +62,15 @@
     },
     "nonNegative": { "type": "number", "minimum": 0 },
     "unitValue": { "type": "number", "minimum": 0, "maximum": 1 },
+    "gridSize": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
     "constructionState": {
       "enum": ["Existing", "Proposed", "UnderConstruction", "DemolitionProposed", "Demolishing"]
     },
@@ -75,6 +85,67 @@
         "width_units": { "type": "number", "exclusiveMinimum": 0 },
         "height_units": { "type": "number", "exclusiveMinimum": 0 }
       }
+    },
+    "planningGrid": {
+      "type": "object",
+      "required": ["cols", "rows", "max_active_player_buildings", "cells"],
+      "properties": {
+        "cols": { "const": 6 },
+        "rows": { "const": 4 },
+        "max_active_player_buildings": { "const": 9 },
+        "cells": {
+          "type": "array",
+          "minItems": 24,
+          "maxItems": 24,
+          "items": { "$ref": "#/$defs/gridCell" }
+        }
+      }
+    },
+    "gridCell": {
+      "type": "object",
+      "required": [
+        "id",
+        "row",
+        "col",
+        "center_norm",
+        "size_norm",
+        "baseline_cover",
+        "current_cover",
+        "buildable",
+        "fixed_feature",
+        "occupant_id",
+        "habitat_patch_id",
+        "was_woodland",
+        "last_changed_revision"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-D][1-6]$" },
+        "row": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "col": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "center_norm": { "$ref": "#/$defs/point" },
+        "size_norm": { "$ref": "#/$defs/gridSize" },
+        "baseline_cover": { "$ref": "#/$defs/landCover" },
+        "current_cover": { "$ref": "#/$defs/landCover" },
+        "buildable": { "type": "boolean" },
+        "fixed_feature": { "type": "boolean" },
+        "occupant_id": { "type": ["string", "null"] },
+        "habitat_patch_id": { "type": ["string", "null"] },
+        "was_woodland": { "type": "boolean" },
+        "last_changed_revision": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "landCover": {
+      "enum": [
+        "OpenLand",
+        "Woodland",
+        "PublicGreen",
+        "Water",
+        "CivicPlaza",
+        "Building",
+        "ShrubGarden",
+        "Disturbed",
+        "Recovering"
+      ]
     },
     "building": {
       "type": "object",
@@ -102,6 +173,7 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "source_token_id": { "type": "integer", "minimum": -1 },
+        "planning_cell_id": { "type": ["string", "null"] },
         "type": { "enum": ["Apartment", "DetachedHouse", "Commercial", "CommunityFacility"] },
         "construction_state": { "$ref": "#/$defs/constructionState" },
         "position_norm": { "$ref": "#/$defs/point" },
@@ -147,6 +219,7 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "source_token_id": { "type": "integer", "minimum": -1 },
+        "planning_cell_id": { "type": ["string", "null"] },
         "type": { "enum": ["Woodland", "ShrubGarden", "OpenGrass"] },
         "construction_state": { "$ref": "#/$defs/constructionState" },
         "public_park": { "type": "boolean" },

@@ -9,15 +9,22 @@ namespace UrbanWildlife.Prototype
     {
         public static CityState Create()
         {
+            CityBounds bounds = new CityBounds
+            {
+                origin = "top_left",
+                width_units = 90f,
+                height_units = 60f,
+            };
             CityBuilding[] buildings =
             {
-                Building("apartment-west", CityBuildingType.Apartment, 100, 0.16f, 0.18f, 60, 0.85f, 0.25f, 8, 0.80f),
-                Building("apartment-court", CityBuildingType.Apartment, 101, 0.34f, 0.18f, 60, 0.85f, 0.25f, 8, 0.80f),
-                Building("detached-garden", CityBuildingType.DetachedHouse, 110, 0.57f, 0.80f, 12, 0.35f, 0.15f, 4, 0.45f),
-                Building("market-hall", CityBuildingType.Commercial, 120, 0.72f, 0.18f, 0, 0.05f, 0.90f, 16, 0.70f),
-                Building("corner-shops", CityBuildingType.Commercial, 121, 0.84f, 0.78f, 0, 0.05f, 0.82f, 12, 0.65f),
-                Building("community-centre", CityBuildingType.CommunityFacility, 130, 0.87f, 0.48f, 0, 0.05f, 0.72f, 24, 0.50f),
+                Building("apartment-west", CityBuildingType.Apartment, 100, 0.083333f, 0.125f, 60, 0.85f, 0.25f, 8, 0.80f),
+                Building("apartment-court", CityBuildingType.Apartment, 101, 0.416667f, 0.125f, 60, 0.85f, 0.25f, 8, 0.80f),
+                Building("detached-garden", CityBuildingType.DetachedHouse, 110, 0.583333f, 0.875f, 12, 0.35f, 0.15f, 4, 0.45f),
+                Building("market-hall", CityBuildingType.Commercial, 120, 0.75f, 0.125f, 0, 0.05f, 0.90f, 16, 0.70f),
+                Building("corner-shops", CityBuildingType.Commercial, 121, 0.916667f, 0.875f, 0, 0.05f, 0.82f, 12, 0.65f),
+                Building("community-centre", CityBuildingType.CommunityFacility, 130, 0.916667f, 0.375f, 0, 0.05f, 0.72f, 24, 0.50f),
             };
+            CityPlanningGrid planningGrid = CreatePlanningGrid(buildings, bounds);
 
             CityVehicleRoad[] mainRoads =
             {
@@ -127,17 +134,11 @@ namespace UrbanWildlife.Prototype
                 building.pedestrian_link_ids = new[] { linkId };
             }
 
-            CityGreenPatch[] patches =
-            {
-                Patch("public-park", CityGreenPatchType.OpenGrass, true, 0.12f, 0.48f, 0.46f, 0.86f, 0.25f, 0.22f, 0.48f),
-                Patch("woodland-west", CityGreenPatchType.Woodland, false, 0.06f, 0.57f, 0.24f, 0.92f, 0.88f, 0.82f, 0.12f),
-                Patch("woodland-east", CityGreenPatchType.Woodland, false, 0.72f, 0.55f, 0.94f, 0.94f, 0.90f, 0.78f, 0.14f),
-                Patch("rain-garden", CityGreenPatchType.ShrubGarden, false, 0.34f, 0.60f, 0.49f, 0.88f, 0.62f, 0.58f, 0.18f),
-            };
+            CityGreenPatch[] patches = CreateGreenPatches(planningGrid, bounds);
 
             CityAmenity[] amenities =
             {
-                Amenity("bench-park-01", CityAmenityType.Bench, 0.30f, 0.67f, 10f, 0.55f, 0f, 0f),
+                Amenity("bench-park-01", CityAmenityType.Bench, 0.583333f, 0.375f, 10f, 0.55f, 0f, 0f),
                 Amenity("bin-main-01", CityAmenityType.Bin, 0.31f, 0.50f, 15f, 0.08f, 2.35f, 0.68f),
                 Amenity("bin-east-01", CityAmenityType.Bin, 0.76f, 0.52f, 15f, 0.08f, 2.25f, 0.68f),
             };
@@ -158,7 +159,8 @@ namespace UrbanWildlife.Prototype
                 city_id = "city-prototype-v01",
                 revision = 4,
                 source_contract = "city-prototype-demo-0.1",
-                bounds = new CityBounds { origin = "top_left", width_units = 90f, height_units = 60f },
+                bounds = bounds,
+                planning_grid = planningGrid,
                 buildings = buildings,
                 green_patches = patches,
                 vehicle_roads = roads.ToArray(),
@@ -220,32 +222,136 @@ namespace UrbanWildlife.Prototype
             };
         }
 
-        private static CityGreenPatch Patch(
-            string id,
-            CityGreenPatchType type,
-            bool publicPark,
-            float minX,
-            float minY,
-            float maxX,
-            float maxY,
-            float shelter,
-            float food,
-            float disturbance)
+        private static CityPlanningGrid CreatePlanningGrid(
+            IEnumerable<CityBuilding> buildings,
+            CityBounds bounds)
         {
-            return new CityGreenPatch
+            CityPlanningGrid grid = new CityPlanningGrid
             {
-                id = id,
-                source_token_id = -1,
-                type = type,
-                construction_state = CityConstructionState.Existing,
-                public_park = publicPark,
-                polygon_norm = Points((minX, minY), (maxX, minY), (maxX, maxY), (minX, maxY)),
-                shelter_value = shelter,
-                natural_food_value = food,
-                human_disturbance = disturbance,
-                patch_size_units = (maxX - minX) * 90f * (maxY - minY) * 60f,
-                connected_patch_ids = Array.Empty<string>(),
+                cols = 6,
+                rows = 4,
+                max_active_player_buildings = 9,
+                cells = Enumerable.Range(0, 4)
+                    .SelectMany(row => Enumerable.Range(0, 6)
+                        .Select(col => CreateGridCell(row, col)))
+                    .ToArray(),
             };
+
+            foreach (CityBuilding building in buildings ?? Array.Empty<CityBuilding>())
+            {
+                if (!CityGridResolver.TryOccupyWithBuilding(
+                        grid,
+                        bounds,
+                        building,
+                        0,
+                        out string error))
+                {
+                    throw new InvalidOperationException(
+                        $"Could not place baseline building {building.id} on the planning grid: {error}");
+                }
+            }
+            return grid;
+        }
+
+        private static CityGridCell CreateGridCell(int row, int col)
+        {
+            CityLandCover cover = BaselineCover(row, col);
+            bool fixedFeature = cover == CityLandCover.PublicGreen ||
+                                cover == CityLandCover.Water ||
+                                cover == CityLandCover.CivicPlaza;
+            string habitatId = cover == CityLandCover.Woodland ||
+                               cover == CityLandCover.PublicGreen
+                ? HabitatPatchId(row, col, cover)
+                : null;
+            return new CityGridCell
+            {
+                id = CellId(row, col),
+                row = row,
+                col = col,
+                center_norm = new[] { (col + 0.5f) / 6f, (row + 0.5f) / 4f },
+                size_norm = new[] { 1f / 6f, 1f / 4f },
+                baseline_cover = cover,
+                current_cover = cover,
+                buildable = !fixedFeature,
+                fixed_feature = fixedFeature,
+                occupant_id = null,
+                habitat_patch_id = habitatId,
+                was_woodland = cover == CityLandCover.Woodland,
+                last_changed_revision = 0,
+            };
+        }
+
+        private static CityLandCover BaselineCover(int row, int col)
+        {
+            bool coreWoodland = (row == 2 && col <= 2) || (row == 3 && col <= 1);
+            bool woodlandFragment = row == 2 && col >= 4;
+            if (coreWoodland || woodlandFragment)
+            {
+                return CityLandCover.Woodland;
+            }
+            if (row == 1 && col == 3)
+            {
+                return CityLandCover.PublicGreen;
+            }
+            if (row == 1 && col == 4)
+            {
+                return CityLandCover.CivicPlaza;
+            }
+            if (row == 3 && col == 4)
+            {
+                return CityLandCover.Water;
+            }
+            return CityLandCover.OpenLand;
+        }
+
+        private static CityGreenPatch[] CreateGreenPatches(
+            CityPlanningGrid grid,
+            CityBounds bounds)
+        {
+            CityGridCell[] habitatCells = grid.cells
+                .Where(cell => cell != null &&
+                               !string.IsNullOrWhiteSpace(cell.habitat_patch_id))
+                .OrderBy(cell => cell.row)
+                .ThenBy(cell => cell.col)
+                .ToArray();
+            HashSet<string> habitatCellIds = new HashSet<string>(
+                habitatCells.Select(cell => cell.id));
+            return habitatCells.Select(cell =>
+            {
+                bool woodland = cell.current_cover == CityLandCover.Woodland;
+                string[] connected = CityGridResolver.GetFourNeighbours(grid, cell.id)
+                    .Where(neighbour => habitatCellIds.Contains(neighbour.id))
+                    .Select(neighbour => neighbour.habitat_patch_id)
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .ToArray();
+                return new CityGreenPatch
+                {
+                    id = cell.habitat_patch_id,
+                    source_token_id = -1,
+                    planning_cell_id = cell.id,
+                    type = woodland ? CityGreenPatchType.Woodland : CityGreenPatchType.OpenGrass,
+                    construction_state = CityConstructionState.Existing,
+                    public_park = !woodland,
+                    polygon_norm = CityGridResolver.PolygonFor(cell),
+                    shelter_value = woodland ? 0.88f : 0.30f,
+                    natural_food_value = woodland ? 0.80f : 0.28f,
+                    human_disturbance = woodland ? 0.12f : 0.46f,
+                    patch_size_units = cell.size_norm[0] * bounds.width_units *
+                                       cell.size_norm[1] * bounds.height_units,
+                    connected_patch_ids = connected,
+                };
+            }).ToArray();
+        }
+
+        private static string HabitatPatchId(int row, int col, CityLandCover cover)
+        {
+            string prefix = cover == CityLandCover.Woodland ? "woodland" : "public-green";
+            return $"{prefix}-cell-{CellId(row, col).ToLowerInvariant()}";
+        }
+
+        private static string CellId(int row, int col)
+        {
+            return $"{(char)('A' + row)}{col + 1}";
         }
 
         private static CityAmenity Amenity(

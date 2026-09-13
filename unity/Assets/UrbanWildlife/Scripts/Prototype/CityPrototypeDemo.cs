@@ -25,6 +25,8 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Environment/tree-citybuilder-default-v01";
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
+        private const string CityWoodlandResourcePath =
+            "UrbanWildlife/Environment/woodland-citybuilder-grove-v01";
 
         [SerializeField]
         [Tooltip("Path relative to Unity Assets, or an absolute path.")]
@@ -72,6 +74,8 @@ namespace UrbanWildlife.Prototype
         public int GeneratedVehicleRoadCount { get; private set; }
         public int GeneratedPedestrianLinkCount { get; private set; }
         public int GeneratedAmenityCount { get; private set; }
+        public int GeneratedPlanningCellCount { get; private set; }
+        public int AvailablePlanningCellCount { get; private set; }
         public int RepresentativeAgentCount => plan?.RepresentativeAgentCount ?? 0;
         public int RepresentedPopulation => plan?.RepresentedPopulation ?? 0;
         public int VehicleTripCount => plan?.DriveTripCount ?? 0;
@@ -203,6 +207,7 @@ namespace UrbanWildlife.Prototype
                 generatedRoot.hideFlags = HideFlags.DontSave;
             }
             BuildBoard();
+            BuildPlanningGrid();
             BuildGreenPatches();
             BuildNetworks();
             BuildBuildings();
@@ -257,28 +262,126 @@ namespace UrbanWildlife.Prototype
             board.transform.localPosition = new Vector3(0f, -0.08f, 0f);
             board.transform.localScale = new Vector3(MapWidth + 0.18f, 0.14f, MapHeight + 0.18f);
             RemoveCollider(board);
-            SetMaterial(board, new Color(0.94f, 0.94f, 0.88f, 1f));
+            SetMaterial(board, new Color(0.90f, 0.92f, 0.85f, 1f));
+        }
 
-            GameObject waterRoot = ChildRoot("Water features");
-            CreateLine(
-                waterRoot.transform,
-                "East canal",
-                new[]
+        private void BuildPlanningGrid()
+        {
+            GameObject root = ChildRoot("Planning grid");
+            GameObject cellsRoot = new GameObject("Cells");
+            cellsRoot.transform.SetParent(root.transform, false);
+            GameObject boundariesRoot = new GameObject("Boundaries");
+            boundariesRoot.transform.SetParent(root.transform, false);
+            GeneratedPlanningCellCount = 0;
+            AvailablePlanningCellCount = 0;
+            CityPlanningGrid grid = city.planning_grid;
+            if (grid?.cells == null)
+            {
+                return;
+            }
+
+            foreach (CityGridCell cell in grid.cells.Where(item => item != null)
+                         .OrderBy(item => item.row).ThenBy(item => item.col))
+            {
+                GameObject cellObject = new GameObject(cell.id);
+                cellObject.transform.SetParent(cellsRoot.transform, false);
+                CreatePolygon(
+                    cellObject.transform,
+                    "Land cover " + cell.current_cover,
+                    CityGridResolver.PolygonFor(cell),
+                    0.008f,
+                    PlanningCellColour(cell.current_cover),
+                    -40);
+                float[] labelPosition =
                 {
-                    new[] { 0.985f, 0.01f },
-                    new[] { 0.975f, 0.28f },
-                    new[] { 0.990f, 0.56f },
-                    new[] { 0.975f, 0.99f },
-                },
-                0.48f,
-                new Color(0.36f, 0.76f, 0.88f, 1f),
-                0.015f,
-                -45);
+                    cell.center_norm[0] - cell.size_norm[0] * 0.41f,
+                    cell.center_norm[1] - cell.size_norm[1] * 0.41f,
+                };
+                CreateLabel(cellObject.transform, cell.id, ToWorld(labelPosition, 0.020f), 0.09f);
+                TextMesh label = cellObject.GetComponentInChildren<TextMesh>();
+                label.color = new Color(0.42f, 0.49f, 0.40f, 1f);
+                label.GetComponent<Renderer>().sortingOrder = -28;
+                GeneratedPlanningCellCount += 1;
+                if (cell.buildable && !cell.fixed_feature &&
+                    string.IsNullOrWhiteSpace(cell.occupant_id))
+                {
+                    AvailablePlanningCellCount += 1;
+                }
+            }
+
+            Color boundaryColour = new Color(0.73f, 0.78f, 0.68f, 1f);
+            for (int col = 0; col <= grid.cols; col += 1)
+            {
+                float x = (float)col / grid.cols;
+                CreateLine(boundariesRoot.transform, "Column " + col,
+                    new[] { new[] { x, 0f }, new[] { x, 1f } },
+                    0.014f, boundaryColour, 0.016f, -30);
+            }
+            for (int row = 0; row <= grid.rows; row += 1)
+            {
+                float y = (float)row / grid.rows;
+                CreateLine(boundariesRoot.transform, "Row " + row,
+                    new[] { new[] { 0f, y }, new[] { 1f, y } },
+                    0.014f, boundaryColour, 0.016f, -30);
+            }
+        }
+
+        private static Color PlanningCellColour(CityLandCover cover)
+        {
+            switch (cover)
+            {
+                case CityLandCover.Woodland:
+                    return new Color(0.73f, 0.82f, 0.65f, 1f);
+                case CityLandCover.PublicGreen:
+                    return new Color(0.80f, 0.88f, 0.69f, 1f);
+                case CityLandCover.CivicPlaza:
+                    return new Color(0.89f, 0.85f, 0.77f, 1f);
+                case CityLandCover.Water:
+                    return new Color(0.66f, 0.81f, 0.82f, 1f);
+                case CityLandCover.Building:
+                    return new Color(0.87f, 0.86f, 0.81f, 1f);
+                case CityLandCover.ShrubGarden:
+                    return new Color(0.79f, 0.85f, 0.68f, 1f);
+                case CityLandCover.Disturbed:
+                    return new Color(0.85f, 0.80f, 0.68f, 1f);
+                case CityLandCover.Recovering:
+                    return new Color(0.83f, 0.87f, 0.72f, 1f);
+                default:
+                    return new Color(0.88f, 0.91f, 0.78f, 1f);
+            }
         }
 
         private void BuildGreenPatches()
         {
             GameObject root = ChildRoot("Green patches");
+            if (city.planning_grid?.cells != null)
+            {
+                foreach (CityGridCell cell in city.planning_grid.cells.Where(item => item != null))
+                {
+                    if (cell.current_cover == CityLandCover.Woodland)
+                    {
+                        CreateWoodlandGrove(root.transform, cell.id, CityGridResolver.PolygonFor(cell));
+                    }
+                    else if (cell.current_cover == CityLandCover.PublicGreen ||
+                             cell.current_cover == CityLandCover.ShrubGarden ||
+                             cell.current_cover == CityLandCover.Recovering)
+                    {
+                        GameObject garden = new GameObject(cell.id + " public greenery");
+                        garden.transform.SetParent(root.transform, false);
+                        if (cell.current_cover == CityLandCover.PublicGreen)
+                        {
+                            CreateTree(garden.transform, "Park tree",
+                                CellPosition(cell, -0.27f, -0.24f), 0.61f);
+                        }
+                        CreateBush(garden.transform, "Park shrub 1",
+                            CellPosition(cell, 0.26f, -0.24f), 0.45f);
+                        CreateBush(garden.transform, "Park shrub 2",
+                            CellPosition(cell, 0.28f, 0.25f), 0.37f);
+                    }
+                }
+                return;
+            }
+
             foreach (CityGreenPatch patch in city.green_patches.Where(item =>
                          item.construction_state == CityConstructionState.Existing))
             {
@@ -296,18 +399,20 @@ namespace UrbanWildlife.Prototype
                         break;
                 }
                 CreatePolygon(root.transform, patch.id, patch.polygon_norm, 0.025f, colour);
+                if (patch.type == CityGreenPatchType.Woodland)
+                {
+                    CreateWoodlandGrove(root.transform, patch.id, patch.polygon_norm);
+                }
             }
+        }
 
-            CreateTree(root.transform, "Tree west 1", new[] { 0.10f, 0.66f }, 0.90f);
-            CreateTree(root.transform, "Tree west 2", new[] { 0.19f, 0.79f }, 0.72f);
-            CreateTree(root.transform, "Tree east 1", new[] { 0.79f, 0.63f }, 0.86f);
-            CreateTree(root.transform, "Tree east 2", new[] { 0.88f, 0.85f }, 0.76f);
-            CreateTree(root.transform, "Garden tree", new[] { 0.42f, 0.73f }, 0.66f);
-
-            CreateBush(root.transform, "Rain garden shrub 1", new[] { 0.36f, 0.67f }, 0.78f);
-            CreateBush(root.transform, "Rain garden shrub 2", new[] { 0.44f, 0.82f }, 0.64f);
-            CreateBush(root.transform, "West woodland shrub", new[] { 0.14f, 0.87f }, 0.58f);
-            CreateBush(root.transform, "East woodland shrub", new[] { 0.77f, 0.88f }, 0.62f);
+        private static float[] CellPosition(CityGridCell cell, float xOffset, float yOffset)
+        {
+            return new[]
+            {
+                cell.center_norm[0] + cell.size_norm[0] * xOffset,
+                cell.center_norm[1] + cell.size_norm[1] * yOffset,
+            };
         }
 
         private void BuildNetworks()
@@ -836,7 +941,10 @@ namespace UrbanWildlife.Prototype
             GUILayout.Space(16f);
 
             GUILayout.Label("MAP KEY", headingStyle);
-            GUILayout.Label("■ Housing   ■ Shops\n■ Community   ■ Park / green space\n■ Water   ━ Road   ━ Footpath", bodyStyle);
+            GUILayout.Label(
+                $"Planning cells  {GeneratedPlanningCellCount}  ·  Available  {AvailablePlanningCellCount}",
+                bodyStyle);
+            GUILayout.Label("Available cells include woodland.\n■ Open land   ■ Woodland   ■ Public green\n■ Plaza   ■ Water   ■ Buildings\n━ Road   ━ Footpath", bodyStyle);
             GUILayout.Space(16f);
 
             GUILayout.Label("DESTINATION PRESSURE", headingStyle);
@@ -1292,6 +1400,44 @@ namespace UrbanWildlife.Prototype
             };
         }
 
+        private void CreateWoodlandGrove(Transform parent, string id, float[][] polygon)
+        {
+            Sprite sprite = Resources.Load<Sprite>(CityWoodlandResourcePath);
+            if (sprite == null || polygon == null || polygon.Length == 0)
+            {
+                Debug.LogWarning($"City woodland sprite or patch geometry was not found for {id}.");
+                return;
+            }
+
+            float minX = polygon.Min(point => point[0]);
+            float maxX = polygon.Max(point => point[0]);
+            float minY = polygon.Min(point => point[1]);
+            float maxY = polygon.Max(point => point[1]);
+            float centreX = (minX + maxX) * 0.5f;
+            float centreY = (minY + maxY) * 0.5f;
+
+            GameObject grove = new GameObject(id + " woodland grove");
+            grove.transform.SetParent(parent, false);
+            grove.transform.localPosition = ToWorld(new[] { centreX, centreY }, 0.08f);
+
+            GameObject artwork = new GameObject("Woodland grove artwork");
+            artwork.transform.SetParent(grove.transform, false);
+            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            artwork.transform.localPosition = Vector3.zero;
+            // Fit the entire grove within its own planning cell in both map axes.
+            float targetWidth = (maxX - minX) * MapWidth * 0.84f;
+            float targetHeight = (maxY - minY) * MapHeight * 0.80f;
+            float artworkScale = Mathf.Min(
+                targetWidth / Mathf.Max(0.001f, sprite.bounds.size.x),
+                targetHeight / Mathf.Max(0.001f, sprite.bounds.size.y));
+            float mirror = centreX > 0.5f ? -1f : 1f;
+            artwork.transform.localScale = new Vector3(artworkScale * mirror, artworkScale, artworkScale);
+
+            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = 12;
+        }
+
         private void CreateTree(Transform parent, string name, float[] normalized, float scale)
         {
             GameObject tree = new GameObject(name);
@@ -1387,7 +1533,8 @@ namespace UrbanWildlife.Prototype
             string name,
             float[][] points,
             float height,
-            Color colour)
+            Color colour,
+            int sortingOrder = 0)
         {
             GameObject polygon = new GameObject(name);
             polygon.transform.SetParent(parent, false);
@@ -1404,7 +1551,9 @@ namespace UrbanWildlife.Prototype
             mesh.triangles = triangles;
             mesh.RecalculateBounds();
             polygon.AddComponent<MeshFilter>().sharedMesh = mesh;
-            polygon.AddComponent<MeshRenderer>().sharedMaterial = MaterialFor(colour);
+            MeshRenderer renderer = polygon.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = MaterialFor(colour);
+            renderer.sortingOrder = sortingOrder;
         }
 
         private void CreateLabel(

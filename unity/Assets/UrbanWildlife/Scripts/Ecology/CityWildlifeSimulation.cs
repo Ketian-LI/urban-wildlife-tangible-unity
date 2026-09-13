@@ -171,7 +171,7 @@ namespace UrbanWildlife.Ecology
             {
                 throw new ArgumentOutOfRangeException(nameof(count));
             }
-            CityGreenPatch[] patches = OperationalPatches().ToArray();
+            CityGreenPatch[] patches = PreferredInitialPatches(species);
             if (patches.Length == 0 && count > 0)
             {
                 throw new InvalidOperationException("Wildlife requires at least one existing green patch.");
@@ -186,6 +186,26 @@ namespace UrbanWildlife.Ecology
                     index + 1,
                     new[] { Mathf.Clamp01(centre[0] + offset), Mathf.Clamp01(centre[1] - offset) }));
             }
+        }
+
+        private CityGreenPatch[] PreferredInitialPatches(CityWildlifeSpecies species)
+        {
+            CityGreenPatch[] operational = OperationalPatches().ToArray();
+            bool woodlandSpecies = species == CityWildlifeSpecies.GreySquirrel ||
+                                   species == CityWildlifeSpecies.Fox ||
+                                   species == CityWildlifeSpecies.Hedgehog;
+            if (woodlandSpecies)
+            {
+                CityGreenPatch[] woodland = operational
+                    .Where(patch => patch.type == CityGreenPatchType.Woodland)
+                    .OrderBy(patch => patch.id, StringComparer.Ordinal)
+                    .ToArray();
+                return woodland.Length > 0 ? woodland : operational;
+            }
+            return operational
+                .OrderByDescending(patch => patch.type == CityGreenPatchType.OpenGrass)
+                .ThenBy(patch => patch.id, StringComparer.Ordinal)
+                .ToArray();
         }
 
         private CityWildlifeAgent CreateAgent(
@@ -373,6 +393,12 @@ namespace UrbanWildlife.Ecology
         private bool IsBlocked(float[] point)
         {
             if (point[0] < 0.01f || point[0] > 0.95f || point[1] < 0.01f || point[1] > 0.99f)
+            {
+                return true;
+            }
+            if (CityGridResolver.TryGetContainingCell(city.planning_grid, point, out CityGridCell cell) &&
+                (cell.current_cover == CityLandCover.Water ||
+                 cell.current_cover == CityLandCover.Building))
             {
                 return true;
             }

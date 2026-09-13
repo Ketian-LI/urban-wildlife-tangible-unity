@@ -72,6 +72,7 @@ namespace UrbanWildlife.City
             HashSet<string> linkIds = new HashSet<string>(
                 links.Where(item => item != null && !string.IsNullOrWhiteSpace(item.id))
                     .Select(item => item.id));
+            ValidatePlanningGrid(state, buildings, patches, buildingIds, patchIds, errors);
             foreach (CityBuilding building in buildings.Where(item => item != null))
             {
                 ValidatePoint(building.position_norm, $"Building {building.id} position", errors);
@@ -196,6 +197,285 @@ namespace UrbanWildlife.City
 
             ValidateWaste(state.waste, buildingIds, errors);
             return new CityStateValidationResult(errors);
+        }
+
+        private static void ValidatePlanningGrid(
+            CityState state,
+            CityBuilding[] buildings,
+            CityGreenPatch[] patches,
+            HashSet<string> buildingIds,
+            HashSet<string> patchIds,
+            List<string> errors)
+        {
+            CityPlanningGrid grid = state.planning_grid;
+            if (grid == null)
+            {
+                // The planning grid was introduced after schema 0.1 states were already in use.
+                return;
+            }
+
+            bool expectedDimensions = grid.cols == CityPlanningGrid.DefaultColumns &&
+                                      grid.rows == CityPlanningGrid.DefaultRows;
+            if (!expectedDimensions)
+            {
+                errors.Add(
+                    $"Planning grid must be {CityPlanningGrid.DefaultColumns} columns by " +
+                    $"{CityPlanningGrid.DefaultRows} rows.");
+            }
+
+            if (grid.cells == null)
+            {
+                errors.Add("Planning grid cells are required.");
+                return;
+            }
+            if (grid.cells.Length != CityPlanningGrid.DefaultCellCount)
+            {
+                errors.Add(
+                    $"Planning grid must contain exactly {CityPlanningGrid.DefaultCellCount} cells.");
+            }
+
+            ValidateUniqueIds(grid.cells.Select(cell => cell?.id), "planning grid cell", errors);
+            Dictionary<string, CityGridCell> cellsById = new Dictionary<string, CityGridCell>(
+                StringComparer.Ordinal);
+            HashSet<string> coordinates = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> occupiedBuildingIds = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> occupiedPatchIds = new HashSet<string>(StringComparer.Ordinal);
+            int buildableCellCount = 0;
+
+            foreach (CityGridCell cell in grid.cells)
+            {
+                if (cell == null)
+                {
+                    errors.Add("Planning grid cannot contain a null cell.");
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(cell.id) && !cellsById.ContainsKey(cell.id))
+                {
+                    cellsById.Add(cell.id, cell);
+                }
+
+                bool coordinateInRange = cell.row >= 0 && cell.row < grid.rows &&
+                                         cell.col >= 0 && cell.col < grid.cols;
+                if (!coordinateInRange)
+                {
+                    errors.Add($"Planning grid cell {cell.id} has an out-of-range row or column.");
+                }
+                else if (!coordinates.Add($"{cell.row}:{cell.col}"))
+                {
+                    errors.Add(
+                        $"Planning grid contains more than one cell at row {cell.row}, column {cell.col}.");
+                }
+
+                if (!CityGridResolver.IsUnitPoint(cell.center_norm) ||
+                    !CityGridResolver.IsUnitSize(cell.size_norm))
+                {
+                    errors.Add($"Planning grid cell {cell.id} has invalid normalized geometry.");
+                }
+                else
+                {
+                    float halfWidth = cell.size_norm[0] * 0.5f;
+                    float halfHeight = cell.size_norm[1] * 0.5f;
+                    if (cell.center_norm[0] - halfWidth < -CityGridResolver.GeometryTolerance ||
+                        cell.center_norm[0] + halfWidth > 1f + CityGridResolver.GeometryTolerance ||
+                        cell.center_norm[1] - halfHeight < -CityGridResolver.GeometryTolerance ||
+                        cell.center_norm[1] + halfHeight > 1f + CityGridResolver.GeometryTolerance)
+                    {
+                        errors.Add($"Planning grid cell {cell.id} extends outside normalized city bounds.");
+                    }
+
+                    if (coordinateInRange && grid.cols > 0 && grid.rows > 0)
+                    {
+                        float[] expectedCenter = CityGridResolver.ExpectedCenterNorm(
+                            grid,
+                            cell.row,
+                            cell.col);
+                        float[] expectedSize = CityGridResolver.ExpectedSizeNorm(grid);
+                        if (!CityGridResolver.Approximately(cell.center_norm[0], expectedCenter[0]) ||
+                            !CityGridResolver.Approximately(cell.center_norm[1], expectedCenter[1]) ||
+                            !CityGridResolver.Approximately(cell.size_norm[0], expectedSize[0]) ||
+                            !CityGridResolver.Approximately(cell.size_norm[1], expectedSize[1]))
+                        {
+                            errors.Add(
+                                $"Planning grid cell {cell.id} geometry does not match its row and column.");
+                        }
+                    }
+                }
+
+                if (!Enum.IsDefined(typeof(CityLandCover), cell.baseline_cover) ||
+                    !Enum.IsDefined(typeof(CityLandCover), cell.current_cover))
+                {
+                    errors.Add($"Planning grid cell {cell.id} has an unknown land cover.");
+                }
+                if (cell.fixed_feature && cell.buildable)
+                {
+                    errors.Add($"Fixed planning grid cell {cell.id} cannot be buildable.");
+                }
+                if (cell.buildable && !cell.fixed_feature)
+                {
+                    buildableCellCount += 1;
+                }
+                if ((cell.baseline_cover == CityLandCover.Woodland ||
+                     cell.current_cover == CityLandCover.Woodland) && !cell.was_woodland)
+                {
+                    errors.Add($"Woodland planning grid cell {cell.id} must retain woodland history.");
+                }
+                if (cell.last_changed_revision < 0 ||
+                    cell.last_changed_revision > state.revision)
+                {
+                    errors.Add(
+                        $"Planning grid cell {cell.id} has an invalid last changed revision.");
+                }
+
+                ValidateGridCellOccupancy(
+                    cell,
+                    buildings,
+                    patches,
+                    buildingIds,
+                    patchIds,
+                    occupiedBuildingIds,
+                    occupiedPatchIds,
+                    errors);
+            }
+
+            if (expectedDimensions && coordinates.Count != CityPlanningGrid.DefaultCellCount)
+            {
+                errors.Add("Planning grid must contain each of the 24 row and column coordinates once.");
+            }
+            if (grid.max_active_player_buildings < 0 ||
+                grid.max_active_player_buildings > buildableCellCount)
+            {
+                errors.Add(
+                    "Planning grid maximum active player buildings must fit within its buildable cells.");
+            }
+
+            foreach (CityBuilding building in buildings.Where(item =>
+                         item != null && !string.IsNullOrWhiteSpace(item.planning_cell_id)))
+            {
+                if (!cellsById.TryGetValue(building.planning_cell_id, out CityGridCell cell))
+                {
+                    errors.Add(
+                        $"Building {building.id} references unknown planning cell " +
+                        $"{building.planning_cell_id}.");
+                }
+                else if (cell.occupant_id != building.id)
+                {
+                    errors.Add(
+                        $"Building {building.id} and planning cell {cell.id} do not reference each other.");
+                }
+            }
+
+            foreach (CityGreenPatch patch in patches.Where(item =>
+                         item != null && !string.IsNullOrWhiteSpace(item.planning_cell_id)))
+            {
+                if (!cellsById.TryGetValue(patch.planning_cell_id, out CityGridCell cell))
+                {
+                    errors.Add(
+                        $"Green patch {patch.id} references unknown planning cell " +
+                        $"{patch.planning_cell_id}.");
+                }
+                else if (cell.habitat_patch_id != patch.id)
+                {
+                    errors.Add(
+                        $"Green patch {patch.id} and planning cell {cell.id} do not reference each other.");
+                }
+            }
+        }
+
+        private static void ValidateGridCellOccupancy(
+            CityGridCell cell,
+            CityBuilding[] buildings,
+            CityGreenPatch[] patches,
+            HashSet<string> buildingIds,
+            HashSet<string> patchIds,
+            HashSet<string> occupiedBuildingIds,
+            HashSet<string> occupiedPatchIds,
+            List<string> errors)
+        {
+            bool hasBuilding = !string.IsNullOrWhiteSpace(cell.occupant_id);
+            bool hasPatch = !string.IsNullOrWhiteSpace(cell.habitat_patch_id);
+            if (hasBuilding && hasPatch)
+            {
+                errors.Add($"Planning grid cell {cell.id} cannot contain a building and habitat together.");
+            }
+            if (cell.current_cover == CityLandCover.Building && !hasBuilding)
+            {
+                errors.Add($"Building planning grid cell {cell.id} must reference its occupant.");
+            }
+            if (hasBuilding)
+            {
+                if (cell.current_cover != CityLandCover.Building)
+                {
+                    errors.Add(
+                        $"Occupied planning grid cell {cell.id} must use Building land cover.");
+                }
+                if (!buildingIds.Contains(cell.occupant_id))
+                {
+                    errors.Add(
+                        $"Planning grid cell {cell.id} references unknown building {cell.occupant_id}.");
+                }
+                if (!occupiedBuildingIds.Add(cell.occupant_id))
+                {
+                    errors.Add(
+                        $"Building {cell.occupant_id} occupies more than one planning grid cell.");
+                }
+                CityBuilding building = buildings.FirstOrDefault(item =>
+                    item != null && item.id == cell.occupant_id);
+                if (building != null && building.planning_cell_id != cell.id)
+                {
+                    errors.Add(
+                        $"Planning grid cell {cell.id} and building {building.id} do not reference each other.");
+                }
+            }
+
+            if (hasPatch)
+            {
+                if (!CityGridResolver.IsHabitatCover(cell.current_cover))
+                {
+                    errors.Add(
+                        $"Habitat planning grid cell {cell.id} has incompatible land cover.");
+                }
+                if (!patchIds.Contains(cell.habitat_patch_id))
+                {
+                    errors.Add(
+                        $"Planning grid cell {cell.id} references unknown green patch " +
+                        $"{cell.habitat_patch_id}.");
+                }
+                if (!occupiedPatchIds.Add(cell.habitat_patch_id))
+                {
+                    errors.Add(
+                        $"Green patch {cell.habitat_patch_id} occupies more than one planning grid cell.");
+                }
+                CityGreenPatch patch = patches.FirstOrDefault(item =>
+                    item != null && item.id == cell.habitat_patch_id);
+                if (patch != null)
+                {
+                    if (patch.planning_cell_id != cell.id)
+                    {
+                        errors.Add(
+                            $"Planning grid cell {cell.id} and green patch {patch.id} do not reference each other.");
+                    }
+                    CityLandCover expectedCover = GreenPatchCover(patch);
+                    if (cell.current_cover != expectedCover)
+                    {
+                        errors.Add(
+                            $"Planning grid cell {cell.id} cover does not match green patch {patch.id}.");
+                    }
+                }
+            }
+        }
+
+        private static CityLandCover GreenPatchCover(CityGreenPatch patch)
+        {
+            switch (patch.type)
+            {
+                case CityGreenPatchType.Woodland:
+                    return CityLandCover.Woodland;
+                case CityGreenPatchType.ShrubGarden:
+                    return CityLandCover.ShrubGarden;
+                default:
+                    return patch.public_park ? CityLandCover.PublicGreen : CityLandCover.OpenLand;
+            }
         }
 
         private static void ValidateWaste(

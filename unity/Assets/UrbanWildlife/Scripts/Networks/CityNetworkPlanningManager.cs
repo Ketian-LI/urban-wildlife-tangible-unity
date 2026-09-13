@@ -345,6 +345,7 @@ namespace UrbanWildlife.Networks
                 revision = current.revision + 1,
                 source_contract = SourceContract,
                 bounds = current.bounds,
+                planning_grid = CityGridResolver.DeepClone(current.planning_grid),
                 buildings = buildings,
                 green_patches = current.green_patches ?? Array.Empty<CityGreenPatch>(),
                 vehicle_roads = (current.vehicle_roads ?? Array.Empty<CityVehicleRoad>())
@@ -421,6 +422,7 @@ namespace UrbanWildlife.Networks
             {
                 id = building.id,
                 source_token_id = building.source_token_id,
+                planning_cell_id = building.planning_cell_id,
                 type = building.type,
                 construction_state = building.construction_state,
                 position_norm = building.position_norm == null

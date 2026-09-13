@@ -66,13 +66,10 @@ namespace UrbanWildlife.EditorTools
             {
                 EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             }
-            EditorApplication.delayCall += () =>
+            if (!EditorApplication.isPlayingOrWillChangePlaymode)
             {
-                if (!EditorApplication.isPlayingOrWillChangePlaymode)
-                {
-                    EditorApplication.isPlaying = true;
-                }
-            };
+                EditorApplication.EnterPlaymode();
+            }
         }
 
         public static void BatchBuildAndVerifyCityPrototype()

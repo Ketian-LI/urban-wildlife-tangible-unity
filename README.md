@@ -84,6 +84,7 @@ urban-wildlife-tangible-unity/
 - [x] 接入鸽子、灰松鼠、狐狸、刺猬四物种 Utility、6–10条事件记忆、迁入迁出及车辆实际碰撞 Roadkill
 - [x] 接入 DP、施工/拆除时长、Quiet/Active/Peak/Late、五个发展阶段与五维 City Balance
 - [x] 建立城市 Human/Animal/Combined Trace、City Feed、阶段 Before/After 报告及隐私安全 JSONL/CSV 日志框架
+- [x] 将 Scan City → Preview → 选路 → DP → 跨时段施工接入城市右侧面板；预览期只显示占地提示，完工后才生成正式对象
 - [x] 接入跨周期滚动记忆：活动节点回访、松鼠熟悉度保留、谨慎度变化与可见日志
 - [x] 接入按成功个体比例计算的100分规划表现分，并在Run实时更新、Observe冻结记录
 - [x] 接入实时Human/Animal/Combined Trace、上一轮淡化叠加以及轨迹距离日志

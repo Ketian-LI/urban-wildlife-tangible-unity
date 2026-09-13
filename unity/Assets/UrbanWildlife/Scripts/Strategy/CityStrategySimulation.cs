@@ -48,6 +48,11 @@ namespace UrbanWildlife.Strategy
         public CityStrategySnapshot Snapshot { get; private set; }
         public static float[] AllowedTimeScales => new[] { 0f, 1f, 2f };
 
+        public static int DevelopmentPointCost(CityStrategyActionType actionType)
+        {
+            return CostFor(actionType).cost;
+        }
+
         public bool TryQueueProject(
             CityStrategyActionType actionType,
             string targetId,

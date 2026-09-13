@@ -5,6 +5,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UrbanWildlife.City;
+using UrbanWildlife.Planning;
 using UrbanWildlife.Prototype;
 
 namespace UrbanWildlife.EditorTools
@@ -92,6 +94,7 @@ namespace UrbanWildlife.EditorTools
                 prototype.HumanTracePointCount <= 0 ||
                 prototype.AnimalTracePointCount <= 0 ||
                 prototype.CityFeedCount <= 0 ||
+                !prototype.PlanningWorkflowConnected ||
                 prototype.RepresentativeAgentCount != 11 ||
                 prototype.RepresentedPopulation != 132 ||
                 prototype.VehicleTripCount <= 0 ||
@@ -107,6 +110,7 @@ namespace UrbanWildlife.EditorTools
                     $"phases={prototype?.DevelopmentPhaseCount}, balance={prototype?.CityBalanceTotal}, " +
                     $"humanTrace={prototype?.HumanTracePointCount}, animalTrace={prototype?.AnimalTracePointCount}, " +
                     $"feed={prototype?.CityFeedCount}, " +
+                    $"planning={prototype?.PlanningWorkflowConnected}, " +
                     $"agents={prototype?.RepresentativeAgentCount}, population={prototype?.RepresentedPopulation}, " +
                     $"vehicles={prototype?.VehicleTripCount}, viewport={separateViewport}.");
             }
@@ -123,6 +127,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("City prototype is missing a generated visual layer.");
             }
+            VerifyPlanningWorkflow();
             Debug.Log(
                 "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True buildings=6 vehicle_roads=8 " +
                 "pedestrian_links=8 amenities=3 food_sources=True waste_pressure=True " +
@@ -130,7 +135,73 @@ namespace UrbanWildlife.EditorTools
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
                 "representative_agents=11 represented_population=132 walk_and_drive=True " +
-                "live_vehicle_agents=True max_speed=2x no_questionnaire=True");
+                "live_vehicle_agents=True max_speed=2x no_questionnaire=True " +
+                "scan_preview_route_dp_construction=True no_premature_buildings=True");
+        }
+
+        private static void VerifyPlanningWorkflow()
+        {
+            CityState workflowCity = CityPrototypeStateFactory.Create();
+            CityPlanningWorkflow workflow = new CityPlanningWorkflow(
+                workflowCity,
+                CityPlanningDemoScanFactory.ConfirmedTokensFrom(workflowCity));
+            var scan = CityPlanningDemoScanFactory.CreateElectronicSample(
+                workflowCity,
+                1789322400000);
+            if (!workflow.TryAcceptScan(scan, out string error) ||
+                workflow.Phase != CityPlanningWorkflowPhase.Preview ||
+                workflow.ConstructionPreview.NewCount != 2 ||
+                workflow.ConstructionPreview.UnchangedCount != 6 ||
+                workflow.CurrentState.buildings.Length != 6)
+            {
+                throw new InvalidOperationException($"City planning scan/Preview failed: {error}");
+            }
+            if (!workflow.ConfirmPreview(out error) ||
+                workflow.Phase != CityPlanningWorkflowPhase.RouteSelection ||
+                workflow.NetworkPreview.RequiredRoadChoiceCount != 1 ||
+                workflow.CurrentState.buildings.Count(item =>
+                    item.construction_state == CityConstructionState.Proposed) != 1)
+            {
+                throw new InvalidOperationException($"City planning Preview confirmation failed: {error}");
+            }
+            if (!workflow.SelectRecommendedLowImpactRoutes(out error) ||
+                !workflow.NetworkPreview.CanConfirm ||
+                !workflow.ConfirmRoutes(out error) ||
+                workflow.Phase != CityPlanningWorkflowPhase.ReadyToBuild ||
+                workflow.Snapshot.required_development_points != 14 ||
+                !workflow.StartConstruction(out error) ||
+                workflow.Phase != CityPlanningWorkflowPhase.Construction ||
+                workflow.Strategy.DevelopmentPoints != 6)
+            {
+                throw new InvalidOperationException($"City planning route/DP commit failed: {error}");
+            }
+            workflow.AdvanceConstructionBlock();
+            if (workflow.Phase != CityPlanningWorkflowPhase.Construction)
+            {
+                throw new InvalidOperationException("Two-block construction completed too early.");
+            }
+            workflow.AdvanceConstructionBlock();
+            bool allBuilt = workflow.CurrentState.buildings
+                                .Where(item => item.source_token_id == 102)
+                                .All(item => item.construction_state == CityConstructionState.Existing) &&
+                            workflow.CurrentState.green_patches
+                                .Where(item => item.source_token_id == 140)
+                                .All(item => item.construction_state == CityConstructionState.Existing) &&
+                            workflow.CurrentState.vehicle_roads
+                                .Where(item => item.id.Contains("building-token-102"))
+                                .All(item => item.construction_state == CityConstructionState.Existing) &&
+                            workflow.CurrentState.pedestrian_links
+                                .Where(item => item.id.Contains("building-token-102"))
+                                .All(item => item.construction_state == CityConstructionState.Existing);
+            if (workflow.Phase != CityPlanningWorkflowPhase.Complete || !allBuilt ||
+                workflow.Snapshot.completed_object_ids.Length != 4)
+            {
+                throw new InvalidOperationException("City construction did not complete transactionally.");
+            }
+            Debug.Log(
+                "UNITY_CITY_PLANNING_WORKFLOW_SMOKE_OK steps=Scan>Preview>Confirm>Route>DP>Build " +
+                "new_objects=2 selected_route=LowImpact dp=20-14 construction_blocks=2 " +
+                "preview_not_live=True completed_objects=4");
         }
     }
 }

@@ -17,7 +17,7 @@
 
 ## 打开和验证
 
-如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为固定城市信息栏，不发生遮挡；面板可暂停、重启Trip或隐藏Footpath。场景会循环演示6栋既有基线建筑、8条机动车路段、8条步行连接、11名代表性居民（代表132人）和15只四物种动物；Drive Trip才生成车辆。信息栏实时显示两类食物、Waste、Overflow、干扰、DP、阶段、City Balance和轨迹计数。概念图中的新建筑不是开局内容，正式规划对象仍须完成Scan → Preview → Confirm → 选路 → 施工后才显示。
+如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为可滚动的固定城市信息栏，不发生遮挡。点击 **SCAN CITY · ELECTRONIC TEST** 可依次检查Preview、三种道路候选、DP提交、Pause/1x/2x与跨Time Block施工；电子夹具只是实体板到货前的替代输入。Preview与施工中只显示青色占地/线路提示，第二个施工时段完成后才生成正式城市对象。场景基线仍有6栋既有建筑、8条机动车路段、8条步行连接、11名代表性居民（代表132人）和15只四物种动物；Drive Trip才生成车辆。
 
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
@@ -57,6 +57,7 @@
 - `Environmental/`：同步Building与Bin垃圾节点，生成两类食物、持续Overflow、Litter Hotspot和Green Patch局部压力。
 - `Ecology/`：提供四物种Profile、Utility选点、6–10条事件记忆、基础占地避让、迁入迁出及实际Vehicle碰撞Roadkill。
 - `Strategy/`：管理DP、施工/拆除项目、四个Time Block、五个Development Phase和五维等权City Balance。
+- `Planning/CityPlanningWorkflow.cs`：把稳定扫描、差异Preview、建设确认、道路选择、DP预检和跨时段施工串成单一可操作状态机。
 - `Reporting/`：采样Human/Animal/Combined Trace，生成City Feed与阶段Before/After报告，并输出城市JSONL/CSV日志。
 - `Prototype/CityPrototypeStateFactory.cs` 与 `CityPrototypeDemo.cs`：提供可重复的城市整合夹具和实时表现层；分屏显示既有基线建筑、双路网、人流、车辆、环境压力、四物种和阶段反馈。
 - `CityPrototypeSceneTools.cs`：用菜单创建、打开并自动验证 `City_Prototype` 场景，不替换旧P0回归场景。
@@ -89,5 +90,5 @@
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。
-- 城市Token、路网、出行、环境压力、四物种、施工计时、DP、五阶段、City Balance、Trace/Feed/Report数据与城市日志均已接入机制框架和自动验证；当前Play Mode中的建筑、设施和动物仍是程序化检查物，Scan City正式控制面板、轨迹印记渲染、City Feed/Report最终界面及统一等距美术仍待完成。
+- 城市Token、路网、出行、环境压力、四物种、施工计时、DP、五阶段、City Balance、Trace/Feed/Report数据与城市日志均已接入机制框架和自动验证；Scan City流程已用电子夹具接入Play Mode，实体摄像头源仍需到货后替换验证。当前建筑、设施和动物仍是程序化检查物，城市轨迹印记、City Feed/Report最终界面及统一等距美术仍待完成。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

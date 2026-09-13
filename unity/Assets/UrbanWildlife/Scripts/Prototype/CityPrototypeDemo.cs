@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UrbanWildlife.City;
+using UrbanWildlife.Construction;
 using UrbanWildlife.Ecology;
 using UrbanWildlife.Environmental;
+using UrbanWildlife.Input;
 using UrbanWildlife.Mobility;
+using UrbanWildlife.Networks;
+using UrbanWildlife.Planning;
 using UrbanWildlife.Strategy;
 using UrbanWildlife.Reporting;
 
@@ -32,14 +36,17 @@ namespace UrbanWildlife.Prototype
         private CityEnvironmentSimulation environment;
         private CityWildlifeSimulation wildlife;
         private CityStrategySimulation strategy;
+        private CityPlanningWorkflow planningWorkflow;
         private CityObservationTracker observation;
         private ActorView[] actorViews = Array.Empty<ActorView>();
         private readonly Dictionary<string, GameObject> wildlifeViews =
             new Dictionary<string, GameObject>();
         private GameObject generatedRoot;
         private GameObject pedestrianRoot;
+        private GameObject planningPreviewRoot;
         private bool paused;
         private bool showPedestrianNetwork = true;
+        private Vector2 sidebarScroll;
         private float completeElapsed;
         private float simulationElapsed;
         private GUIStyle panelStyle;
@@ -71,6 +78,9 @@ namespace UrbanWildlife.Prototype
         public int AnimalTracePointCount => observation?
             .Trace(CityTraceDisplayMode.AnimalTrace).Length ?? 0;
         public int CityFeedCount => observation?.Snapshot?.city_feed?.Length ?? 0;
+        public bool PlanningWorkflowConnected => planningWorkflow != null;
+        public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
+                                                           CityPlanningWorkflowPhase.ReadyToScan;
 
         private void OnEnable()
         {
@@ -102,7 +112,24 @@ namespace UrbanWildlife.Prototype
                 Time.deltaTime * RuntimeSpeed,
                 environment.Snapshot,
                 mobility.ActiveVehicleAgents);
-            strategy?.Tick(Time.deltaTime * RuntimeSpeed, environment.Snapshot, wildlife.Snapshot);
+            CityPlanningWorkflowPhase phaseBeforeTick = planningWorkflow?.Phase ??
+                                                         CityPlanningWorkflowPhase.ReadyToScan;
+            if (planningWorkflow?.Phase == CityPlanningWorkflowPhase.Construction)
+            {
+                planningWorkflow.Tick(
+                    Time.deltaTime * RuntimeSpeed,
+                    environment.Snapshot,
+                    wildlife.Snapshot);
+                strategy = planningWorkflow.Strategy;
+            }
+            else if (planningWorkflow?.Phase == CityPlanningWorkflowPhase.ReadyToBuild)
+            {
+                strategy?.UpdateFeedback(environment.Snapshot, wildlife.Snapshot);
+            }
+            else
+            {
+                strategy?.Tick(Time.deltaTime * RuntimeSpeed, environment.Snapshot, wildlife.Snapshot);
+            }
             observation?.Capture(
                 Time.deltaTime * RuntimeSpeed,
                 mobility,
@@ -111,6 +138,12 @@ namespace UrbanWildlife.Prototype
                 strategy.Snapshot);
             UpdateActors();
             UpdateWildlife();
+            if (phaseBeforeTick != planningWorkflow?.Phase &&
+                planningWorkflow?.Phase == CityPlanningWorkflowPhase.Complete)
+            {
+                InitializePrototype(false);
+                return;
+            }
             if (mobility.AllComplete)
             {
                 completeElapsed += Time.deltaTime;
@@ -124,7 +157,7 @@ namespace UrbanWildlife.Prototype
         public void InitializePrototype(bool advancePreview)
         {
             ClearGenerated();
-            city = CityPrototypeStateFactory.Create();
+            city = planningWorkflow?.CurrentState ?? CityPrototypeStateFactory.Create();
             plan = CityTripPlanner.CreatePlan(city);
             mobility = new CityMobilitySimulation(plan, city.bounds);
             environment = new CityEnvironmentSimulation(city, new CityEnvironmentConfiguration
@@ -132,7 +165,13 @@ namespace UrbanWildlife.Prototype
                 overflow_grace_seconds = 4f,
             });
             wildlife = new CityWildlifeSimulation(city);
-            strategy = new CityStrategySimulation(city);
+            strategy = planningWorkflow?.Strategy ?? new CityStrategySimulation(city);
+            if (planningWorkflow == null)
+            {
+                planningWorkflow = new CityPlanningWorkflow(
+                    city,
+                    CityPlanningDemoScanFactory.ConfirmedTokensFrom(city));
+            }
             observation = new CityObservationTracker();
             observation.BeginPhase(strategy.Snapshot);
             completeElapsed = 0f;
@@ -152,6 +191,7 @@ namespace UrbanWildlife.Prototype
             BuildAmenities();
             BuildWildlife();
             BuildActors();
+            BuildPlanningOverlay();
             if (advancePreview)
             {
                 mobility.Tick(8f);
@@ -219,7 +259,8 @@ namespace UrbanWildlife.Prototype
         private void BuildGreenPatches()
         {
             GameObject root = ChildRoot("Green patches");
-            foreach (CityGreenPatch patch in city.green_patches)
+            foreach (CityGreenPatch patch in city.green_patches.Where(item =>
+                         item.construction_state == CityConstructionState.Existing))
             {
                 Color colour;
                 switch (patch.type)
@@ -247,7 +288,9 @@ namespace UrbanWildlife.Prototype
         private void BuildNetworks()
         {
             GameObject roadRoot = ChildRoot("Vehicle road network");
-            foreach (CityVehicleRoad road in city.vehicle_roads)
+            CityVehicleRoad[] activeRoads = city.vehicle_roads.Where(item =>
+                item.construction_state == CityConstructionState.Existing).ToArray();
+            foreach (CityVehicleRoad road in activeRoads)
             {
                 float width = road.width_units / city.bounds.width_units * MapWidth;
                 CreateLine(
@@ -269,7 +312,9 @@ namespace UrbanWildlife.Prototype
             }
 
             pedestrianRoot = ChildRoot("Pedestrian link network");
-            foreach (CityPedestrianLink link in city.pedestrian_links)
+            CityPedestrianLink[] activeLinks = city.pedestrian_links.Where(item =>
+                item.construction_state == CityConstructionState.Existing).ToArray();
+            foreach (CityPedestrianLink link in activeLinks)
             {
                 float width = link.width_units / city.bounds.width_units * MapWidth;
                 CreateLine(
@@ -281,14 +326,16 @@ namespace UrbanWildlife.Prototype
                     0.075f,
                     -4);
             }
-            GeneratedVehicleRoadCount = city.vehicle_roads.Length;
-            GeneratedPedestrianLinkCount = city.pedestrian_links.Length;
+            GeneratedVehicleRoadCount = activeRoads.Length;
+            GeneratedPedestrianLinkCount = activeLinks.Length;
         }
 
         private void BuildBuildings()
         {
             GameObject root = ChildRoot("Buildings");
-            foreach (CityBuilding building in city.buildings)
+            CityBuilding[] activeBuildings = city.buildings.Where(item =>
+                item.construction_state == CityConstructionState.Existing).ToArray();
+            foreach (CityBuilding building in activeBuildings)
             {
                 Color wall;
                 Color roof;
@@ -342,7 +389,136 @@ namespace UrbanWildlife.Prototype
                 SetMaterial(roofObject, roof);
                 CreateLabel(root.transform, shortLabel, ToWorld(building.position_norm, height + 0.18f), 0.18f);
             }
-            GeneratedBuildingCount = city.buildings.Length;
+            GeneratedBuildingCount = activeBuildings.Length;
+        }
+
+        private void BuildPlanningOverlay()
+        {
+            planningPreviewRoot = ChildRoot("Planning Preview Overlay");
+            if (planningWorkflow == null)
+            {
+                return;
+            }
+
+            if (planningWorkflow.Phase == CityPlanningWorkflowPhase.Preview &&
+                planningWorkflow.ConstructionPreview != null)
+            {
+                foreach (CityTokenChange change in planningWorkflow.ConstructionPreview.changes
+                             .Where(item => item.change_kind == CityTokenChangeKind.New &&
+                                            !item.blocks_confirmation))
+                {
+                    if (change.token_type == CityPhysicalTokenType.GreenIntervention)
+                    {
+                        CityGreenPatch patch = CityConstructionFactory.CreateGreenIntervention(
+                            change.scanned_state,
+                            city.bounds,
+                            CityConstructionState.Proposed);
+                        DrawPlanningPatch(patch, "SCAN PREVIEW");
+                    }
+                    else
+                    {
+                        CityBuilding building = CityConstructionFactory.CreateBuilding(
+                            change.scanned_state,
+                            CityConstructionState.Proposed);
+                        DrawPlanningFootprint(building, "SCAN PREVIEW");
+                    }
+                }
+                return;
+            }
+
+            foreach (CityBuilding building in planningWorkflow.CurrentState.buildings.Where(item =>
+                         item.construction_state != CityConstructionState.Existing))
+            {
+                DrawPlanningFootprint(
+                    building,
+                    building.construction_state == CityConstructionState.UnderConstruction
+                        ? "BUILDING"
+                        : "PROPOSED");
+            }
+            foreach (CityGreenPatch patch in planningWorkflow.CurrentState.green_patches.Where(item =>
+                         item.construction_state != CityConstructionState.Existing))
+            {
+                DrawPlanningPatch(
+                    patch,
+                    patch.construction_state == CityConstructionState.UnderConstruction
+                        ? "GROWING"
+                        : "PROPOSED");
+            }
+            foreach (CityVehicleRoad road in planningWorkflow.CurrentState.vehicle_roads.Where(item =>
+                         item.construction_state != CityConstructionState.Existing))
+            {
+                CreateLine(
+                    planningPreviewRoot.transform,
+                    "Preview " + road.id,
+                    road.points_norm,
+                    Mathf.Max(0.08f, road.width_units / city.bounds.width_units * MapWidth * 0.45f),
+                    new Color(0.18f, 0.72f, 0.82f, 1f),
+                    0.095f,
+                    8);
+            }
+            foreach (CityPedestrianLink link in planningWorkflow.CurrentState.pedestrian_links.Where(item =>
+                         item.construction_state != CityConstructionState.Existing))
+            {
+                CreateLine(
+                    planningPreviewRoot.transform,
+                    "Preview " + link.id,
+                    link.points_norm,
+                    0.06f,
+                    new Color(0.98f, 0.73f, 0.30f, 1f),
+                    0.10f,
+                    9);
+            }
+            if (planningWorkflow.Phase == CityPlanningWorkflowPhase.RouteSelection &&
+                planningWorkflow.NetworkPreview != null)
+            {
+                foreach (CityRoadChoiceSet choice in planningWorkflow.NetworkPreview.road_choices.Where(item =>
+                             item.HasSelection))
+                {
+                    CreateLine(
+                        planningPreviewRoot.transform,
+                        "Selected " + choice.SelectedCandidate.id,
+                        choice.SelectedCandidate.points_norm,
+                        0.10f,
+                        new Color(0.18f, 0.72f, 0.82f, 1f),
+                        0.105f,
+                        10);
+                }
+            }
+        }
+
+        private void DrawPlanningFootprint(CityBuilding building, string status)
+        {
+            float width = building.footprint_units[0] / city.bounds.width_units * MapWidth;
+            float depth = building.footprint_units[1] / city.bounds.height_units * MapHeight;
+            GameObject footprint = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            footprint.name = $"{status} {building.id}";
+            footprint.transform.SetParent(planningPreviewRoot.transform, false);
+            footprint.transform.localPosition = ToWorld(building.position_norm, 0.115f);
+            footprint.transform.localScale = new Vector3(width, 0.035f, depth);
+            footprint.transform.localRotation = Quaternion.Euler(0f, -building.rotation_deg, 0f);
+            RemoveCollider(footprint);
+            SetMaterial(footprint, new Color(0.30f, 0.84f, 0.90f, 1f));
+            CreateLabel(
+                planningPreviewRoot.transform,
+                status,
+                ToWorld(building.position_norm, 0.18f),
+                0.13f);
+        }
+
+        private void DrawPlanningPatch(CityGreenPatch patch, string status)
+        {
+            CreatePolygon(
+                planningPreviewRoot.transform,
+                $"{status} {patch.id}",
+                patch.polygon_norm,
+                0.10f,
+                new Color(0.45f, 0.82f, 0.62f, 1f));
+            float[] centre =
+            {
+                patch.polygon_norm.Average(point => point[0]),
+                patch.polygon_norm.Average(point => point[1]),
+            };
+            CreateLabel(planningPreviewRoot.transform, status, ToWorld(centre, 0.16f), 0.13f);
         }
 
         private void BuildAmenities()
@@ -576,6 +752,7 @@ namespace UrbanWildlife.Prototype
             float panelX = Screen.width * 0.77f;
             float panelWidth = Screen.width * 0.23f;
             GUILayout.BeginArea(new Rect(panelX, 0f, panelWidth, Screen.height), panelStyle);
+            sidebarScroll = GUILayout.BeginScrollView(sidebarScroll, false, true);
             GUILayout.Space(20f);
             GUILayout.Label("RIVERSIDE WILDLIFE DISTRICT", headingStyle);
             GUILayout.Label("LIVE CITY", titleStyle);
@@ -589,6 +766,9 @@ namespace UrbanWildlife.Prototype
                     $"DP {strategy.Snapshot.development_points}  ·  Balance {strategy.Snapshot.balance.total:0}",
                     metricStyle);
             }
+            GUILayout.Space(18f);
+
+            DrawPlanningWorkflowPanel();
             GUILayout.Space(18f);
 
             GUILayout.Label(paused ? "PAUSED" : "LIVE CITY  ·  ×2", headingStyle);
@@ -665,7 +845,202 @@ namespace UrbanWildlife.Prototype
                 "Residents emerge from housing and respond to destination appeal, distance and crowding. Vehicles only appear for Drive trips.",
                 bodyStyle);
             GUILayout.Space(18f);
+            GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        private void DrawPlanningWorkflowPanel()
+        {
+            if (planningWorkflow == null)
+            {
+                return;
+            }
+            CityPlanningWorkflowSnapshot snapshot = planningWorkflow.Snapshot;
+            GUILayout.Label("CITY PLANNING", headingStyle);
+            GUILayout.Label(WorkflowStepLabel(snapshot.phase), metricStyle);
+            GUILayout.Label(snapshot.message, bodyStyle);
+            GUILayout.Space(7f);
+
+            switch (snapshot.phase)
+            {
+                case CityPlanningWorkflowPhase.ReadyToScan:
+                    if (GUILayout.Button("SCAN CITY · ELECTRONIC TEST", buttonStyle))
+                    {
+                        CityTokenScanPacket scan = CityPlanningDemoScanFactory.CreateElectronicSample(
+                            city,
+                            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                        planningWorkflow.TryAcceptScan(scan, out _);
+                        RefreshPlanningOverlay();
+                    }
+                    GUILayout.Label(
+                        "Uses a stable sample frame now; the same validated packet will later come from the overhead camera.",
+                        bodyStyle);
+                    break;
+
+                case CityPlanningWorkflowPhase.Preview:
+                    CityConstructionPreview construction = snapshot.construction_preview;
+                    if (construction != null)
+                    {
+                        GUILayout.Label(
+                            $"New {construction.NewCount}  ·  Moved {construction.MovedCount}  ·  Missing {construction.MissingCount}",
+                            bodyStyle);
+                    }
+                    GUI.enabled = snapshot.CanConfirmPreview;
+                    if (GUILayout.Button("CONFIRM PREVIEW", buttonStyle))
+                    {
+                        planningWorkflow.ConfirmPreview(out _);
+                        RefreshPlanningOverlay();
+                    }
+                    GUI.enabled = true;
+                    if (GUILayout.Button("CANCEL PREVIEW", buttonStyle))
+                    {
+                        planningWorkflow.CancelPreview();
+                        RefreshPlanningOverlay();
+                    }
+                    break;
+
+                case CityPlanningWorkflowPhase.RouteSelection:
+                    DrawRouteChoices(snapshot.network_preview);
+                    break;
+
+                case CityPlanningWorkflowPhase.ReadyToBuild:
+                    GUILayout.Label(
+                        $"Cost {snapshot.required_development_points} DP  ·  Available {snapshot.strategy.development_points} DP",
+                        bodyStyle);
+                    GUI.enabled = snapshot.CanStartConstruction;
+                    if (GUILayout.Button("START CONSTRUCTION", buttonStyle))
+                    {
+                        if (planningWorkflow.StartConstruction(out _))
+                        {
+                            InitializePrototype(false);
+                        }
+                    }
+                    GUI.enabled = true;
+                    break;
+
+                case CityPlanningWorkflowPhase.Construction:
+                    int active = snapshot.strategy.projects.Count(item =>
+                        item.state == CityStrategyProjectState.Active);
+                    int total = snapshot.strategy.projects.Length;
+                    GUILayout.Label($"Active projects  {active}/{total}", bodyStyle);
+                    foreach (CityStrategyProject project in snapshot.strategy.projects.Where(item =>
+                                 item.state == CityStrategyProjectState.Active).Take(3))
+                    {
+                        GUILayout.Label(
+                            $"{project.target_id}  ·  {project.remaining_time_blocks} block(s)",
+                            bodyStyle);
+                    }
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("PAUSE", buttonStyle)) planningWorkflow.SetTimeScale(0f);
+                    if (GUILayout.Button("1×", buttonStyle)) planningWorkflow.SetTimeScale(1f);
+                    if (GUILayout.Button("2×", buttonStyle)) planningWorkflow.SetTimeScale(2f);
+                    GUILayout.EndHorizontal();
+                    if (GUILayout.Button("ADVANCE ONE BLOCK", buttonStyle))
+                    {
+                        planningWorkflow.AdvanceConstructionBlock();
+                        if (planningWorkflow.Phase == CityPlanningWorkflowPhase.Complete)
+                        {
+                            InitializePrototype(false);
+                        }
+                        else
+                        {
+                            RefreshPlanningOverlay();
+                        }
+                    }
+                    break;
+
+                case CityPlanningWorkflowPhase.Complete:
+                    GUILayout.Label(
+                        $"Built {snapshot.completed_object_ids.Length} confirmed city objects.",
+                        bodyStyle);
+                    GUILayout.Label("The Preview footprints are now live city geometry.", bodyStyle);
+                    break;
+            }
+        }
+
+        private void DrawRouteChoices(CityNetworkPlanPreview preview)
+        {
+            if (preview == null)
+            {
+                return;
+            }
+            foreach (CityRoadChoiceSet choice in preview.road_choices)
+            {
+                GUILayout.Label(choice.building_id, bodyStyle);
+                GUILayout.BeginHorizontal();
+                DrawRoadChoiceButton(choice, CityRoadRouteOption.Direct, "DIRECT");
+                DrawRoadChoiceButton(choice, CityRoadRouteOption.ExistingNetwork, "EXISTING");
+                DrawRoadChoiceButton(choice, CityRoadRouteOption.LowImpact, "LOW");
+                GUILayout.EndHorizontal();
+                if (choice.HasSelection)
+                {
+                    GUILayout.Label(
+                        $"Selected: {choice.SelectedCandidate.route_option} · " +
+                        $"green impact {choice.SelectedCandidate.estimated_green_impact_units:0.0}",
+                        bodyStyle);
+                }
+            }
+            if (GUILayout.Button("USE LOW-IMPACT ROUTES", buttonStyle))
+            {
+                planningWorkflow.SelectRecommendedLowImpactRoutes(out _);
+                RefreshPlanningOverlay();
+            }
+            GUI.enabled = preview.CanConfirm;
+            if (GUILayout.Button("CONFIRM ROUTES", buttonStyle))
+            {
+                if (planningWorkflow.ConfirmRoutes(out _))
+                {
+                    InitializePrototype(false);
+                }
+            }
+            GUI.enabled = true;
+        }
+
+        private void DrawRoadChoiceButton(
+            CityRoadChoiceSet choice,
+            CityRoadRouteOption option,
+            string label)
+        {
+            bool available = choice.candidates.Any(candidate => candidate.route_option == option);
+            bool previous = GUI.enabled;
+            GUI.enabled = previous && available;
+            if (GUILayout.Button(label, buttonStyle))
+            {
+                planningWorkflow.SelectRoadOption(choice.building_id, option, out _);
+                RefreshPlanningOverlay();
+            }
+            GUI.enabled = previous;
+        }
+
+        private static string WorkflowStepLabel(CityPlanningWorkflowPhase phase)
+        {
+            switch (phase)
+            {
+                case CityPlanningWorkflowPhase.ReadyToScan: return "1  SCAN CITY";
+                case CityPlanningWorkflowPhase.Preview: return "2  PREVIEW";
+                case CityPlanningWorkflowPhase.RouteSelection: return "3  CHOOSE ACCESS";
+                case CityPlanningWorkflowPhase.ReadyToBuild: return "4  COMMIT DP";
+                case CityPlanningWorkflowPhase.Construction: return "5  CONSTRUCTION";
+                default: return "COMPLETE";
+            }
+        }
+
+        private void RefreshPlanningOverlay()
+        {
+            if (planningPreviewRoot != null)
+            {
+                planningPreviewRoot.SetActive(false);
+                if (Application.isPlaying)
+                {
+                    Destroy(planningPreviewRoot);
+                }
+                else
+                {
+                    DestroyImmediate(planningPreviewRoot);
+                }
+                planningPreviewRoot = null;
+            }
+            BuildPlanningOverlay();
         }
 
         private void EnsureStyles()

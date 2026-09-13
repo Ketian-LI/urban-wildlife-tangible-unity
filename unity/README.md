@@ -2,7 +2,7 @@
 
 这是可直接由 Unity Hub 打开的Unity 6工程，项目路径为仓库中的 `unity/`，编辑器版本固定为 `6000.3.4f1`。
 
-当前主场景为 `Assets/Scenes/P0_InputSpike.unity`。场景包含布局输入、约束、回合控制、基础人类代理、三种动物状态机、实时Human/Animal/Combined Trace和最小研究日志。
+当前保留两个场景：`Assets/Scenes/P0_InputSpike.unity` 是旧公园回归底座；`Assets/Scenes/City_Prototype.unity` 是新版城市整合场景，优先用于检查建筑、双路网、代表性居民与车辆。
 
 不要提交 `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 或本机构建输出。
 
@@ -16,6 +16,8 @@
 - 正式字段定义见 `data/schemas/layout_packet_v0.1.schema.json`；隐私安全示例见 `docs/images/vision/layout-packet-validation/latest_layout.json`。
 
 ## 打开和验证
+
+如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧29%为固定公园管理告示栏，右侧71%为独立地图视口，不发生遮挡；面板可暂停、重启Trip或隐藏Footpath。场景会循环演示6栋建筑、8条机动车路段、8条步行连接和11名代表性居民（代表132人），Drive Trip才生成车辆。
 
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
@@ -52,6 +54,8 @@
 - `Mobility/CityTripPlanner.cs`：从已建住宅生成最多24个代表性居民，按权重、距离与拥挤惩罚选择目的地，并在独立网络间选择Walk或Drive。
 - `Mobility/CityNetworkRouteBuilder.cs`：沿Building Access与主网络拼接归一化路线，步行和机动车路线互不混用。
 - `Mobility/CityTripAgent.cs` 与 `CityMobilitySimulation.cs`：分批生成Trip，运行Outbound、Dwelling、Returning、Complete状态；只有Drive Trip产生Vehicle Agent。
+- `Prototype/CityPrototypeStateFactory.cs` 与 `CityPrototypeDemo.cs`：提供可重复的城市整合夹具和实时表现层；分屏显示6栋建筑、两级机动车道路、独立步行网络、人流、车辆与目的地压力。
+- `CityPrototypeSceneTools.cs`：用菜单创建、打开并自动验证 `City_Prototype` 场景，不替换旧P0回归场景。
 - `LayoutPacketModels.cs`：与Python JSON对应的数据模型，支持路径二维数组。
 - `LayoutPacketReader.cs`：读取原子文件，校验版本、时间戳、完整Token集合、数值范围和连续路径；只有全部通过才发布 `LayoutAccepted` 事件。
 - `P0ElectronicDemoInput.cs`：在材料到货前，从脱敏夹具原子生成带新时间戳、Session和Cycle的电子演示包；不产生实体识别已经通过的主张。

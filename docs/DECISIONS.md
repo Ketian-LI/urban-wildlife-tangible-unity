@@ -93,6 +93,7 @@
 | D085 | 基础步行接入由系统自动生成，机动车与步行网络分开存储；额外Footpath只在屏幕Preview中新增、修改或删除并标记为ScreenEdited，正式城市输入不再使用道路彩带 | 已实现数据与事务规则，DP和施工时间待后续批次 |
 | D086 | 城市人口以代表性Trip呈现，默认最多24个、接口上限30个；住宅Housing Capacity与Origin Rate决定数量，每个代理保存represented_people，避免将人口一比一显示为NPC | 已实现确定性V0.1，待正式城市Play Mode视觉调参 |
 | D087 | 目的地选择读取Weight、距离、Comfortable Capacity与Crowd Penalty；Walk与Drive分别使用PedestrianLink和VehicleRoad，且只有Drive Trip生成可追溯的Vehicle Agent，不制作随机背景交通 | 已实现规则与往返模拟，待城市UI批次接入表现层 |
+| D088 | 在环境压力批次前先建立独立`City_Prototype`集成场景；左侧29%为固定规划告示栏、右侧71%为完整地图视口，旧P0场景保留回归。样板需实时呈现Building、双路网、代表性居民、车辆和Crowding，但不冒充最终城市美术 | 已实现并通过场景集成烟雾测试 |
 
 ## 待确定顺序
 

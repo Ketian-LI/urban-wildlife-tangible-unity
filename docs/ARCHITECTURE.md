@@ -42,6 +42,10 @@
 
 `CityNetworkRouteBuilder` 通过建筑接入线的 `connected_road_ids` 或 `connected_link_ids` 拼接主网络：Walk只查询PedestrianLink，Drive只查询VehicleRoad。`CityTripAgent` 使用同一路线完成Outbound、目的地Dwelling和反向Returning。`CityMobilitySimulation` 按1.5秒间隔生成代理；Drive状态才公开对应Vehicle Agent，因此车辆数量可追溯到具体Trip，不存在随机背景交通。当前公式和速度是确定性玩法V0.1，不是人口或交通预测模型。
 
+### 城市可视化集成壳
+
+`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的6建筑演示状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染右侧71%的地图视口，左侧29%由固定现场告示式控制面板占用，两者不遮挡。该场景用于提前暴露系统整合与视觉问题，不代表最终城市美术或最终摄像头工作流。
+
 ## 已确定的实体输入基线
 
 - 60 × 90 cm 黑色磁吸板，横向平放。

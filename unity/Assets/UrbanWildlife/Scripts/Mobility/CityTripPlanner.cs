@@ -228,6 +228,11 @@ namespace UrbanWildlife.Mobility
                 return CityTravelMode.Drive;
             }
 
+            if (origin.vehicle_demand <= 0.5f && directDistance <= 50f)
+            {
+                return CityTravelMode.Walk;
+            }
+
             float distanceFactor = Math.Min(1f, directDistance / 45f);
             float jitter = (StableUnit(agentId + "mode", seed) - 0.5f) * 0.08f;
             float driveScore = origin.vehicle_demand * 0.55f + distanceFactor * 0.45f + jitter;

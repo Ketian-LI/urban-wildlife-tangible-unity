@@ -8,5 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/P0_InputSpike.unity
     guid: 081881e4cf3267b49b36adb4ee5230f9
+  - enabled: 1
+    path: Assets/Scenes/City_Prototype.unity
+    guid: b2202243ce4ffeb43b8c1eae656db1cb
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

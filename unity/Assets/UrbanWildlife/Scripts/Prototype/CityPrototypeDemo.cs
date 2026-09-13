@@ -23,6 +23,8 @@ namespace UrbanWildlife.Prototype
         private const float RuntimeSpeed = 2f;
         private const string CityTreeResourcePath =
             "UrbanWildlife/Environment/tree-citybuilder-default-v01";
+        private const string CityBushResourcePath =
+            "UrbanWildlife/Environment/bush-citybuilder-default-v01";
 
         [SerializeField]
         [Tooltip("Path relative to Unity Assets, or an absolute path.")]
@@ -301,6 +303,11 @@ namespace UrbanWildlife.Prototype
             CreateTree(root.transform, "Tree east 1", new[] { 0.79f, 0.63f }, 0.86f);
             CreateTree(root.transform, "Tree east 2", new[] { 0.88f, 0.85f }, 0.76f);
             CreateTree(root.transform, "Garden tree", new[] { 0.42f, 0.73f }, 0.66f);
+
+            CreateBush(root.transform, "Rain garden shrub 1", new[] { 0.36f, 0.67f }, 0.78f);
+            CreateBush(root.transform, "Rain garden shrub 2", new[] { 0.44f, 0.82f }, 0.64f);
+            CreateBush(root.transform, "West woodland shrub", new[] { 0.14f, 0.87f }, 0.58f);
+            CreateBush(root.transform, "East woodland shrub", new[] { 0.77f, 0.88f }, 0.62f);
         }
 
         private void BuildNetworks()
@@ -1310,6 +1317,34 @@ namespace UrbanWildlife.Prototype
             SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.sortingOrder = 14;
+        }
+
+        private void CreateBush(Transform parent, string name, float[] normalized, float scale)
+        {
+            Sprite sprite = Resources.Load<Sprite>(CityBushResourcePath);
+            if (sprite == null)
+            {
+                Debug.LogWarning($"City bush sprite was not found at Resources/{CityBushResourcePath}.");
+                return;
+            }
+
+            GameObject bush = new GameObject(name);
+            bush.transform.SetParent(parent, false);
+            bush.transform.localPosition = ToWorld(normalized, 0.09f);
+
+            GameObject artwork = new GameObject("Bush artwork");
+            artwork.transform.SetParent(bush.transform, false);
+            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            artwork.transform.localPosition = Vector3.zero;
+            // The source artwork deliberately keeps generous transparent breathing room.
+            // Compensate here so its visible foliage reads at the same map scale as the trees.
+            float targetWidth = 1.20f * scale;
+            float artworkScale = targetWidth / Mathf.Max(0.001f, sprite.bounds.size.x);
+            artwork.transform.localScale = new Vector3(artworkScale, artworkScale, artworkScale);
+
+            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = 13;
         }
 
         private GameObject ChildRoot(string name)

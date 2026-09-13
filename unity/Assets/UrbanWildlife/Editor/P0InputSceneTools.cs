@@ -608,11 +608,32 @@ namespace UrbanWildlife.EditorTools
                     Directory.Delete(cityLogSmokeRoot, true);
                 }
             }
+            observation.ResetView(
+                reportingPlan,
+                reportingEnvironment.Snapshot,
+                reportingWildlife.Snapshot,
+                reportingStrategy.Snapshot);
+            if (observation.Snapshot.trace_points.Length != 0 ||
+                observation.Snapshot.city_feed.Length != 0)
+            {
+                throw new InvalidOperationException("Reset View did not clear traces and City Feed.");
+            }
+            observation.Capture(
+                0f,
+                reportingMobility,
+                reportingEnvironment.Snapshot,
+                reportingWildlife.Snapshot,
+                reportingStrategy.Snapshot);
+            if (observation.Snapshot.city_feed.Length != 0)
+            {
+                throw new InvalidOperationException(
+                    "Reset View immediately replayed already observed City Feed events.");
+            }
             Debug.Log(
                 "UNITY_CITY_OBSERVATION_SMOKE_OK traces=Human/Animal/Combined " +
                 "marks=Footprint/VehicleTyre/BirdTrack/SmallPaw/FoxPaw/HedgehogTrack " +
                 "city_feed=overflow/crowding/feeding/migration/roadkill/project/balance " +
-                "phase_report=Before/After jsonl=True csv=True participant_fields=0");
+                "phase_report=Before/After reset_view=True jsonl=True csv=True participant_fields=0");
 
             string cityScanPath = Path.GetFullPath(Path.Combine(
                 Application.dataPath,

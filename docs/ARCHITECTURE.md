@@ -52,7 +52,7 @@
 
 `CityStrategySimulation`管理DP、施工/拆除项目、四个日内Time Block和五个Development Phase。项目开始后转为UnderConstruction/Demolishing，经过规定Time Block才完成；City Balance五维等权计算，最后一个Natural Food Patch受到硬约束保护。暂停与运行速度只允许0、1、2倍。
 
-`CityObservationTracker`从Mobility与Wildlife公开快照采样Human/Animal/Combined Trace，去重生成Overflow、Crowding、Feeding、Migration、Roadkill、Project Completed和Balance Warning事件。阶段报告冻结Before/After五维分数；`CityResearchLogWriter`输出不含参与者身份字段的JSONL与CSV。最终UI只消费这些快照，不反向修改模拟状态。
+`CityObservationTracker`从Mobility与Wildlife公开快照采样Human/Animal/Combined Trace，去重生成Overflow、Crowding、Feeding、Migration、Roadkill、Project Completed和Balance Warning事件。阶段报告冻结Before/After五维分数；`CityResearchLogWriter`输出不含参与者身份字段的JSONL与CSV。`CityTraceVisualizer`只消费快照，把最近900个采样点渲染为鞋印、轮迹、鸟爪、松鼠小爪、狐狸大爪和刺猬点印；People、Wildlife与All只是显示切换，不反向修改模拟状态。
 
 ## 已确定的实体输入基线
 

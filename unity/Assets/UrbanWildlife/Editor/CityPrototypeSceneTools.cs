@@ -93,6 +93,7 @@ namespace UrbanWildlife.EditorTools
                 prototype.CityBalanceTotal <= 0f ||
                 prototype.HumanTracePointCount <= 0 ||
                 prototype.AnimalTracePointCount <= 0 ||
+                prototype.VisibleTraceMarkCount <= 0 ||
                 prototype.CityFeedCount <= 0 ||
                 !prototype.PlanningWorkflowConnected ||
                 prototype.RepresentativeAgentCount != 11 ||
@@ -109,6 +110,7 @@ namespace UrbanWildlife.EditorTools
                     $"wildlife={prototype?.WildlifeAgentCount}, species={prototype?.WildlifeSpeciesCount}, " +
                     $"phases={prototype?.DevelopmentPhaseCount}, balance={prototype?.CityBalanceTotal}, " +
                     $"humanTrace={prototype?.HumanTracePointCount}, animalTrace={prototype?.AnimalTracePointCount}, " +
+                    $"visibleTraceMarks={prototype?.VisibleTraceMarkCount}, " +
                     $"feed={prototype?.CityFeedCount}, " +
                     $"planning={prototype?.PlanningWorkflowConnected}, " +
                     $"agents={prototype?.RepresentativeAgentCount}, population={prototype?.RepresentedPopulation}, " +
@@ -122,6 +124,8 @@ namespace UrbanWildlife.EditorTools
                 "Generated City Prototype/Digital amenities",
                 "Generated City Prototype/City wildlife agents",
                 "Generated City Prototype/Representative mobility agents",
+                "Generated City Prototype/Live city traces/Human traces",
+                "Generated City Prototype/Live city traces/Animal traces",
             };
             if (requiredObjects.Any(path => prototype.transform.Find(path) == null))
             {
@@ -136,6 +140,7 @@ namespace UrbanWildlife.EditorTools
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
                 "representative_agents=11 represented_population=132 walk_and_drive=True " +
                 "live_vehicle_agents=True max_speed=2x no_questionnaire=True " +
+                "visible_footprint_tyre_bird_paw_tracks=True city_feed_panel=True phase_snapshot=True " +
                 "scan_preview_route_dp_construction=True no_premature_buildings=True");
         }
 

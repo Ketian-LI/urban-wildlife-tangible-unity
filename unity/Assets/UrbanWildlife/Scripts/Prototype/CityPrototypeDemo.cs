@@ -38,6 +38,7 @@ namespace UrbanWildlife.Prototype
         private CityStrategySimulation strategy;
         private CityPlanningWorkflow planningWorkflow;
         private CityObservationTracker observation;
+        private CityTraceVisualizer traceVisualizer;
         private ActorView[] actorViews = Array.Empty<ActorView>();
         private readonly Dictionary<string, GameObject> wildlifeViews =
             new Dictionary<string, GameObject>();
@@ -46,6 +47,7 @@ namespace UrbanWildlife.Prototype
         private GameObject planningPreviewRoot;
         private bool paused;
         private bool showPedestrianNetwork = true;
+        private CityTraceDisplayMode traceDisplayMode = CityTraceDisplayMode.CombinedTrace;
         private Vector2 sidebarScroll;
         private float completeElapsed;
         private float simulationElapsed;
@@ -78,6 +80,7 @@ namespace UrbanWildlife.Prototype
         public int AnimalTracePointCount => observation?
             .Trace(CityTraceDisplayMode.AnimalTrace).Length ?? 0;
         public int CityFeedCount => observation?.Snapshot?.city_feed?.Length ?? 0;
+        public int VisibleTraceMarkCount => traceVisualizer?.VisibleMarkCount ?? 0;
         public bool PlanningWorkflowConnected => planningWorkflow != null;
         public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
                                                            CityPlanningWorkflowPhase.ReadyToScan;
@@ -136,6 +139,7 @@ namespace UrbanWildlife.Prototype
                 environment.Snapshot,
                 wildlife.Snapshot,
                 strategy.Snapshot);
+            UpdateTraceVisuals();
             UpdateActors();
             UpdateWildlife();
             if (phaseBeforeTick != planningWorkflow?.Phase &&
@@ -172,8 +176,11 @@ namespace UrbanWildlife.Prototype
                     city,
                     CityPlanningDemoScanFactory.ConfirmedTokensFrom(city));
             }
-            observation = new CityObservationTracker();
-            observation.BeginPhase(strategy.Snapshot);
+            if (observation == null)
+            {
+                observation = new CityObservationTracker();
+                observation.BeginPhase(strategy.Snapshot);
+            }
             completeElapsed = 0f;
             simulationElapsed = 0f;
             paused = false;
@@ -192,6 +199,7 @@ namespace UrbanWildlife.Prototype
             BuildWildlife();
             BuildActors();
             BuildPlanningOverlay();
+            BuildTraceLayer();
             if (advancePreview)
             {
                 mobility.Tick(8f);
@@ -204,6 +212,7 @@ namespace UrbanWildlife.Prototype
                     environment.Snapshot,
                     wildlife.Snapshot,
                     strategy.Snapshot);
+                UpdateTraceVisuals();
                 UpdateActors();
                 UpdateWildlife();
             }
@@ -807,6 +816,7 @@ namespace UrbanWildlife.Prototype
                     $"Traces  H {HumanTracePointCount}  ·  A {AnimalTracePointCount}",
                     bodyStyle);
             }
+            DrawObservationPanel();
             GUILayout.Space(16f);
 
             GUILayout.Label("MAP KEY", headingStyle);
@@ -956,6 +966,145 @@ namespace UrbanWildlife.Prototype
                     GUILayout.Label("The Preview footprints are now live city geometry.", bodyStyle);
                     break;
             }
+        }
+
+        private void DrawObservationPanel()
+        {
+            if (observation?.Snapshot == null || strategy?.Snapshot == null ||
+                wildlife?.Snapshot == null)
+            {
+                return;
+            }
+            GUILayout.Space(12f);
+            GUILayout.Label("CITY TRACKS", headingStyle);
+            GUILayout.BeginHorizontal();
+            DrawTraceModeButton(CityTraceDisplayMode.HumanTrace, "PEOPLE");
+            DrawTraceModeButton(CityTraceDisplayMode.AnimalTrace, "WILDLIFE");
+            DrawTraceModeButton(CityTraceDisplayMode.CombinedTrace, "ALL");
+            GUILayout.EndHorizontal();
+            GUILayout.Label(
+                $"Visible marks {VisibleTraceMarkCount}/{CityTraceVisualizer.MaximumVisibleMarks}",
+                bodyStyle);
+
+            GUILayout.Space(10f);
+            GUILayout.Label("CITY FEED", headingStyle);
+            CityFeedEntry[] latest = observation.Snapshot.city_feed
+                .Reverse()
+                .Take(4)
+                .ToArray();
+            if (latest.Length == 0)
+            {
+                GUILayout.Label("Waiting for a meaningful city event…", bodyStyle);
+            }
+            foreach (CityFeedEntry entry in latest)
+            {
+                GUILayout.Label(
+                    $"{FeedSymbol(entry.type)}  {FeedTitle(entry.type)}  ·  {entry.elapsed_seconds:0}s",
+                    metricStyle);
+                GUILayout.Label(entry.message, bodyStyle);
+            }
+
+            CityPhaseReport report = observation.BuildPhaseReport(
+                strategy.Snapshot,
+                wildlife.Snapshot);
+            GUILayout.Space(10f);
+            GUILayout.Label("PHASE SNAPSHOT", headingStyle);
+            GUILayout.Label(
+                $"{report.phase}  ·  Balance {report.after.total:0} " +
+                $"({Signed(report.change.total)})",
+                metricStyle);
+            GUILayout.Label(
+                $"Tracks H {report.human_trace_points} / A {report.animal_trace_points}  ·  " +
+                $"Feed {report.feeding_events}  ·  Migration {report.migration_events}",
+                bodyStyle);
+            if (GUILayout.Button("CLEAR TRACKS & FEED", buttonStyle))
+            {
+                observation.ResetView(
+                    mobility.Plan,
+                    environment.Snapshot,
+                    wildlife.Snapshot,
+                    strategy.Snapshot);
+                RefreshTraceLayer();
+            }
+        }
+
+        private void DrawTraceModeButton(CityTraceDisplayMode mode, string label)
+        {
+            string text = traceDisplayMode == mode ? "● " + label : label;
+            if (GUILayout.Button(text, buttonStyle))
+            {
+                traceDisplayMode = mode;
+                traceVisualizer?.SetMode(mode);
+            }
+        }
+
+        private static string FeedSymbol(CityFeedEventType type)
+        {
+            switch (type)
+            {
+                case CityFeedEventType.WasteOverflow: return "!";
+                case CityFeedEventType.Crowding: return "↟";
+                case CityFeedEventType.Feeding: return "●";
+                case CityFeedEventType.MigrationIn: return "+";
+                case CityFeedEventType.MigrationOut: return "−";
+                case CityFeedEventType.Roadkill: return "×";
+                case CityFeedEventType.ProjectCompleted: return "✓";
+                default: return "△";
+            }
+        }
+
+        private static string FeedTitle(CityFeedEventType type)
+        {
+            switch (type)
+            {
+                case CityFeedEventType.WasteOverflow: return "WASTE PRESSURE";
+                case CityFeedEventType.Crowding: return "CROWDING";
+                case CityFeedEventType.Feeding: return "FEEDING";
+                case CityFeedEventType.MigrationIn: return "MIGRATION IN";
+                case CityFeedEventType.MigrationOut: return "MIGRATION OUT";
+                case CityFeedEventType.Roadkill: return "ROAD INCIDENT";
+                case CityFeedEventType.ProjectCompleted: return "PROJECT COMPLETE";
+                default: return "BALANCE WARNING";
+            }
+        }
+
+        private static string Signed(float value)
+        {
+            return value > 0.05f ? $"+{value:0.0}" : value < -0.05f ? $"{value:0.0}" : "±0.0";
+        }
+
+        private void BuildTraceLayer()
+        {
+            traceVisualizer = new CityTraceVisualizer(generatedRoot.transform, MapWidth, MapHeight);
+            traceVisualizer.SetMode(traceDisplayMode);
+            UpdateTraceVisuals();
+        }
+
+        private void UpdateTraceVisuals()
+        {
+            if (traceVisualizer == null || observation?.Snapshot?.trace_points == null)
+            {
+                return;
+            }
+            traceVisualizer.Render(observation.Snapshot.trace_points);
+        }
+
+        private void RefreshTraceLayer()
+        {
+            Transform existing = generatedRoot?.transform.Find("Live city traces");
+            if (existing != null)
+            {
+                existing.gameObject.SetActive(false);
+                if (Application.isPlaying)
+                {
+                    Destroy(existing.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(existing.gameObject);
+                }
+            }
+            BuildTraceLayer();
         }
 
         private void DrawRouteChoices(CityNetworkPlanPreview preview)

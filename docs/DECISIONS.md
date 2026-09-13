@@ -101,6 +101,7 @@
 | D093 | 策略时间只提供Pause/1x/2x；施工与拆除消耗DP并跨Time Block完成，五阶段固定为Population Growth、Public Life、Waste Pressure、Mobility Pressure、Redevelopment；City Balance五维各占20% | 已实现机制，UI待完善 |
 | D094 | 城市观察层分开保存Human、Animal与Combined Trace，City Feed事件去重，阶段报告比较Before/After；城市JSONL/CSV不含参与者身份字段 | 数据与日志已实现，最终轨迹/UI待完善 |
 | D095 | 城市Play Mode只通过单一规划状态机推进Scan、Preview、Confirm、Route Selection、DP Commit与Construction；电子测试帧必须标注为替代输入，新对象在完工前只显示占地/线路预览，不得显示为既有建筑 | 已实现并通过两Time Block事务测试；实体摄像头源待到货验证 |
+| D096 | 城市轨迹以语义足迹而非连续色带呈现：人类鞋印、车辆双轮迹、鸽子鸟爪、松鼠小爪、狐狸大爪、刺猬点印；屏幕只滚动保留最新900个标记，完整数据保留在Observation与日志中 | 已实现People/Wildlife/All切换、City Feed与阶段快照原型 |
 
 ## 待确定顺序
 

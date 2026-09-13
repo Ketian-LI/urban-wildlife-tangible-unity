@@ -83,7 +83,7 @@
 - Migration、死亡和Roadkill作为永久事件保存。Roadkill只由带ID的Vehicle Agent与地面动物实际距离碰撞触发；鸽子不进入地面碰撞判定，拆除设施不会删除动物记忆。
 - 策略层使用DP和Time Block推进施工/拆除，速度只允许Pause、1x、2x；五阶段为Population Growth、Public Life、Waste Pressure、Mobility Pressure、Redevelopment。
 - City Balance由Development、Accessibility、Waste Management、Habitat Connectivity、Wildlife Safety五项等权20%组成；最后一个Natural Food Patch禁止拆除。
-- 观察层分开采样Human、Animal与Combined Trace，记录City Feed，输出阶段Before/After和JSONL/CSV城市日志；正式UI图形、轨迹印记渲染与最终视觉换皮仍属于表现层工作。
+- 观察层分开采样Human、Animal与Combined Trace，记录City Feed，输出阶段Before/After和JSONL/CSV城市日志；城市原型已渲染语义鞋印、轮迹与四种动物足迹，并显示最新Feed及阶段快照。统一等距资产与最终排版仍属于表现层工作。
 
 ## 每批通用完成条件
 

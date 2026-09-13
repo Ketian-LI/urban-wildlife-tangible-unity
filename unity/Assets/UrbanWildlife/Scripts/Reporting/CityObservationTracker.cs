@@ -38,6 +38,46 @@ namespace UrbanWildlife.Reporting
 
         public CityObservationSnapshot Snapshot { get; private set; }
 
+        public void ResetView(
+            CityMobilityPlan mobility,
+            CityEnvironmentSnapshot environment,
+            CityWildlifeSnapshot wildlife,
+            CityStrategySnapshot strategy)
+        {
+            if (mobility == null || environment == null || wildlife == null || strategy == null)
+            {
+                throw new ArgumentException("A complete city snapshot is required to reset observations.");
+            }
+            traces.Clear();
+            feed.Clear();
+            lastTracePositions.Clear();
+            observedEventKeys.Clear();
+            previousOverflow = environment.overflow_active;
+            foreach (CityDestinationLoad load in mobility.destination_loads.Where(item =>
+                         item.crowd_penalty > 0f))
+            {
+                observedEventKeys.Add(CrowdingKey(wildlife.cycle_index, load.building_id));
+            }
+            foreach (CityWildlifeOutcome outcome in wildlife.permanent_outcomes)
+            {
+                observedEventKeys.Add(WildlifeOutcomeKey(outcome));
+            }
+            foreach (CityStrategyProject project in strategy.projects.Where(item =>
+                         item.state == CityStrategyProjectState.Complete))
+            {
+                observedEventKeys.Add(ProjectKey(project.id));
+            }
+            foreach (var dimension in BalanceDimensions(strategy).Where(item => item.Item2 < 35f))
+            {
+                observedEventKeys.Add(BalanceKey(
+                    wildlife.cycle_index,
+                    strategy.phase,
+                    dimension.Item1));
+            }
+            Snapshot = new CityObservationSnapshot();
+            BeginPhase(strategy);
+        }
+
         public void BeginPhase(CityStrategySnapshot strategy)
         {
             if (strategy == null)
@@ -226,7 +266,7 @@ namespace UrbanWildlife.Reporting
         {
             foreach (CityDestinationLoad load in plan.destination_loads.Where(item => item.crowd_penalty > 0f))
             {
-                AddFeedOnce($"crowding:{cycleIndex}:{load.building_id}",
+                AddFeedOnce(CrowdingKey(cycleIndex, load.building_id),
                     CityFeedEventType.Crowding, load.building_id, null,
                     $"{load.building_id} exceeded comfortable destination capacity.", cycleIndex, phase);
             }
@@ -238,7 +278,7 @@ namespace UrbanWildlife.Reporting
         {
             foreach (CityWildlifeOutcome outcome in wildlife.permanent_outcomes)
             {
-                string key = $"wildlife:{outcome.cycle_index}:{outcome.type}:{outcome.agent_id}:{outcome.cause_id}";
+                string key = WildlifeOutcomeKey(outcome);
                 CityFeedEventType type;
                 switch (outcome.type)
                 {
@@ -258,7 +298,7 @@ namespace UrbanWildlife.Reporting
             foreach (CityStrategyProject project in strategy.projects.Where(item =>
                          item.state == CityStrategyProjectState.Complete))
             {
-                AddFeedOnce($"project:{project.id}", CityFeedEventType.ProjectCompleted,
+                AddFeedOnce(ProjectKey(project.id), CityFeedEventType.ProjectCompleted,
                     project.target_id, project.id,
                     $"{project.action_type} completed after {project.total_time_blocks} time block(s).",
                     cycleIndex, strategy.phase);
@@ -267,17 +307,9 @@ namespace UrbanWildlife.Reporting
 
         private void ObserveBalance(CityStrategySnapshot strategy, int cycleIndex)
         {
-            var dimensions = new[]
+            foreach (var dimension in BalanceDimensions(strategy).Where(item => item.Item2 < 35f))
             {
-                ("Development", strategy.balance.development),
-                ("Accessibility", strategy.balance.accessibility),
-                ("Waste management", strategy.balance.waste_management),
-                ("Habitat connectivity", strategy.balance.habitat_connectivity),
-                ("Wildlife safety", strategy.balance.wildlife_safety),
-            };
-            foreach (var dimension in dimensions.Where(item => item.Item2 < 35f))
-            {
-                AddFeedOnce($"balance:{cycleIndex}:{strategy.phase}:{dimension.Item1}",
+                AddFeedOnce(BalanceKey(cycleIndex, strategy.phase, dimension.Item1),
                     CityFeedEventType.BalanceWarning, dimension.Item1, null,
                     $"{dimension.Item1} fell below the 35-point warning line.",
                     cycleIndex, strategy.phase);
@@ -335,6 +367,41 @@ namespace UrbanWildlife.Reporting
                 case CityWildlifeSpecies.Fox: return CityTraceMark.FoxPaw;
                 default: return CityTraceMark.HedgehogTrack;
             }
+        }
+
+        private static (string, float)[] BalanceDimensions(CityStrategySnapshot strategy)
+        {
+            return new[]
+            {
+                ("Development", strategy.balance.development),
+                ("Accessibility", strategy.balance.accessibility),
+                ("Waste management", strategy.balance.waste_management),
+                ("Habitat connectivity", strategy.balance.habitat_connectivity),
+                ("Wildlife safety", strategy.balance.wildlife_safety),
+            };
+        }
+
+        private static string CrowdingKey(int cycleIndex, string buildingId)
+        {
+            return $"crowding:{cycleIndex}:{buildingId}";
+        }
+
+        private static string WildlifeOutcomeKey(CityWildlifeOutcome outcome)
+        {
+            return $"wildlife:{outcome.cycle_index}:{outcome.type}:{outcome.agent_id}:{outcome.cause_id}";
+        }
+
+        private static string ProjectKey(string projectId)
+        {
+            return $"project:{projectId}";
+        }
+
+        private static string BalanceKey(
+            int cycleIndex,
+            CityDevelopmentPhase phase,
+            string dimension)
+        {
+            return $"balance:{cycleIndex}:{phase}:{dimension}";
         }
 
         private static string MessageFor(CityWildlifeOutcome outcome)

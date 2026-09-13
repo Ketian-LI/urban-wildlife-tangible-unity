@@ -12,7 +12,6 @@ namespace UrbanWildlife.Prototype
         private const float MapWidth = 12f;
         private const float MapHeight = 8f;
         private const float RuntimeSpeed = 4f;
-        private const string ParkMapResource = "UrbanWildlife/Environment/park-board-s001-v03";
 
         private sealed class ActorView
         {
@@ -114,10 +113,10 @@ namespace UrbanWildlife.Prototype
             {
                 return;
             }
-            camera.rect = new Rect(0.29f, 0f, 0.71f, 1f);
+            camera.rect = new Rect(0f, 0f, 0.77f, 1f);
             camera.orthographic = true;
             camera.orthographicSize = 4.45f;
-            camera.backgroundColor = new Color(0.045f, 0.075f, 0.055f, 1f);
+            camera.backgroundColor = new Color(0.56f, 0.82f, 0.90f, 1f);
         }
 
         private void BuildBoard()
@@ -128,25 +127,23 @@ namespace UrbanWildlife.Prototype
             board.transform.localPosition = new Vector3(0f, -0.08f, 0f);
             board.transform.localScale = new Vector3(MapWidth + 0.18f, 0.14f, MapHeight + 0.18f);
             RemoveCollider(board);
-            SetMaterial(board, new Color(0.035f, 0.075f, 0.052f, 1f));
+            SetMaterial(board, new Color(0.94f, 0.94f, 0.88f, 1f));
 
-            Sprite mapSprite = Resources.Load<Sprite>(ParkMapResource);
-            if (mapSprite == null)
-            {
-                return;
-            }
-            GameObject artwork = new GameObject("Urban neighbourhood park artwork");
-            artwork.transform.SetParent(generatedRoot.transform, false);
-            artwork.transform.localPosition = new Vector3(0f, 0.01f, 0f);
-            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            artwork.transform.localScale = new Vector3(
-                MapWidth / Mathf.Max(0.001f, mapSprite.bounds.size.x),
-                MapHeight / Mathf.Max(0.001f, mapSprite.bounds.size.y),
-                1f);
-            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
-            renderer.sprite = mapSprite;
-            renderer.color = new Color(0.82f, 0.84f, 0.72f, 0.96f);
-            renderer.sortingOrder = -50;
+            GameObject waterRoot = ChildRoot("Water features");
+            CreateLine(
+                waterRoot.transform,
+                "East canal",
+                new[]
+                {
+                    new[] { 0.985f, 0.01f },
+                    new[] { 0.975f, 0.28f },
+                    new[] { 0.990f, 0.56f },
+                    new[] { 0.975f, 0.99f },
+                },
+                0.48f,
+                new Color(0.36f, 0.76f, 0.88f, 1f),
+                0.015f,
+                -45);
         }
 
         private void BuildGreenPatches()
@@ -158,17 +155,23 @@ namespace UrbanWildlife.Prototype
                 switch (patch.type)
                 {
                     case CityGreenPatchType.Woodland:
-                        colour = new Color(0.055f, 0.23f, 0.13f, 0.76f);
+                        colour = new Color(0.30f, 0.57f, 0.40f, 0.96f);
                         break;
                     case CityGreenPatchType.ShrubGarden:
-                        colour = new Color(0.23f, 0.42f, 0.18f, 0.70f);
+                        colour = new Color(0.47f, 0.70f, 0.43f, 0.96f);
                         break;
                     default:
-                        colour = new Color(0.46f, 0.58f, 0.26f, 0.28f);
+                        colour = new Color(0.69f, 0.84f, 0.57f, 0.92f);
                         break;
                 }
                 CreatePolygon(root.transform, patch.id, patch.polygon_norm, 0.025f, colour);
             }
+
+            CreateTree(root.transform, "Tree west 1", new[] { 0.10f, 0.66f }, 0.90f);
+            CreateTree(root.transform, "Tree west 2", new[] { 0.19f, 0.79f }, 0.72f);
+            CreateTree(root.transform, "Tree east 1", new[] { 0.79f, 0.63f }, 0.86f);
+            CreateTree(root.transform, "Tree east 2", new[] { 0.88f, 0.85f }, 0.76f);
+            CreateTree(root.transform, "Garden tree", new[] { 0.42f, 0.73f }, 0.66f);
         }
 
         private void BuildNetworks()
@@ -182,7 +185,7 @@ namespace UrbanWildlife.Prototype
                     road.id + " kerb",
                     road.points_norm,
                     width + 0.10f,
-                    new Color(0.72f, 0.67f, 0.53f, 1f),
+                    new Color(0.91f, 0.90f, 0.84f, 1f),
                     0.045f,
                     -8);
                 CreateLine(
@@ -190,7 +193,7 @@ namespace UrbanWildlife.Prototype
                     road.id + " asphalt",
                     road.points_norm,
                     width,
-                    new Color(0.075f, 0.082f, 0.078f, 1f),
+                    new Color(0.72f, 0.76f, 0.77f, 1f),
                     0.055f,
                     -7);
             }
@@ -204,7 +207,7 @@ namespace UrbanWildlife.Prototype
                     link.id,
                     link.points_norm,
                     Mathf.Max(0.07f, width),
-                    new Color(0.88f, 0.78f, 0.55f, 0.94f),
+                    new Color(0.96f, 0.90f, 0.76f, 1f),
                     0.075f,
                     -4);
             }
@@ -224,26 +227,26 @@ namespace UrbanWildlife.Prototype
                 switch (building.type)
                 {
                     case CityBuildingType.Apartment:
-                        wall = new Color(0.50f, 0.19f, 0.12f, 1f);
-                        roof = new Color(0.25f, 0.08f, 0.055f, 1f);
+                        wall = new Color(0.66f, 0.77f, 0.84f, 1f);
+                        roof = new Color(0.28f, 0.52f, 0.70f, 1f);
                         height = 0.34f;
                         shortLabel = "HOUSING";
                         break;
                     case CityBuildingType.DetachedHouse:
-                        wall = new Color(0.77f, 0.65f, 0.46f, 1f);
-                        roof = new Color(0.37f, 0.17f, 0.10f, 1f);
+                        wall = new Color(0.94f, 0.89f, 0.75f, 1f);
+                        roof = new Color(0.88f, 0.39f, 0.28f, 1f);
                         height = 0.22f;
                         shortLabel = "HOME";
                         break;
                     case CityBuildingType.Commercial:
-                        wall = new Color(0.72f, 0.45f, 0.14f, 1f);
-                        roof = new Color(0.30f, 0.24f, 0.11f, 1f);
+                        wall = new Color(0.95f, 0.72f, 0.45f, 1f);
+                        roof = new Color(0.91f, 0.45f, 0.25f, 1f);
                         height = 0.27f;
                         shortLabel = "SHOPS";
                         break;
                     default:
-                        wall = new Color(0.15f, 0.39f, 0.36f, 1f);
-                        roof = new Color(0.07f, 0.20f, 0.18f, 1f);
+                        wall = new Color(0.68f, 0.84f, 0.82f, 1f);
+                        roof = new Color(0.20f, 0.55f, 0.53f, 1f);
                         height = 0.26f;
                         shortLabel = "COMMUNITY";
                         break;
@@ -382,21 +385,26 @@ namespace UrbanWildlife.Prototype
                 return;
             }
             EnsureStyles();
-            float panelWidth = Screen.width * 0.29f;
-            GUILayout.BeginArea(new Rect(0f, 0f, panelWidth, Screen.height), panelStyle);
+            float panelX = Screen.width * 0.77f;
+            float panelWidth = Screen.width * 0.23f;
+            GUILayout.BeginArea(new Rect(panelX, 0f, panelWidth, Screen.height), panelStyle);
             GUILayout.Space(20f);
-            GUILayout.Label("BOROUGH PLANNING OFFICE", headingStyle);
-            GUILayout.Label("LIVE CITY PROTOTYPE", titleStyle);
-            GUILayout.Label("CITY MOBILITY CHECK · V0.1", bodyStyle);
+            GUILayout.Label("RIVERSIDE WILDLIFE DISTRICT", headingStyle);
+            GUILayout.Label("LIVE CITY", titleStyle);
+            GUILayout.Label("A shared city for people and wildlife", bodyStyle);
             GUILayout.Space(18f);
 
-            GUILayout.Label(paused ? "PAUSED" : "LIVE  ·  SIMULATION ×4", headingStyle);
+            GUILayout.Label(paused ? "PAUSED" : "LIVE MOBILITY  ·  ×4", headingStyle);
             GUILayout.Space(8f);
             GUILayout.Label($"Active residents  {mobility.ActiveHumanAgentCount}/{plan.RepresentativeAgentCount}", metricStyle);
             GUILayout.Label($"Represented people  {plan.RepresentedPopulation}", metricStyle);
             GUILayout.Label($"Walk / Drive  {plan.WalkTripCount} / {plan.DriveTripCount}", metricStyle);
             GUILayout.Label($"Active vehicles  {mobility.ActiveVehicleAgents.Length}", metricStyle);
             GUILayout.Label($"Completed returns  {mobility.CompletedTripCount}", metricStyle);
+            GUILayout.Space(16f);
+
+            GUILayout.Label("MAP KEY", headingStyle);
+            GUILayout.Label("■ Housing   ■ Shops\n■ Community   ■ Park / green space\n■ Water   ━ Road   ━ Footpath", bodyStyle);
             GUILayout.Space(16f);
 
             GUILayout.Label("DESTINATION PRESSURE", headingStyle);
@@ -442,33 +450,33 @@ namespace UrbanWildlife.Prototype
             }
             panelStyle = new GUIStyle(GUI.skin.box)
             {
-                padding = new RectOffset(24, 24, 10, 18),
-                normal = { background = SolidTexture(new Color(0.035f, 0.13f, 0.105f, 0.99f)) },
+                padding = new RectOffset(20, 20, 10, 18),
+                normal = { background = SolidTexture(new Color(0.975f, 0.965f, 0.93f, 0.995f)) },
             };
             titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 28,
+                fontSize = 26,
                 fontStyle = FontStyle.Bold,
                 wordWrap = true,
-                normal = { textColor = new Color(0.96f, 0.90f, 0.69f, 1f) },
+                normal = { textColor = new Color(0.10f, 0.18f, 0.23f, 1f) },
             };
             headingStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 16,
+                fontSize = 15,
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.80f, 0.66f, 0.30f, 1f) },
+                normal = { textColor = new Color(0.16f, 0.50f, 0.55f, 1f) },
             };
             bodyStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 14,
                 wordWrap = true,
-                normal = { textColor = new Color(0.82f, 0.86f, 0.75f, 1f) },
+                normal = { textColor = new Color(0.25f, 0.31f, 0.32f, 1f) },
             };
             metricStyle = new GUIStyle(bodyStyle)
             {
-                fontSize = 17,
+                fontSize = 16,
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.92f, 0.92f, 0.78f, 1f) },
+                normal = { textColor = new Color(0.12f, 0.25f, 0.27f, 1f) },
             };
             buttonStyle = new GUIStyle(GUI.skin.button)
             {
@@ -476,7 +484,40 @@ namespace UrbanWildlife.Prototype
                 fontSize = 15,
                 fontStyle = FontStyle.Bold,
                 margin = new RectOffset(0, 0, 5, 5),
+                normal =
+                {
+                    background = SolidTexture(new Color(0.78f, 0.90f, 0.92f, 1f)),
+                    textColor = new Color(0.10f, 0.22f, 0.26f, 1f),
+                },
+                hover =
+                {
+                    background = SolidTexture(new Color(0.67f, 0.85f, 0.88f, 1f)),
+                    textColor = new Color(0.08f, 0.18f, 0.22f, 1f),
+                },
             };
+        }
+
+        private void CreateTree(Transform parent, string name, float[] normalized, float scale)
+        {
+            GameObject tree = new GameObject(name);
+            tree.transform.SetParent(parent, false);
+            tree.transform.localPosition = ToWorld(normalized, 0.08f);
+
+            GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            trunk.name = "Trunk";
+            trunk.transform.SetParent(tree.transform, false);
+            trunk.transform.localPosition = new Vector3(0f, 0.14f * scale, 0f);
+            trunk.transform.localScale = new Vector3(0.06f * scale, 0.14f * scale, 0.06f * scale);
+            RemoveCollider(trunk);
+            SetMaterial(trunk, new Color(0.55f, 0.38f, 0.22f, 1f));
+
+            GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            canopy.name = "Canopy";
+            canopy.transform.SetParent(tree.transform, false);
+            canopy.transform.localPosition = new Vector3(0f, 0.36f * scale, 0f);
+            canopy.transform.localScale = new Vector3(0.34f, 0.24f, 0.30f) * scale;
+            RemoveCollider(canopy);
+            SetMaterial(canopy, new Color(0.25f, 0.57f, 0.39f, 1f));
         }
 
         private GameObject ChildRoot(string name)
@@ -555,7 +596,7 @@ namespace UrbanWildlife.Prototype
             label.alignment = TextAlignment.Center;
             label.fontSize = 48;
             label.characterSize = characterSize;
-            label.color = new Color(1f, 0.92f, 0.67f, 1f);
+            label.color = new Color(0.10f, 0.23f, 0.28f, 1f);
         }
 
         private Vector3 ToWorld(float[] normalized, float height)

@@ -94,6 +94,7 @@
 | D086 | 城市人口以代表性Trip呈现，默认最多24个、接口上限30个；住宅Housing Capacity与Origin Rate决定数量，每个代理保存represented_people，避免将人口一比一显示为NPC | 已实现确定性V0.1，待正式城市Play Mode视觉调参 |
 | D087 | 目的地选择读取Weight、距离、Comfortable Capacity与Crowd Penalty；Walk与Drive分别使用PedestrianLink和VehicleRoad，且只有Drive Trip生成可追溯的Vehicle Agent，不制作随机背景交通 | 已实现规则与往返模拟，待城市UI批次接入表现层 |
 | D088 | 在环境压力批次前先建立独立`City_Prototype`集成场景；左侧29%为固定规划告示栏、右侧71%为完整地图视口，旧P0场景保留回归。样板需实时呈现Building、双路网、代表性居民、车辆和Crowding，但不冒充最终城市美术 | 已实现并通过场景集成烟雾测试 |
+| D089 | `City_Prototype`视觉改为左侧77%完整地图、右侧23%固定信息栏，并采用明亮城市规划桌游语言；继续保持正俯视以匹配实体板坐标，不加入直接放置动物的工具 | 已实现，替代D088的分屏方向与视觉基调 |
 
 ## 待确定顺序
 

@@ -44,7 +44,7 @@
 
 ### 城市可视化集成壳
 
-`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的6建筑演示状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染右侧71%的地图视口，左侧29%由固定现场告示式控制面板占用，两者不遮挡。该场景用于提前暴露系统整合与视觉问题，不代表最终城市美术或最终摄像头工作流。
+`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的6建筑演示状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧77%的地图视口，右侧23%由固定城市信息栏占用，两者不遮挡。场景采用明亮、低饱和、可分类的城市规划桌游语言，但继续保持正俯视，以便屏幕坐标与实体板坐标一致；当前仍是程序化集成原型，不代表最终插画资产。
 
 ## 已确定的实体输入基线
 

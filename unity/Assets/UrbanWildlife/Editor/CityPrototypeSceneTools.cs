@@ -25,10 +25,10 @@ namespace UrbanWildlife.EditorTools
             cameraObject.transform.position = new Vector3(0f, 10f, 0f);
             cameraObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.045f, 0.075f, 0.055f, 1f);
+            camera.backgroundColor = new Color(0.56f, 0.82f, 0.90f, 1f);
             camera.orthographic = true;
             camera.orthographicSize = 4.45f;
-            camera.rect = new Rect(0.29f, 0f, 0.71f, 1f);
+            camera.rect = new Rect(0f, 0f, 0.77f, 1f);
 
             GameObject lightObject = new GameObject("Directional Light");
             Light light = lightObject.AddComponent<Light>();
@@ -81,8 +81,8 @@ namespace UrbanWildlife.EditorTools
             CityPrototypeDemo prototype = UnityEngine.Object.FindFirstObjectByType<CityPrototypeDemo>();
             Camera camera = Camera.main;
             bool separateViewport = camera != null &&
-                                    Math.Abs(camera.rect.x - 0.29f) < 0.001f &&
-                                    Math.Abs(camera.rect.width - 0.71f) < 0.001f;
+                                    Math.Abs(camera.rect.x) < 0.001f &&
+                                    Math.Abs(camera.rect.width - 0.77f) < 0.001f;
             if (prototype == null || prototype.GeneratedBuildingCount != 6 ||
                 prototype.GeneratedVehicleRoadCount != 8 ||
                 prototype.GeneratedPedestrianLinkCount != 8 ||
@@ -111,7 +111,7 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("City prototype is missing a generated visual layer.");
             }
             Debug.Log(
-                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True buildings=6 vehicle_roads=8 " +
+                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True buildings=6 vehicle_roads=8 " +
                 "pedestrian_links=8 representative_agents=11 represented_population=132 " +
                 "walk_and_drive=True live_vehicle_agents=True no_questionnaire=True");
         }

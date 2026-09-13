@@ -17,7 +17,7 @@
 
 ## 打开和验证
 
-如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧29%为固定公园管理告示栏，右侧71%为独立地图视口，不发生遮挡；面板可暂停、重启Trip或隐藏Footpath。场景会循环演示6栋建筑、8条机动车路段、8条步行连接和11名代表性居民（代表132人），Drive Trip才生成车辆。
+如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为固定城市信息栏，不发生遮挡；面板可暂停、重启Trip或隐藏Footpath。场景会循环演示6栋建筑、8条机动车路段、8条步行连接和11名代表性居民（代表132人），Drive Trip才生成车辆。当前视觉采用明亮城市规划桌游方向：浅蓝水岸、浅绿公共空间、浅灰道路、米白步行道和柔和建筑分类色。
 
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。

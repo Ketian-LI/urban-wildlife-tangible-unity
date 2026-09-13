@@ -22,6 +22,7 @@
 - `calibrate_corners.py`：识别四角 Marker，计算透视矩阵，输出校准标注图、俯视矫正图和 Camera → Game 标准化坐标参数。
 - `detect_path.py`：按 HSV 颜色预设分割彩色路径，进行形态学去噪并输出 Path Mask、检查图和JSON统计。
 - `build_layout_packet.py`：从同一帧提取四角校准、Token 和路径，原子写入 Unity 使用的 `latest_layout.json` 并按 Session/Cycle 归档。
+- `build_city_token_scan.py`：从稳定俯拍画面生成正式城市 `city_token_scan`，只读取五类建筑/绿化 Token，并原子更新 Unity 的最新扫描收件箱。
 - `capture_stability.py`：在Confirm时等待连续静止画面，避免把正在移动的手、Token或抖动帧写入Unity数据包。
 - `generate_layout_fixture.py`：生成不含真实环境与个人信息的完整流程测试画面。
 - `detect_contour_tokens.py`：在900 × 600矫正板面中识别无贴纸轮廓 Token 的逻辑ID、中心、标准化坐标和方向。
@@ -30,6 +31,7 @@
 - `config/path_detection.json`：亮洋红、青色与橙色路径的初始 HSV 阈值和去噪参数。
 - `config/contour_tokens.json`：无贴纸 Token 的直径、方向缺口、三位轮廓编码与实物验收阈值。
 - `config/contour_tokens_v0.2.json`：已选A款Food＋B款Woodland造型、毫米尺寸、轮廓编码与毛毡磁吸点位置。
+- `config/city_tokens_v0.1.json`：城市版四角 Marker、`DICT_4X4_1000` 与14件实体 Token 的固定 ID—类型字典。
 
 ## 一键配置
 
@@ -104,6 +106,18 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_vision.ps1
 - `path_mask.png`、`packet_overlay.png`、`calibration_overlay.png`：本地 Debug 证据，不提交真实参与者画面。
 
 `latest_layout.json` 使用“先完整写临时文件、再原子替换”的方式，避免 Unity 读到半份 JSON。正式数据契约见 `data/schemas/layout_packet_v0.1.schema.json`。稳定阈值在 `config/calibration.json` 的 `stability` 区块中；当前数值是固定俯拍实测前的暂定基线。图片输入只用于确定性测试，数据包会标记为 `image_input`，不作为真实摄像头稳定证据。当前折线采样针对 P0 单条、从左至右且不自交的路径约束。
+
+## 城市版摄像头扫描
+
+正式城市玩法不再读取彩带，只扫描 Apartment、Detached House、Commercial、Community Facility 与 Green Intervention。双手离开板面后运行：
+
+```powershell
+.\.venv\Scripts\python.exe vision\build_city_token_scan.py --camera 1 --session-id pilot-city-001 --development-phase 1
+```
+
+程序先等待约1秒稳定画面，使用 ID 0–3完成四角矫正，再按 `city_tokens_v0.1.json` 将 Marker 100–142转换为五类 Token。未知ID、重复ID、越界对象、缺少四角或不稳定画面都会失败，且不会覆盖上一份有效扫描。输出 `data/raw/city-token-scans/latest_city_scan.json`、按Session归档的JSON、稳定性记录和两张本地检查图。之后在 `City_Prototype` 右侧点击 **LOAD LATEST CAMERA SCAN**；Unity仍会再次验证契约和时间戳，并且只进入Preview，不会直接建设。
+
+也可用 `--image path\to\frame.png` 做电子图像测试；该模式明确写入 `capture.mode = image_input`，不能当作真实相机验收证据。
 
 ## 无贴纸轮廓 Token
 

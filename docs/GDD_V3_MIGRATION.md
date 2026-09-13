@@ -14,7 +14,7 @@
 | --- | --- | --- | --- |
 | 0 | 对齐新版交互基线 | 移除 Run 前选择题和预测门槛；保留旧日志列以兼容已有记录 | 已完成 |
 | 1 | 城市片区数据底座 | 建立 Building、GreenPatch、Road、Pedestrian、Waste 与 CityState 数据模型；保留旧场景适配层 | 已完成 |
-| 2 | 五类实体 Token 与建设流程 | Apartment、Detached、Commercial、Community、Green Intervention；Scan City → Preview → Confirm Construction；New、Moved、Missing、Unchanged 差分 | 已完成 |
+| 2 | 五类实体 Token 与建设流程 | Apartment、Detached、Commercial、Community、Green Intervention；Scan City → Preview → Confirm Construction；New、Moved、Missing、Unchanged 差分 | 机制与相机文件桥已完成；实体实拍待验收 |
 | 3 | 道路与步行网络 | 为新建筑生成 Direct、Existing-network、Low-impact 三条候选机动车路线；自动基础步行接入；屏幕编辑额外 Footpath | 已完成 |
 | 4 | 人流与车辆 | 建筑 Origin/Destination、代表性 Trip、Walk/Drive、Destination Capacity、Crowding 与车辆代理 | 已完成 |
 | 5 | 城市环境压力 | 三类 Green Patch、Natural/Anthropogenic Food、Bin、Bench、Waste Capacity、Overflow 与局部 Disturbance | 已完成 |
@@ -47,6 +47,7 @@
 ## 批次 2 验收
 
 - 城市实体库存固定为 Apartment 3、Detached House 4、Commercial 2、Community Facility 2、Green Intervention 3，共 14 个唯一 Token；ID 与类型不匹配时拒绝扫描。
+- 视觉端使用稳定门控与四角校准生成`latest_city_scan.json`，未知、重复或越界Marker不会覆盖上一份有效扫描；Unity通过显式按钮读取并二次验证，摄像头永远不能绕过Preview与Confirm。
 - `city_token_scan` V0.1 保存校准 ID、稳定画面、识别后端、开发阶段以及每个 Token 的 ID、类型、归一化位置、角度和置信度；不稳定画面不得进入 Preview。
 - `Scan City` 把当前扫描与最近一次确认快照比较为 New、Moved、Missing、Unchanged；位置容差为板面归一化 0.01，角度容差为 5°。
 - New 生成 Proposed Construction；已确认 Token 被移动时必须先拆除，Missing 只提出 `Demolish?` 并阻止确认，不能自动删除城市对象；Unchanged 保持原状态。

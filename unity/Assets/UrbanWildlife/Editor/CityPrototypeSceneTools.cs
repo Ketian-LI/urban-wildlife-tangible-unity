@@ -6,6 +6,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UrbanWildlife.City;
+using UrbanWildlife.Input;
 using UrbanWildlife.Planning;
 using UrbanWildlife.Prototype;
 
@@ -96,6 +97,7 @@ namespace UrbanWildlife.EditorTools
                 prototype.VisibleTraceMarkCount <= 0 ||
                 prototype.CityFeedCount <= 0 ||
                 !prototype.PlanningWorkflowConnected ||
+                string.IsNullOrWhiteSpace(prototype.ResolvedCityScanPath) ||
                 prototype.RepresentativeAgentCount != 11 ||
                 prototype.RepresentedPopulation != 132 ||
                 prototype.VehicleTripCount <= 0 ||
@@ -131,6 +133,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException("City prototype is missing a generated visual layer.");
             }
+            VerifyCameraScanFileSource();
             VerifyPlanningWorkflow();
             Debug.Log(
                 "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True buildings=6 vehicle_roads=8 " +
@@ -141,7 +144,26 @@ namespace UrbanWildlife.EditorTools
                 "representative_agents=11 represented_population=132 walk_and_drive=True " +
                 "live_vehicle_agents=True max_speed=2x no_questionnaire=True " +
                 "visible_footprint_tyre_bird_paw_tracks=True city_feed_panel=True phase_snapshot=True " +
-                "scan_preview_route_dp_construction=True no_premature_buildings=True");
+                "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
+                "no_premature_buildings=True");
+        }
+
+        private static void VerifyCameraScanFileSource()
+        {
+            string examplePath = Path.GetFullPath(Path.Combine(
+                Application.dataPath,
+                "../../data/examples/city_scan_new_v0.1.json"));
+            if (!CityTokenScanFileSource.TryRead(
+                    examplePath,
+                    out string json,
+                    out string resolvedPath,
+                    out string error) ||
+                string.IsNullOrWhiteSpace(json) ||
+                resolvedPath != examplePath)
+            {
+                throw new InvalidOperationException(
+                    $"City camera scan file bridge failed: {error}");
+            }
         }
 
         private static void VerifyPlanningWorkflow()

@@ -22,6 +22,10 @@ namespace UrbanWildlife.Prototype
         private const float MapHeight = 8f;
         private const float RuntimeSpeed = 2f;
 
+        [SerializeField]
+        [Tooltip("Path relative to Unity Assets, or an absolute path.")]
+        private string cityScanPath = CityTokenScanFileSource.DefaultProjectRelativePath;
+
         private sealed class ActorView
         {
             public GameObject human;
@@ -48,6 +52,8 @@ namespace UrbanWildlife.Prototype
         private bool paused;
         private bool showPedestrianNetwork = true;
         private CityTraceDisplayMode traceDisplayMode = CityTraceDisplayMode.CombinedTrace;
+        private string cityScanInputMessage =
+            "Camera scans remain pending until you load and confirm them.";
         private Vector2 sidebarScroll;
         private float completeElapsed;
         private float simulationElapsed;
@@ -82,6 +88,7 @@ namespace UrbanWildlife.Prototype
         public int CityFeedCount => observation?.Snapshot?.city_feed?.Length ?? 0;
         public int VisibleTraceMarkCount => traceVisualizer?.VisibleMarkCount ?? 0;
         public bool PlanningWorkflowConnected => planningWorkflow != null;
+        public string ResolvedCityScanPath => CityTokenScanFileSource.Resolve(cityScanPath);
         public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
                                                            CityPlanningWorkflowPhase.ReadyToScan;
 
@@ -874,16 +881,24 @@ namespace UrbanWildlife.Prototype
             switch (snapshot.phase)
             {
                 case CityPlanningWorkflowPhase.ReadyToScan:
+                    if (GUILayout.Button("LOAD LATEST CAMERA SCAN", buttonStyle))
+                    {
+                        TryLoadLatestCameraScan();
+                    }
+                    GUILayout.Label(cityScanInputMessage, bodyStyle);
+                    GUILayout.Space(4f);
                     if (GUILayout.Button("SCAN CITY · ELECTRONIC TEST", buttonStyle))
                     {
                         CityTokenScanPacket scan = CityPlanningDemoScanFactory.CreateElectronicSample(
                             city,
                             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                         planningWorkflow.TryAcceptScan(scan, out _);
+                        cityScanInputMessage =
+                            "Electronic sample accepted. This is not a physical-camera claim.";
                         RefreshPlanningOverlay();
                     }
                     GUILayout.Label(
-                        "Uses a stable sample frame now; the same validated packet will later come from the overhead camera.",
+                        "The electronic sample stays available while the physical board is unavailable.",
                         bodyStyle);
                     break;
 
@@ -966,6 +981,27 @@ namespace UrbanWildlife.Prototype
                     GUILayout.Label("The Preview footprints are now live city geometry.", bodyStyle);
                     break;
             }
+        }
+
+        private void TryLoadLatestCameraScan()
+        {
+            if (!CityTokenScanFileSource.TryRead(
+                    cityScanPath,
+                    out string json,
+                    out string resolvedPath,
+                    out string readError))
+            {
+                cityScanInputMessage = readError;
+                return;
+            }
+            if (!planningWorkflow.TryScanJson(json, out string validationError))
+            {
+                cityScanInputMessage = validationError;
+                return;
+            }
+            cityScanInputMessage =
+                $"Validated city scan loaded from {System.IO.Path.GetFileName(resolvedPath)}. Review Preview before confirming.";
+            RefreshPlanningOverlay();
         }
 
         private void DrawObservationPanel()

@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1",
+  "aruco_dictionary": "DICT_4X4_1000",
+  "corner_ids": {
+    "top_left": 0,
+    "top_right": 1,
+    "bottom_right": 2,
+    "bottom_left": 3
+  },
+  "board_size_mm": {
+    "width": 900,
+    "height": 600
+  },
+  "video": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30
+  },
+  "stability": {
+    "stable_seconds": 1.0,
+    "maximum_wait_seconds": 6.0,
+    "difference_pixel_threshold": 18,
+    "maximum_changed_fraction": 0.015,
+    "analysis_width": 320,
+    "minimum_frames": 3,
+    "status": "provisional_until_fixed_camera_test"
+  },
+  "token_inventory": {
+    "100": "Apartment",
+    "101": "Apartment",
+    "102": "Apartment",
+    "110": "DetachedHouse",
+    "111": "DetachedHouse",
+    "112": "DetachedHouse",
+    "113": "DetachedHouse",
+    "120": "Commercial",
+    "121": "Commercial",
+    "130": "CommunityFacility",
+    "131": "CommunityFacility",
+    "140": "GreenIntervention",
+    "141": "GreenIntervention",
+    "142": "GreenIntervention"
+  }
+}

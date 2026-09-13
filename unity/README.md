@@ -17,7 +17,7 @@
 
 ## 打开和验证
 
-如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为可滚动的固定城市信息栏，不发生遮挡。点击 **SCAN CITY · ELECTRONIC TEST** 可依次检查Preview、三种道路候选、DP提交、Pause/1x/2x与跨Time Block施工；电子夹具只是实体板到货前的替代输入。Preview与施工中只显示青色占地/线路提示，第二个施工时段完成后才生成正式城市对象。地图会滚动保留最多900个人类鞋印、车辆双轮迹、鸟爪、松鼠小爪、狐狸大爪和刺猬短点印；右侧可切换People/Wildlife/All，并查看最新City Feed与阶段Balance变化。场景基线仍有6栋既有建筑、8条机动车路段、8条步行连接、11名代表性居民（代表132人）和15只四物种动物；Drive Trip才生成车辆。
+如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为可滚动的固定城市信息栏，不发生遮挡。视觉端生成 `data/raw/city-token-scans/latest_city_scan.json` 后，点击 **LOAD LATEST CAMERA SCAN** 即可把稳定相机帧送入Preview；文件不存在、时间戳过旧或内容无效时保持当前城市不变。点击 **SCAN CITY · ELECTRONIC TEST** 仍可依次检查Preview、三种道路候选、DP提交、Pause/1x/2x与跨Time Block施工；电子夹具只是实体板到货前的替代输入。Preview与施工中只显示青色占地/线路提示，第二个施工时段完成后才生成正式城市对象。地图会滚动保留最多900个人类鞋印、车辆双轮迹、鸟爪、松鼠小爪、狐狸大爪和刺猬短点印；右侧可切换People/Wildlife/All，并查看最新City Feed与阶段Balance变化。场景基线仍有6栋既有建筑、8条机动车路段、8条步行连接、11名代表性居民（代表132人）和15只四物种动物；Drive Trip才生成车辆。
 
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
@@ -48,6 +48,7 @@
 - `CityStateValidator.cs`：验证城市状态版本、ID、坐标、数值、引用关系和 Natural Food 保留原则。
 - `LegacyParkCityAdapter.cs`：在不改变现有 P0 行为的情况下，把旧 S001 布局旁路映射为 CityState；正式城市输入接入后移除该过渡职责。
 - `CityTokenScanModels.cs`、`CityTokenInventory.cs` 与 `CityTokenScanReader.cs`：定义五类14件实体库存，读取并验证稳定的城市扫描、校准信息、Token位置、角度、置信度及ID/类型对应关系。
+- `CityTokenScanFileSource.cs`：读取Python原子生成的最新城市扫描文件；实际接纳仍交给规划状态机进行版本、稳定性和新时间戳复核。
 - `Construction/`：比较最近确认快照，输出New/Moved/Missing/Unchanged Preview，验证建筑占地，并只把可确认的New项目追加为Proposed Construction；Missing不自动删除。
 - `Networks/CityRoadCandidateGenerator.cs`：把新建筑投影到最近既有机动车/步行网络，生成Direct、Existing-network、Low-impact三种候选及自动Basic Building Access。
 - `Networks/CityNetworkPlanningManager.cs`：要求每栋建筑选一条机动车路线，管理屏幕额外Footpath的新增、修改与删除，并用单次事务更新路网和建筑引用。
@@ -91,5 +92,5 @@
 - 动物参数是为了验证因果链和交互节奏的P0设计抽象，不是伦敦公园的生态预测。
 - 当前Animal Reachable只适用于S001的单一内部池塘：人类路径增加成本但不封路；未来加入围栏或多个障碍时再升级为网格寻路。
 - 当前控制面板使用Unity内置即时GUI完成可操作原型；正式视觉语言和无障碍测试留到核心行为闭环稳定后处理。
-- 城市Token、路网、出行、环境压力、四物种、施工计时、DP、五阶段、City Balance、Trace/Feed/Report数据与城市日志均已接入机制框架和自动验证；Scan City流程已用电子夹具接入Play Mode，实体摄像头源仍需到货后替换验证。城市轨迹、City Feed和阶段快照已有可操作原型，但当前建筑、设施、动物和界面仍是程序化检查物，统一等距美术与最终排版仍待完成。
+- 城市Token、路网、出行、环境压力、四物种、施工计时、DP、五阶段、City Balance、Trace/Feed/Report数据与城市日志均已接入机制框架和自动验证；正式城市扫描现在已具备Python稳定帧生成、原子收件箱、Unity二次验证和手动Preview入口。实体相机参数仍需材料到货后实拍锁定。城市轨迹、City Feed和阶段快照已有可操作原型，但当前建筑、设施、动物和界面仍是程序化检查物，统一等距美术与最终排版仍待完成。
 - `Library`、`Temp`、`Obj`、`Logs`、`UserSettings` 和本机构建输出均不提交。

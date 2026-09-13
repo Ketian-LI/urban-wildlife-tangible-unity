@@ -28,6 +28,8 @@
 
 `city_token_scan` V0.1 是正式城市输入契约，JSON Schema 位于 `data/schemas/city_token_scan_v0.1.schema.json`。库存为 Apartment 100–102、Detached House 110–113、Commercial 120–121、Community Facility 130–131、Green Intervention 140–142，共14件；Unity同时校验ID/类型配对、校准坐标、稳定画面、角度、置信度和每类数量上限。
 
+`vision/build_city_token_scan.py`使用独立的`DICT_4X4_1000`城市字典和四角ID 0–3，在稳定门控后把五类 Marker 转为0–1坐标；未知、重复、越界或缺少四角时不更新收件箱。输出先写临时文件再原子替换`data/raw/city-token-scans/latest_city_scan.json`。Unity的`CityTokenScanFileSource`只负责完整读取，`CityPlanningWorkflow`随后再次验证版本、时间戳、稳定状态和库存，成功后也只进入Preview。
+
 摄像头不逐帧直接改写城市。玩家触发 `Scan City` 后，`CityTokenDiffer` 将扫描与最近确认 Token 快照比较为 New、Moved、Missing、Unchanged；位置变化超过归一化0.01或角度变化超过5°才算Moved。`CityConstructionManager` 把New转换为Proposed Building或GreenPatch并检查边界与建筑占地重叠；Moved和Missing会阻止确认，Missing只显示拆除请求语义，不删除数据。成功 `Confirm Construction` 是一次事务：只追加New对象、建筑Waste输出节点并把CityState revision加一。选定道路后建筑与网络仍保持Proposed；后续施工时间与DP批次负责推进状态。
 
 ### 机动车与步行网络规划
@@ -61,7 +63,7 @@
 - 摄像头从正上方垂直俯拍，首轮输入为 1920 × 1080、30 fps；预估高度为板面上方 70 至 100 cm，最终由镜头视角测试确定。
 - P0 主摄像头为 DJI Pocket 3，通过 USB 接入 OBS；iPhone 13 作为备用输入。
 - 地图板放在桌面，落地式俯拍支架独立放在桌后地面，以减少桌面操作带来的画面振动。
-- 四角透视校准采用 ArUco `DICT_4X4_50`，固定使用 ID 0、1、2、3。
+- 四角透视校准固定使用 ID 0、1、2、3；旧P0夹具采用`DICT_4X4_50`，正式城市14件Token与四角统一采用可容纳100–142编号的`DICT_4X4_1000`。
 - Woodland 的B款120 × 90 mm叶片毛毡只承担区域与触感表达；视觉系统读取中央刚性木座的缺口轮廓，不尝试从布料轮廓判断ID或角度。
 - Woodland 中央刚性木座固定为直径 50 mm、厚 3–4 mm 的圆形桦木片；外层不规则毛毡最大宽度约 120 mm。
 - Woodland 逻辑ID 20–21由50 mm中央木座的方向缺口与C、A+C编码槽区分，木座顶部不贴视觉码。
@@ -80,8 +82,8 @@
 ```text
 Camera Frame
    ├─ Corner ArUco detector → calibration quadrilateral
-   ├─ Contour token detector → logical id, x, y, angle
-   └─ HSV path detector → path mask / polyline
+   ├─ Legacy P0: contour Token + HSV path
+   └─ City mode: ArUco 100–142 → five physical Token types
                  ↓
 Coordinate normalizer
                  ↓

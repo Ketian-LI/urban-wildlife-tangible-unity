@@ -102,6 +102,7 @@
 | D094 | 城市观察层分开保存Human、Animal与Combined Trace，City Feed事件去重，阶段报告比较Before/After；城市JSONL/CSV不含参与者身份字段 | 数据与日志已实现，最终轨迹/UI待完善 |
 | D095 | 城市Play Mode只通过单一规划状态机推进Scan、Preview、Confirm、Route Selection、DP Commit与Construction；电子测试帧必须标注为替代输入，新对象在完工前只显示占地/线路预览，不得显示为既有建筑 | 已实现并通过两Time Block事务测试；实体摄像头源待到货验证 |
 | D096 | 城市轨迹以语义足迹而非连续色带呈现：人类鞋印、车辆双轮迹、鸽子鸟爪、松鼠小爪、狐狸大爪、刺猬点印；屏幕只滚动保留最新900个标记，完整数据保留在Observation与日志中 | 已实现People/Wildlife/All切换、City Feed与阶段快照原型 |
+| D097 | 正式城市扫描使用独立`DICT_4X4_1000`字典：四角为0–3，五类实体Token为100–142；Python只在稳定、已校准且无未知/重复/越界ID时原子更新收件箱，Unity显式读取后二次验证并只进入Preview | 软件桥已实现；实物尺寸、相机高度与曝光待到货后验收 |
 
 ## 待确定顺序
 

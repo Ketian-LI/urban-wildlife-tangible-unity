@@ -34,9 +34,9 @@ namespace UrbanWildlife.Prototype
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
         private const string CityResidentialLotBlueResourcePath =
-            "UrbanWildlife/Buildings/residential-lot-a-pastel-blue-v04";
+            "UrbanWildlife/Buildings/residential-lot-a-pastel-blue-clean-v05";
         private const string CityResidentialLotCoralResourcePath =
-            "UrbanWildlife/Buildings/residential-lot-a-pastel-coral-v04";
+            "UrbanWildlife/Buildings/residential-lot-a-pastel-coral-clean-v05";
         private const string CityResidentialLotBResourcePath =
             "UrbanWildlife/Buildings/residential-lot-b-simplified-v03";
         private const string CityResidentialLotCResourcePath =

@@ -234,10 +234,10 @@ namespace UrbanWildlife.EditorTools
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
             int residentialBlueCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "residential-lot-a-pastel-blue-v04");
+                renderer.sprite.name == "residential-lot-a-pastel-blue-clean-v05");
             int residentialCoralCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "residential-lot-a-pastel-coral-v04");
+                renderer.sprite.name == "residential-lot-a-pastel-coral-clean-v05");
             int residentialLotBCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
                 renderer.sprite.name == "residential-lot-b-simplified-v03");

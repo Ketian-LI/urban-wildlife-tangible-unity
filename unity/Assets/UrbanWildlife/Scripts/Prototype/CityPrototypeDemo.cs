@@ -112,6 +112,7 @@ namespace UrbanWildlife.Prototype
         private bool paused;
         private bool showVehicleNetwork;
         private bool showPedestrianNetwork;
+        private bool showHeatmap;
         [SerializeField]
         private bool useCameraInput;
         [SerializeField]
@@ -165,6 +166,8 @@ namespace UrbanWildlife.Prototype
             .Trace(CityTraceDisplayMode.AnimalTrace).Length ?? 0;
         public int CityFeedCount => observation?.Snapshot?.city_feed?.Length ?? 0;
         public int VisibleTraceMarkCount => traceVisualizer?.VisibleMarkCount ?? 0;
+        public int VisibleHeatCellCount => traceVisualizer?.VisibleCellCount ?? 0;
+        public bool HeatmapVisible => showHeatmap;
         public bool PlanningWorkflowConnected => planningWorkflow != null;
         public string ResolvedCityScanPath => CityTokenScanFileSource.Resolve(cityScanPath);
         public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
@@ -240,6 +243,10 @@ namespace UrbanWildlife.Prototype
             if (Application.isPlaying && !useCameraInput)
             {
                 HandleDesktopPointerInput();
+            }
+            if (Application.isPlaying && UnityEngine.Input.GetKeyDown(KeyCode.H))
+            {
+                SetHeatmapVisible(!showHeatmap);
             }
             if (!Application.isPlaying || mobility == null || paused)
             {
@@ -1578,8 +1585,8 @@ namespace UrbanWildlife.Prototype
                     $"{T("Roadkill", "道路伤亡")}  {wildlife.Snapshot.roadkill_events}",
                     bodyStyle);
                 GUILayout.Label(
-                    $"{T("Traces", "轨迹")}  {T("H", "人")} {HumanTracePointCount}  ·  " +
-                    $"{T("A", "动物")} {AnimalTracePointCount}",
+                    $"{T("Heat samples", "热点样本")}  {T("People", "人类")} {HumanTracePointCount}  ·  " +
+                    $"{T("Wildlife", "动物")} {AnimalTracePointCount}",
                     bodyStyle);
             }
             DrawObservationPanel();
@@ -1941,14 +1948,24 @@ namespace UrbanWildlife.Prototype
                 return;
             }
             AddUiSpace(CityPrototypeUiTheme.SpaceMd);
-            GUILayout.Label(T("CITY TRACKS", "城市轨迹"), headingStyle);
+            GUILayout.Label(T("ACTIVITY HEATMAP", "活动热点图"), headingStyle);
+            if (GUILayout.Button(
+                    showHeatmap
+                        ? T("HIDE HEATMAP  [H]", "隐藏热点图  [H]")
+                        : T("SHOW HEATMAP  [H]", "显示热点图  [H]"),
+                    buttonStyle))
+            {
+                SetHeatmapVisible(!showHeatmap);
+            }
             GUILayout.BeginHorizontal();
             DrawTraceModeButton(CityTraceDisplayMode.HumanTrace, T("PEOPLE", "人类"));
             DrawTraceModeButton(CityTraceDisplayMode.AnimalTrace, T("WILDLIFE", "动物"));
             DrawTraceModeButton(CityTraceDisplayMode.CombinedTrace, T("ALL", "全部"));
             GUILayout.EndHorizontal();
             GUILayout.Label(
-                $"{T("Visible marks", "可见痕迹")} {VisibleTraceMarkCount}/{CityTraceVisualizer.MaximumVisibleMarks}",
+                $"{T("Active heat cells", "活跃热点单元")} " +
+                $"{VisibleHeatCellCount}/{CityTraceVisualizer.MaximumVisibleMarks}  ·  " +
+                (showHeatmap ? T("VISIBLE", "显示中") : T("HIDDEN", "已隐藏")),
                 bodyStyle);
 
             AddUiSpace(CityPrototypeUiTheme.SpaceMd);
@@ -1979,12 +1996,12 @@ namespace UrbanWildlife.Prototype
                 $"({Signed(report.change.total)})",
                 metricStyle);
             GUILayout.Label(
-                $"{T("Tracks", "轨迹")} {T("H", "人")} {report.human_trace_points} / " +
-                $"{T("A", "动物")} {report.animal_trace_points}  ·  " +
+                $"{T("Samples", "样本")} {T("People", "人类")} {report.human_trace_points} / " +
+                $"{T("Wildlife", "动物")} {report.animal_trace_points}  ·  " +
                 $"{T("Feed", "进食")} {report.feeding_events}  ·  " +
                 $"{T("Migration", "迁移")} {report.migration_events}",
                 bodyStyle);
-            if (GUILayout.Button(T("Clear tracks & feed", "清除轨迹与动态"), buttonStyle))
+            if (GUILayout.Button(T("Clear heatmap & feed", "清除热点与动态"), buttonStyle))
             {
                 observation.ResetView(
                     mobility.Plan,
@@ -2044,7 +2061,14 @@ namespace UrbanWildlife.Prototype
         {
             traceVisualizer = new CityTraceVisualizer(generatedRoot.transform, MapWidth, MapHeight);
             traceVisualizer.SetMode(traceDisplayMode);
+            traceVisualizer.SetVisible(showHeatmap);
             UpdateTraceVisuals();
+        }
+
+        public void SetHeatmapVisible(bool visible)
+        {
+            showHeatmap = visible;
+            traceVisualizer?.SetVisible(visible);
         }
 
         private void UpdateTraceVisuals()

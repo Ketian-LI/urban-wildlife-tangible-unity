@@ -5,20 +5,32 @@ using UnityEngine;
 
 namespace UrbanWildlife.Reporting
 {
+    /// <summary>
+    /// Aggregates recorded movement samples into a deliberately coarse heatmap.
+    /// The observation data remains exact, but the map no longer renders individual
+    /// shoes, tyres or animal paws. The visual layer starts hidden and is toggled by
+    /// the City Prototype with H.
+    /// </summary>
     public sealed class CityTraceVisualizer
     {
-        public const int MaximumVisibleMarks = 900;
+        public const int HeatmapColumns = 18;
+        public const int HeatmapRows = 12;
+        public const int MaximumVisibleMarks = HeatmapColumns * HeatmapRows;
+        private const int MaximumSourcePoints = 6000;
+        private const int IntensityBuckets = 8;
+        private const int RingsPerCell = 3;
 
         private readonly float mapWidth;
         private readonly float mapHeight;
+        private readonly Transform root;
         private readonly Transform humanRoot;
         private readonly Transform animalRoot;
-        private readonly Dictionary<string, Vector2> lastPositions =
-            new Dictionary<string, Vector2>();
-        private readonly Dictionary<CityTraceMark, Material> materials =
-            new Dictionary<CityTraceMark, Material>();
-        private readonly Queue<GameObject> visibleMarks = new Queue<GameObject>();
-        private int renderedPointCount;
+        private readonly Transform combinedRoot;
+        private readonly Dictionary<int, Material> materials =
+            new Dictionary<int, Material>();
+        private CityTracePoint[] cachedPoints = Array.Empty<CityTracePoint>();
+        private object cachedSourceReference;
+        private int cachedSourceCount = -1;
 
         public CityTraceVisualizer(Transform parent, float mapWidth, float mapHeight)
         {
@@ -28,234 +40,212 @@ namespace UrbanWildlife.Reporting
             }
             this.mapWidth = mapWidth;
             this.mapHeight = mapHeight;
-            GameObject root = new GameObject("Live city traces");
-            root.transform.SetParent(parent, false);
-            humanRoot = Child(root.transform, "Human traces");
-            animalRoot = Child(root.transform, "Animal traces");
+            GameObject rootObject = new GameObject("Live city traces");
+            rootObject.transform.SetParent(parent, false);
+            root = rootObject.transform;
+            humanRoot = Child(root, "Human traces");
+            animalRoot = Child(root, "Animal traces");
+            combinedRoot = Child(root, "Combined heatmap");
             SetMode(CityTraceDisplayMode.CombinedTrace);
+            SetVisible(false);
         }
 
         public int VisibleMarkCount { get; private set; }
+        public int VisibleCellCount => VisibleMarkCount;
         public CityTraceDisplayMode DisplayMode { get; private set; }
+        public bool IsVisible { get; private set; }
 
         public void Render(IEnumerable<CityTracePoint> source)
         {
-            CityTracePoint[] points = (source ?? Array.Empty<CityTracePoint>()).ToArray();
-            if (points.Length < renderedPointCount)
+            if (source is ICollection<CityTracePoint> collection &&
+                ReferenceEquals(source, cachedSourceReference) &&
+                collection.Count == cachedSourceCount)
             {
-                ClearVisibleMarks();
-                renderedPointCount = 0;
-                lastPositions.Clear();
+                return;
             }
-            int startIndex = renderedPointCount == 0
-                ? Math.Max(0, points.Length - MaximumVisibleMarks)
-                : renderedPointCount;
-            for (int index = startIndex; index < points.Length; index += 1)
+            CityTracePoint[] points = (source ?? Array.Empty<CityTracePoint>())
+                .Where(IsUsable)
+                .ToArray();
+            cachedSourceReference = source;
+            cachedSourceCount = source is ICollection<CityTracePoint> sourceCollection
+                ? sourceCollection.Count
+                : points.Length;
+            cachedPoints = points.Length <= MaximumSourcePoints
+                ? points
+                : points.Skip(points.Length - MaximumSourcePoints).ToArray();
+            if (IsVisible)
             {
-                CityTracePoint point = points[index];
-                if (point?.position_norm == null || point.position_norm.Length != 2)
-                {
-                    continue;
-                }
-                GameObject mark = Draw(point, index);
-                visibleMarks.Enqueue(mark);
-                while (visibleMarks.Count > MaximumVisibleMarks)
-                {
-                    GameObject oldest = visibleMarks.Dequeue();
-                    oldest.SetActive(false);
-                    if (Application.isPlaying)
-                    {
-                        UnityEngine.Object.Destroy(oldest);
-                    }
-                    else
-                    {
-                        UnityEngine.Object.DestroyImmediate(oldest);
-                    }
-                }
+                RebuildSelectedHeatmap();
             }
-            renderedPointCount = points.Length;
-            VisibleMarkCount = visibleMarks.Count;
-        }
-
-        private void ClearVisibleMarks()
-        {
-            while (visibleMarks.Count > 0)
-            {
-                GameObject mark = visibleMarks.Dequeue();
-                mark.SetActive(false);
-                if (Application.isPlaying)
-                {
-                    UnityEngine.Object.Destroy(mark);
-                }
-                else
-                {
-                    UnityEngine.Object.DestroyImmediate(mark);
-                }
-            }
-            VisibleMarkCount = 0;
         }
 
         public void SetMode(CityTraceDisplayMode mode)
         {
             DisplayMode = mode;
-            humanRoot.gameObject.SetActive(mode != CityTraceDisplayMode.AnimalTrace);
-            animalRoot.gameObject.SetActive(mode != CityTraceDisplayMode.HumanTrace);
+            humanRoot.gameObject.SetActive(mode == CityTraceDisplayMode.HumanTrace);
+            animalRoot.gameObject.SetActive(mode == CityTraceDisplayMode.AnimalTrace);
+            combinedRoot.gameObject.SetActive(mode == CityTraceDisplayMode.CombinedTrace);
+            if (IsVisible)
+            {
+                RebuildSelectedHeatmap();
+            }
         }
 
-        private GameObject Draw(CityTracePoint point, int index)
+        public void SetVisible(bool visible)
         {
-            Transform layer = point.layer == CityTraceLayer.Human ? humanRoot : animalRoot;
-            GameObject mark = new GameObject($"{point.mark} {index:0000}");
-            mark.transform.SetParent(layer, false);
-            Vector2 current = new Vector2(point.position_norm[0], point.position_norm[1]);
-            Vector2 direction = Vector2.up;
-            if (lastPositions.TryGetValue(point.agent_id, out Vector2 previous) &&
-                Vector2.Distance(previous, current) > 0.0001f)
+            IsVisible = visible;
+            root.gameObject.SetActive(visible);
+            if (visible)
             {
-                direction = (current - previous).normalized;
+                RebuildSelectedHeatmap();
             }
-            lastPositions[point.agent_id] = current;
-            mark.transform.localPosition = ToWorld(current, 0.115f);
-            float heading = Mathf.Atan2(direction.x, direction.y) * Mathf.Rad2Deg;
-            mark.transform.localRotation = Quaternion.Euler(0f, heading, 0f);
+        }
 
-            switch (point.mark)
+        private void RebuildSelectedHeatmap()
+        {
+            ClearChildren(humanRoot);
+            ClearChildren(animalRoot);
+            ClearChildren(combinedRoot);
+            Transform target = RootFor(DisplayMode);
+            int[,] counts = new int[HeatmapColumns, HeatmapRows];
+            foreach (CityTracePoint point in cachedPoints.Where(MatchesMode))
             {
-                case CityTraceMark.Footprint:
-                    DrawFootprints(mark.transform, index);
-                    break;
-                case CityTraceMark.VehicleTyre:
-                    DrawTyres(mark.transform);
-                    break;
-                case CityTraceMark.BirdTrack:
-                    DrawBirdTrack(mark.transform, index);
-                    break;
-                case CityTraceMark.SmallPaw:
-                    DrawPaws(mark.transform, 0.034f, index, point.mark);
-                    break;
-                case CityTraceMark.FoxPaw:
-                    DrawPaws(mark.transform, 0.050f, index, point.mark);
-                    break;
+                int column = Mathf.Clamp(
+                    Mathf.FloorToInt(point.position_norm[0] * HeatmapColumns),
+                    0,
+                    HeatmapColumns - 1);
+                int row = Mathf.Clamp(
+                    Mathf.FloorToInt(point.position_norm[1] * HeatmapRows),
+                    0,
+                    HeatmapRows - 1);
+                counts[column, row] += 1;
+            }
+
+            int peak = 0;
+            for (int column = 0; column < HeatmapColumns; column += 1)
+            {
+                for (int row = 0; row < HeatmapRows; row += 1)
+                {
+                    peak = Math.Max(peak, counts[column, row]);
+                }
+            }
+            if (peak == 0)
+            {
+                VisibleMarkCount = 0;
+                return;
+            }
+
+            int visibleCells = 0;
+            for (int column = 0; column < HeatmapColumns; column += 1)
+            {
+                for (int row = 0; row < HeatmapRows; row += 1)
+                {
+                    int count = counts[column, row];
+                    if (count <= 0)
+                    {
+                        continue;
+                    }
+                    float intensity = Mathf.Sqrt(count / (float)peak);
+                    CreateHeatCell(target, column, row, count, intensity);
+                    visibleCells += 1;
+                }
+            }
+            VisibleMarkCount = visibleCells;
+        }
+
+        private bool MatchesMode(CityTracePoint point)
+        {
+            switch (DisplayMode)
+            {
+                case CityTraceDisplayMode.HumanTrace:
+                    return point.layer == CityTraceLayer.Human;
+                case CityTraceDisplayMode.AnimalTrace:
+                    return point.layer == CityTraceLayer.Animal;
                 default:
-                    DrawHedgehogTrack(mark.transform, index);
-                    break;
-            }
-            return mark;
-        }
-
-        private void DrawFootprints(Transform root, int index)
-        {
-            float alternating = index % 2 == 0 ? 1f : -1f;
-            CreateDisc(root, "Left shoe", new Vector3(-0.035f, 0f, -0.025f * alternating),
-                new Vector3(0.028f, 0.006f, 0.060f), CityTraceMark.Footprint);
-            CreateDisc(root, "Right shoe", new Vector3(0.035f, 0f, 0.025f * alternating),
-                new Vector3(0.028f, 0.006f, 0.060f), CityTraceMark.Footprint);
-        }
-
-        private void DrawTyres(Transform root)
-        {
-            CreateBar(root, "Left tyre", new Vector3(-0.055f, 0f, 0f),
-                new Vector3(0.018f, 0.008f, 0.105f), CityTraceMark.VehicleTyre, 0f);
-            CreateBar(root, "Right tyre", new Vector3(0.055f, 0f, 0f),
-                new Vector3(0.018f, 0.008f, 0.105f), CityTraceMark.VehicleTyre, 0f);
-        }
-
-        private void DrawBirdTrack(Transform root, int index)
-        {
-            float side = index % 2 == 0 ? -0.025f : 0.025f;
-            CreateBar(root, "Bird toe centre", new Vector3(side, 0f, 0f),
-                new Vector3(0.010f, 0.006f, 0.050f), CityTraceMark.BirdTrack, 0f);
-            CreateBar(root, "Bird toe left", new Vector3(side - 0.014f, 0f, 0.005f),
-                new Vector3(0.009f, 0.006f, 0.040f), CityTraceMark.BirdTrack, -28f);
-            CreateBar(root, "Bird toe right", new Vector3(side + 0.014f, 0f, 0.005f),
-                new Vector3(0.009f, 0.006f, 0.040f), CityTraceMark.BirdTrack, 28f);
-        }
-
-        private void DrawPaws(
-            Transform root,
-            float size,
-            int index,
-            CityTraceMark mark)
-        {
-            float side = index % 2 == 0 ? -size * 0.65f : size * 0.65f;
-            CreateDisc(root, "Paw pad", new Vector3(side, 0f, 0f),
-                new Vector3(size, 0.006f, size * 1.15f), mark);
-            for (int toe = -1; toe <= 1; toe += 1)
-            {
-                CreateDisc(root, $"Toe {toe + 2}",
-                    new Vector3(side + toe * size * 0.42f, 0f, size * 0.75f),
-                    new Vector3(size * 0.30f, 0.005f, size * 0.34f), mark);
+                    return true;
             }
         }
 
-        private void DrawHedgehogTrack(Transform root, int index)
+        private void CreateHeatCell(
+            Transform parent,
+            int column,
+            int row,
+            int count,
+            float intensity)
         {
-            float side = index % 2 == 0 ? -0.025f : 0.025f;
-            CreateDisc(root, "Hedgehog pad", new Vector3(side, 0f, 0f),
-                new Vector3(0.030f, 0.005f, 0.038f), CityTraceMark.HedgehogTrack);
-            CreateDisc(root, "Hedgehog toe", new Vector3(side, 0f, 0.040f),
-                new Vector3(0.018f, 0.005f, 0.021f), CityTraceMark.HedgehogTrack);
+            GameObject cell = new GameObject($"Heat cell {column:00}-{row:00} · {count}");
+            cell.transform.SetParent(parent, false);
+            Vector2 normalized = new Vector2(
+                (column + 0.5f) / HeatmapColumns,
+                (row + 0.5f) / HeatmapRows);
+            cell.transform.localPosition = ToWorld(normalized, 0.118f);
+
+            float cellWidth = mapWidth / HeatmapColumns;
+            float cellHeight = mapHeight / HeatmapRows;
+            float diameter = Mathf.Min(cellWidth, cellHeight) *
+                             Mathf.Lerp(0.70f, 1.30f, intensity);
+            CreateRing(cell.transform, "Outer glow", diameter, intensity, 0);
+            CreateRing(cell.transform, "Middle glow", diameter * 0.68f, intensity, 1);
+            CreateRing(cell.transform, "Hot core", diameter * 0.34f, intensity, 2);
         }
 
-        private void CreateDisc(
+        private void CreateRing(
             Transform parent,
             string name,
-            Vector3 position,
-            Vector3 scale,
-            CityTraceMark mark)
+            float diameter,
+            float intensity,
+            int ring)
         {
-            GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = name;
             disc.transform.SetParent(parent, false);
-            disc.transform.localPosition = position;
-            disc.transform.localScale = scale;
+            disc.transform.localPosition = new Vector3(0f, ring * 0.0015f, 0f);
+            disc.transform.localScale = new Vector3(diameter, 0.004f, diameter);
             RemoveCollider(disc);
-            disc.GetComponent<Renderer>().sharedMaterial = MaterialFor(mark);
+            int bucket = Mathf.Clamp(
+                Mathf.RoundToInt(intensity * (IntensityBuckets - 1)),
+                0,
+                IntensityBuckets - 1);
+            disc.GetComponent<Renderer>().sharedMaterial = MaterialFor(bucket, ring);
         }
 
-        private void CreateBar(
-            Transform parent,
-            string name,
-            Vector3 position,
-            Vector3 scale,
-            CityTraceMark mark,
-            float yaw)
+        private Material MaterialFor(int bucket, int ring)
         {
-            GameObject bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            bar.name = name;
-            bar.transform.SetParent(parent, false);
-            bar.transform.localPosition = position;
-            bar.transform.localScale = scale;
-            bar.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            RemoveCollider(bar);
-            bar.GetComponent<Renderer>().sharedMaterial = MaterialFor(mark);
-        }
-
-        private Material MaterialFor(CityTraceMark mark)
-        {
-            if (materials.TryGetValue(mark, out Material material))
+            int key = bucket * RingsPerCell + ring;
+            if (materials.TryGetValue(key, out Material material))
             {
                 return material;
             }
-            Color colour;
-            switch (mark)
-            {
-                case CityTraceMark.Footprint: colour = new Color(0.12f, 0.52f, 0.58f, 0.78f); break;
-                case CityTraceMark.VehicleTyre: colour = new Color(0.25f, 0.31f, 0.34f, 0.68f); break;
-                case CityTraceMark.BirdTrack: colour = new Color(0.32f, 0.50f, 0.70f, 0.82f); break;
-                case CityTraceMark.SmallPaw: colour = new Color(0.72f, 0.45f, 0.20f, 0.78f); break;
-                case CityTraceMark.FoxPaw: colour = new Color(0.82f, 0.30f, 0.16f, 0.82f); break;
-                default: colour = new Color(0.43f, 0.31f, 0.46f, 0.78f); break;
-            }
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit") ??
-                            Shader.Find("Unlit/Color") ?? Shader.Find("Sprites/Default");
+            float intensity = bucket / (float)(IntensityBuckets - 1);
+            Color low = new Color(0.12f, 0.58f, 0.92f, 1f);
+            Color middle = new Color(0.98f, 0.82f, 0.18f, 1f);
+            Color high = new Color(0.94f, 0.20f, 0.12f, 1f);
+            Color colour = intensity < 0.5f
+                ? Color.Lerp(low, middle, intensity * 2f)
+                : Color.Lerp(middle, high, (intensity - 0.5f) * 2f);
+            float[] ringAlpha = { 0.11f, 0.22f, 0.48f };
+            colour.a = ringAlpha[ring] * Mathf.Lerp(0.55f, 1f, intensity);
+            Shader shader = Shader.Find("Sprites/Default") ??
+                            Shader.Find("Universal Render Pipeline/Unlit") ??
+                            Shader.Find("Unlit/Transparent");
             material = new Material(shader)
             {
                 color = colour,
                 hideFlags = HideFlags.DontSave,
+                renderQueue = 3000 + ring,
             };
-            materials.Add(mark, material);
+            materials.Add(key, material);
             return material;
+        }
+
+        private Transform RootFor(CityTraceDisplayMode mode)
+        {
+            switch (mode)
+            {
+                case CityTraceDisplayMode.HumanTrace: return humanRoot;
+                case CityTraceDisplayMode.AnimalTrace: return animalRoot;
+                default: return combinedRoot;
+            }
         }
 
         private Vector3 ToWorld(Vector2 normalized, float height)
@@ -266,11 +256,33 @@ namespace UrbanWildlife.Reporting
                 (0.5f - normalized.y) * mapHeight);
         }
 
+        private static bool IsUsable(CityTracePoint point)
+        {
+            return point?.position_norm != null && point.position_norm.Length == 2;
+        }
+
         private static Transform Child(Transform parent, string name)
         {
             GameObject child = new GameObject(name);
             child.transform.SetParent(parent, false);
             return child.transform;
+        }
+
+        private static void ClearChildren(Transform parent)
+        {
+            for (int index = parent.childCount - 1; index >= 0; index -= 1)
+            {
+                GameObject child = parent.GetChild(index).gameObject;
+                child.SetActive(false);
+                if (Application.isPlaying)
+                {
+                    UnityEngine.Object.Destroy(child);
+                }
+                else
+                {
+                    UnityEngine.Object.DestroyImmediate(child);
+                }
+            }
         }
 
         private static void RemoveCollider(GameObject target)

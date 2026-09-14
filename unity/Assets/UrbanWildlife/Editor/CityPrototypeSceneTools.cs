@@ -13,6 +13,7 @@ using UrbanWildlife.Mobility;
 using UrbanWildlife.Networks;
 using UrbanWildlife.Planning;
 using UrbanWildlife.Prototype;
+using UrbanWildlife.Reporting;
 using UrbanWildlife.Strategy;
 
 namespace UrbanWildlife.EditorTools
@@ -153,7 +154,7 @@ namespace UrbanWildlife.EditorTools
                 prototype.CityBalanceTotal <= 0f ||
                 prototype.HumanTracePointCount <= 0 ||
                 prototype.AnimalTracePointCount <= 0 ||
-                prototype.VisibleTraceMarkCount <= 0 ||
+                prototype.HeatmapVisible ||
                 prototype.CityFeedCount <= 0 ||
                 !prototype.PlanningWorkflowConnected ||
                 string.IsNullOrWhiteSpace(prototype.ResolvedCityScanPath) ||
@@ -174,7 +175,7 @@ namespace UrbanWildlife.EditorTools
                     $"wildlife={prototype?.WildlifeAgentCount}, species={prototype?.WildlifeSpeciesCount}, " +
                     $"phases={prototype?.DevelopmentPhaseCount}, balance={prototype?.CityBalanceTotal}, " +
                     $"humanTrace={prototype?.HumanTracePointCount}, animalTrace={prototype?.AnimalTracePointCount}, " +
-                    $"visibleTraceMarks={prototype?.VisibleTraceMarkCount}, " +
+                    $"heatmapVisible={prototype?.HeatmapVisible}, heatCells={prototype?.VisibleHeatCellCount}, " +
                     $"feed={prototype?.CityFeedCount}, " +
                     $"planning={prototype?.PlanningWorkflowConnected}, " +
                     $"agents={prototype?.RepresentativeAgentCount}, population={prototype?.RepresentedPopulation}, " +
@@ -195,6 +196,7 @@ namespace UrbanWildlife.EditorTools
                 "Generated City Prototype/Representative mobility agents",
                 "Generated City Prototype/Live city traces/Human traces",
                 "Generated City Prototype/Live city traces/Animal traces",
+                "Generated City Prototype/Live city traces/Combined heatmap",
             };
             if (requiredObjects.Any(path => prototype.transform.Find(path) == null))
             {
@@ -205,6 +207,7 @@ namespace UrbanWildlife.EditorTools
             VerifyCommercialBuildingVisuals(prototype);
             VerifyCompactNeighbourhoodPresentation(prototype);
             VerifyBilingualUi(prototype);
+            VerifyActivityHeatmap(prototype);
             VerifyResponsiveCameraFit();
             VerifyCameraScanFileSource();
             VerifyPlanningWorkflow();
@@ -221,7 +224,7 @@ namespace UrbanWildlife.EditorTools
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
                 "represented_population=24 external_return_routes=True " +
                 "live_vehicle_agents=True max_speed=2x no_questionnaire=True " +
-                "visible_footprint_tyre_bird_paw_tracks=True city_feed_panel=True phase_snapshot=True " +
+                "activity_heatmap=True heatmap_hotkey_h=True footprints_removed=True city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
                 "sparse_opening_map=True road_following=True no_premature_buildings=True " +
@@ -247,6 +250,73 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_BILINGUAL_UI_SMOKE_OK chinese=True english=True persisted=True " +
                 $"planning_overlay_refresh=True cjk_font_fallback=True font={prototype.ChineseUiFontName}");
+        }
+
+        private static void VerifyActivityHeatmap(CityPrototypeDemo prototype)
+        {
+            if (prototype.HeatmapVisible)
+            {
+                throw new InvalidOperationException("The activity heatmap must start hidden.");
+            }
+            prototype.SetHeatmapVisible(true);
+            bool prototypeToggleOn = prototype.HeatmapVisible;
+            prototype.SetHeatmapVisible(false);
+
+            GameObject host = new GameObject("Heatmap smoke host");
+            try
+            {
+                CityTraceVisualizer visualizer = new CityTraceVisualizer(host.transform, 12f, 8f);
+                CityTracePoint[] samples =
+                {
+                    HeatSample("resident-01", CityTraceLayer.Human, 0.20f, 0.20f),
+                    HeatSample("resident-01", CityTraceLayer.Human, 0.21f, 0.21f),
+                    HeatSample("pigeon-01", CityTraceLayer.Animal, 0.80f, 0.80f),
+                };
+                visualizer.Render(samples);
+                visualizer.SetVisible(true);
+                visualizer.SetMode(CityTraceDisplayMode.CombinedTrace);
+                bool combinedAggregates = visualizer.VisibleCellCount == 2;
+                visualizer.SetMode(CityTraceDisplayMode.HumanTrace);
+                bool humanFilter = visualizer.VisibleCellCount == 1;
+                visualizer.SetMode(CityTraceDisplayMode.AnimalTrace);
+                bool animalFilter = visualizer.VisibleCellCount == 1;
+                bool noFootprintObjects = !host.GetComponentsInChildren<Transform>(true)
+                    .Any(item =>
+                        item.name.IndexOf("shoe", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        item.name.IndexOf("tyre", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        item.name.IndexOf("paw", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        item.name.IndexOf("toe", StringComparison.OrdinalIgnoreCase) >= 0);
+                if (!prototypeToggleOn || !combinedAggregates || !humanFilter ||
+                    !animalFilter || !noFootprintObjects)
+                {
+                    throw new InvalidOperationException(
+                        "The activity heatmap must aggregate trace samples, filter layers and contain no footprint geometry.");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+            Debug.Log(
+                "UNITY_CITY_ACTIVITY_HEATMAP_SMOKE_OK default_hidden=True h_toggle=True " +
+                "combined_cells=2 human_cells=1 animal_cells=1 individual_marks=False");
+        }
+
+        private static CityTracePoint HeatSample(
+            string agentId,
+            CityTraceLayer layer,
+            float x,
+            float y)
+        {
+            return new CityTracePoint
+            {
+                agent_id = agentId,
+                layer = layer,
+                mark = layer == CityTraceLayer.Human
+                    ? CityTraceMark.Footprint
+                    : CityTraceMark.BirdTrack,
+                position_norm = new[] { x, y },
+            };
         }
 
         private static void VerifyResidentialBuildingVisuals(CityPrototypeDemo prototype)

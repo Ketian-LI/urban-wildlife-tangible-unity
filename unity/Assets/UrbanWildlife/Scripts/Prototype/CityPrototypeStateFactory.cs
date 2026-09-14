@@ -35,7 +35,7 @@ namespace UrbanWildlife.Prototype
                     route_option = CityRoadRouteOption.Existing,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.04f, 0.42f), (0.28f, 0.40f), (0.50f, 0.42f), (0.73f, 0.39f), (0.96f, 0.43f)),
+                    points_norm = Points((0.04f, 0.53f), (0.16f, 0.51f), (0.29f, 0.53f), (0.43f, 0.50f), (0.57f, 0.53f), (0.73f, 0.50f), (0.87f, 0.52f), (0.96f, 0.54f)),
                     width_units = 4.2f,
                     speed_units_per_second = 7f,
                     traffic_load = 0.46f,
@@ -49,7 +49,7 @@ namespace UrbanWildlife.Prototype
                     route_option = CityRoadRouteOption.Existing,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.50f, 0.42f), (0.58f, 0.61f), (0.71f, 0.72f), (0.94f, 0.72f)),
+                    points_norm = Points((0.50f, 0.52f), (0.55f, 0.62f), (0.68f, 0.79f), (0.94f, 0.79f)),
                     width_units = 3.2f,
                     speed_units_per_second = 5f,
                     traffic_load = 0.24f,
@@ -66,7 +66,7 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.04f, 0.53f), (0.25f, 0.55f), (0.48f, 0.51f), (0.70f, 0.54f), (0.96f, 0.51f)),
+                    points_norm = Points((0.04f, 0.46f), (0.18f, 0.47f), (0.33f, 0.45f), (0.48f, 0.47f), (0.63f, 0.45f), (0.79f, 0.47f), (0.96f, 0.46f)),
                     width_units = 1.8f,
                     step_free_accessible = true,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
@@ -78,7 +78,7 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.48f, 0.51f), (0.51f, 0.67f), (0.62f, 0.76f), (0.91f, 0.79f)),
+                    points_norm = Points((0.48f, 0.47f), (0.52f, 0.67f), (0.63f, 0.82f), (0.91f, 0.84f)),
                     width_units = 1.5f,
                     step_free_accessible = true,
                     connected_building_ids = new[] { "detached-garden", "corner-shops" },
@@ -98,8 +98,8 @@ namespace UrbanWildlife.Prototype
                     : "pedestrian-park-spine";
                 string roadId = $"road-access-{building.id}";
                 string linkId = $"walk-access-{building.id}";
-                float roadY = roadNetwork == "vehicle-main-street" ? 0.42f : 0.72f;
-                float linkY = linkNetwork == "pedestrian-park-spine" ? 0.53f : 0.78f;
+                float roadY = roadNetwork == "vehicle-main-street" ? 0.53f : 0.79f;
+                float linkY = linkNetwork == "pedestrian-park-spine" ? 0.46f : 0.84f;
                 roads.Add(new CityVehicleRoad
                 {
                     id = roadId,
@@ -283,9 +283,15 @@ namespace UrbanWildlife.Prototype
 
         private static CityLandCover BaselineCover(int row, int col)
         {
-            bool coreWoodland = (row == 2 && col <= 2) || (row == 3 && col <= 1);
-            bool woodlandFragment = row == 2 && col >= 4;
-            if (coreWoodland || woodlandFragment)
+            // Two uneven edge groves frame a readable central planning meadow.
+            // The logical grid remains regular for camera snapping; only the landscape
+            // composition is deliberately asymmetrical.
+            bool westWoodland = (row == 0 && col == 1) ||
+                                (row == 2 && col == 0) ||
+                                (row == 3 && col <= 1);
+            bool eastWoodland = (row == 0 && col == 5) ||
+                                (row == 2 && col >= 4);
+            if (westWoodland || eastWoodland)
             {
                 return CityLandCover.Woodland;
             }
@@ -293,11 +299,13 @@ namespace UrbanWildlife.Prototype
             {
                 return CityLandCover.PublicGreen;
             }
-            if (row == 1 && col == 4)
+            if (row == 1 && col == 1)
             {
                 return CityLandCover.CivicPlaza;
             }
-            if (row == 3 && col == 4)
+            // The pond sits against the western habitat edge rather than on the
+            // outer board border, leaving a calmer buildable foreground.
+            if (row == 2 && col == 1)
             {
                 return CityLandCover.Water;
             }

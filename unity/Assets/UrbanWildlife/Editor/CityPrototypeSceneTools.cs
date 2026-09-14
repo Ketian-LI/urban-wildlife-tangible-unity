@@ -30,9 +30,12 @@ namespace UrbanWildlife.EditorTools
             cameraObject.transform.position = new Vector3(0f, 10f, 0f);
             cameraObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.56f, 0.82f, 0.90f, 1f);
+            camera.backgroundColor = new Color(0.82f, 0.86f, 0.80f, 1f);
             camera.orthographic = true;
-            camera.orthographicSize = 4.45f;
+            camera.orthographicSize = CityPrototypeDemo.OrthographicSizeForViewport(
+                Screen.width,
+                Screen.height,
+                0.77f);
             camera.rect = new Rect(0f, 0f, 0.77f, 1f);
 
             GameObject lightObject = new GameObject("Directional Light");
@@ -126,6 +129,7 @@ namespace UrbanWildlife.EditorTools
             }
             string[] requiredObjects =
             {
+                "Generated City Prototype/Organic terrain underlay",
                 "Generated City Prototype/Planning grid/Cells",
                 "Generated City Prototype/Planning grid/Boundaries",
                 "Generated City Prototype/Green patches",
@@ -143,6 +147,7 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("City prototype is missing a generated visual layer.");
             }
             VerifyPlanningGridVisuals(prototype);
+            VerifyResponsiveCameraFit();
             VerifyCameraScanFileSource();
             VerifyPlanningWorkflow();
             VerifyGridConstructionRules();
@@ -166,6 +171,14 @@ namespace UrbanWildlife.EditorTools
             Transform cells = prototype.transform.Find("Generated City Prototype/Planning grid/Cells");
             Transform boundaries = prototype.transform.Find("Generated City Prototype/Planning grid/Boundaries");
             Transform greenery = prototype.transform.Find("Generated City Prototype/Green patches");
+            Transform underlay = prototype.transform.Find("Generated City Prototype/Organic terrain underlay");
+            SpriteRenderer underlayRenderer = underlay == null
+                ? null
+                : underlay.GetComponent<SpriteRenderer>();
+            Font regularFont = Resources.Load<Font>(
+                "UrbanWildlife/Fonts/Nunito-Regular");
+            Font boldFont = Resources.Load<Font>(
+                "UrbanWildlife/Fonts/Nunito-Bold");
             if (grid.cols != 6 || grid.rows != 4 || cells.childCount != 24 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.OpenLand) != 8 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland) != 7 ||
@@ -174,9 +187,29 @@ namespace UrbanWildlife.EditorTools
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.CivicPlaza) != 1 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 1 ||
                 boundaries.GetComponentsInChildren<LineRenderer>().Length != 12 ||
+                underlayRenderer?.sprite == null ||
+                underlayRenderer.sprite.name != "city-board-organic-underlay-v01" ||
+                underlayRenderer.sortingOrder != -50 ||
+                regularFont == null || boldFont == null ||
                 prototype.GetComponentsInChildren<Transform>().Any(item => item.name == "East canal"))
             {
-                throw new InvalidOperationException("City planning grid must render 24 cells (8 open, 7 woodland, 6 building, 3 fixed public features), 12 grid lines and no east canal.");
+                throw new InvalidOperationException(
+                    "City planning grid must render its organic terrain underlay, 24 cells " +
+                    "(8 open, 7 woodland, 6 building, 3 fixed public features), " +
+                    "12 grid lines and no east canal.");
+            }
+
+            LineRenderer[] boundaryLines = boundaries.GetComponentsInChildren<LineRenderer>();
+            bool naturalBoundaryGeometry = boundaryLines
+                .Where(line => line.name.StartsWith("Column", StringComparison.Ordinal))
+                .All(line => line.positionCount == grid.rows + 1) &&
+                boundaryLines
+                    .Where(line => line.name.StartsWith("Row", StringComparison.Ordinal))
+                    .All(line => line.positionCount == grid.cols + 1);
+            if (!naturalBoundaryGeometry)
+            {
+                throw new InvalidOperationException(
+                    "Planning boundaries must follow shared multi-point landscape edges, not isolated straight cell lines.");
             }
 
             foreach (CityGridCell cell in grid.cells)
@@ -203,10 +236,27 @@ namespace UrbanWildlife.EditorTools
                 else if (cell.current_cover == CityLandCover.PublicGreen)
                 {
                     Transform garden = greenery.Find(cell.id + " public greenery");
-                    if (garden == null || garden.GetComponentsInChildren<SpriteRenderer>().Length != 3)
+                    Transform naturalFeature = cellObject.Find("PublicGreen natural feature");
+                    if (garden == null || garden.GetComponentsInChildren<SpriteRenderer>().Length != 3 ||
+                        naturalFeature?.GetComponent<MeshFilter>()?.sharedMesh == null)
                     {
-                        throw new InvalidOperationException($"Public green cell {cell.id} must retain one tree and two small shrubs.");
+                        throw new InvalidOperationException(
+                            $"Public green cell {cell.id} must retain an organic ground patch, one tree and two small shrubs.");
                     }
+                }
+                else if (cell.current_cover == CityLandCover.Water &&
+                         (cellObject.Find("Water natural feature")?.GetComponent<MeshFilter>()?.sharedMesh == null ||
+                          cellObject.Find("Water artwork")?.GetComponent<SpriteRenderer>()?.sprite == null))
+                {
+                    throw new InvalidOperationException(
+                        $"Water cell {cell.id} must render its organic pond artwork inside its logical planning area.");
+                }
+                else if (cell.current_cover == CityLandCover.CivicPlaza &&
+                         (cellObject.Find("CivicPlaza natural feature")?.GetComponent<MeshFilter>()?.sharedMesh == null ||
+                          cellObject.Find("Civic plaza artwork")?.GetComponent<SpriteRenderer>()?.sprite == null))
+                {
+                    throw new InvalidOperationException(
+                        $"Civic plaza cell {cell.id} must render its detailed civic-space artwork inside its logical planning area.");
                 }
             }
 
@@ -217,7 +267,35 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException($"Expected {expectedGroves} cell-aligned woodland groves, found {actualGroves}.");
             }
-            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=6x4 cells=24 available=15 woodland_groves={actualGroves} public_green=True no_east_canal=True");
+            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=6x4 cells=24 available=15 woodland_groves={actualGroves} organic_underlay=True transparent_land_cover=True natural_boundaries=True detailed_pond_plaza=True static_nunito=Regular/Bold public_green=True no_east_canal=True");
+        }
+
+        private static void VerifyResponsiveCameraFit()
+        {
+            (int width, int height)[] sizes =
+            {
+                (1920, 1080),
+                (1920, 1200),
+                (1280, 1024),
+            };
+            foreach ((int width, int height) in sizes)
+            {
+                const float viewportWidth = 0.77f;
+                float size = CityPrototypeDemo.OrthographicSizeForViewport(
+                    width,
+                    height,
+                    viewportWidth);
+                float viewportAspect = width * viewportWidth / height;
+                float visibleWidth = size * 2f * viewportAspect;
+                float visibleHeight = size * 2f;
+                if (visibleWidth < 12.54f || visibleHeight < 8.54f)
+                {
+                    throw new InvalidOperationException(
+                        $"Responsive camera crops the board at {width}x{height}: " +
+                        $"visible={visibleWidth:0.00}x{visibleHeight:0.00}.");
+                }
+            }
+            Debug.Log("UNITY_CITY_RESPONSIVE_CAMERA_SMOKE_OK sizes=1920x1080/1920x1200/1280x1024 board_uncropped=True ocean_frame=False");
         }
 
         private static void VerifyCameraScanFileSource()

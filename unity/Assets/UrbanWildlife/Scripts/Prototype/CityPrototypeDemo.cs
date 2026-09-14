@@ -20,7 +20,15 @@ namespace UrbanWildlife.Prototype
     {
         private const float MapWidth = 12f;
         private const float MapHeight = 8f;
+        private const float MapViewportWidth = 0.77f;
+        private const float BoardViewMargin = 0.55f;
         private const float RuntimeSpeed = 2f;
+        private const string CityBoardUnderlayResourcePath =
+            "UrbanWildlife/Environment/city-board-organic-underlay-v01";
+        private const string CityPlazaResourcePath =
+            "UrbanWildlife/Environment/human-activity-plaza-v01";
+        private const string CityPondResourcePath =
+            "UrbanWildlife/Environment/park-pond-citybuilder-v01";
         private const string CityTreeResourcePath =
             "UrbanWildlife/Environment/tree-citybuilder-default-v01";
         private const string CityBushResourcePath =
@@ -65,10 +73,16 @@ namespace UrbanWildlife.Prototype
         private float simulationElapsed;
         private GUIStyle panelStyle;
         private GUIStyle titleStyle;
+        private GUIStyle eyebrowStyle;
         private GUIStyle headingStyle;
         private GUIStyle bodyStyle;
+        private GUIStyle captionStyle;
         private GUIStyle metricStyle;
         private GUIStyle buttonStyle;
+        private float uiScale = 1f;
+        private int styledScreenHeight = -1;
+        private int configuredScreenWidth = -1;
+        private int configuredScreenHeight = -1;
 
         public int GeneratedBuildingCount { get; private set; }
         public int GeneratedVehicleRoadCount { get; private set; }
@@ -119,6 +133,11 @@ namespace UrbanWildlife.Prototype
 
         private void Update()
         {
+            if (configuredScreenWidth != Screen.width ||
+                configuredScreenHeight != Screen.height)
+            {
+                ConfigureCamera();
+            }
             if (!Application.isPlaying || mobility == null || paused)
             {
                 return;
@@ -248,10 +267,30 @@ namespace UrbanWildlife.Prototype
             {
                 return;
             }
-            camera.rect = new Rect(0f, 0f, 0.77f, 1f);
+            camera.rect = new Rect(0f, 0f, MapViewportWidth, 1f);
             camera.orthographic = true;
-            camera.orthographicSize = 4.45f;
-            camera.backgroundColor = new Color(0.56f, 0.82f, 0.90f, 1f);
+            camera.orthographicSize = OrthographicSizeForViewport(
+                Screen.width,
+                Screen.height,
+                MapViewportWidth);
+            camera.backgroundColor = new Color(0.82f, 0.86f, 0.80f, 1f);
+            configuredScreenWidth = Screen.width;
+            configuredScreenHeight = Screen.height;
+        }
+
+        public static float OrthographicSizeForViewport(
+            int screenWidth,
+            int screenHeight,
+            float viewportWidth = MapViewportWidth)
+        {
+            float safeWidth = Mathf.Max(1f, screenWidth);
+            float safeHeight = Mathf.Max(1f, screenHeight);
+            float safeViewportWidth = Mathf.Clamp(viewportWidth, 0.1f, 1f);
+            float viewportAspect = safeWidth * safeViewportWidth / safeHeight;
+            float verticalFit = (MapHeight + BoardViewMargin) * 0.5f;
+            float horizontalFit = (MapWidth + BoardViewMargin) /
+                                  (2f * Mathf.Max(0.1f, viewportAspect));
+            return Mathf.Max(verticalFit, horizontalFit);
         }
 
         private void BuildBoard()
@@ -262,7 +301,28 @@ namespace UrbanWildlife.Prototype
             board.transform.localPosition = new Vector3(0f, -0.08f, 0f);
             board.transform.localScale = new Vector3(MapWidth + 0.18f, 0.14f, MapHeight + 0.18f);
             RemoveCollider(board);
-            SetMaterial(board, new Color(0.90f, 0.92f, 0.85f, 1f));
+            SetMaterial(board, new Color(0.96f, 0.95f, 0.90f, 1f));
+
+            Sprite underlay = Resources.Load<Sprite>(CityBoardUnderlayResourcePath);
+            if (underlay == null)
+            {
+                Debug.LogWarning(
+                    $"City board underlay was not found at Resources/{CityBoardUnderlayResourcePath}.");
+                return;
+            }
+
+            GameObject artwork = new GameObject("Organic terrain underlay");
+            artwork.transform.SetParent(generatedRoot.transform, false);
+            artwork.transform.localPosition = new Vector3(0f, 0.004f, 0f);
+            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            float artworkScale = Mathf.Min(
+                MapWidth / Mathf.Max(0.001f, underlay.bounds.size.x),
+                MapHeight / Mathf.Max(0.001f, underlay.bounds.size.y));
+            artwork.transform.localScale = Vector3.one * artworkScale;
+
+            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+            renderer.sprite = underlay;
+            renderer.sortingOrder = -50;
         }
 
         private void BuildPlanningGrid()
@@ -285,22 +345,25 @@ namespace UrbanWildlife.Prototype
             {
                 GameObject cellObject = new GameObject(cell.id);
                 cellObject.transform.SetParent(cellsRoot.transform, false);
+                float[][] visualPolygon = VisualCellPolygon(cell, grid);
                 CreatePolygon(
                     cellObject.transform,
                     "Land cover " + cell.current_cover,
-                    CityGridResolver.PolygonFor(cell),
+                    visualPolygon,
                     0.008f,
                     PlanningCellColour(cell.current_cover),
-                    -40);
+                    -40,
+                    true);
+                BuildNaturalCellFeature(cellObject.transform, cell);
                 float[] labelPosition =
                 {
-                    cell.center_norm[0] - cell.size_norm[0] * 0.41f,
-                    cell.center_norm[1] - cell.size_norm[1] * 0.41f,
+                    visualPolygon[3][0] + cell.size_norm[0] * 0.12f,
+                    visualPolygon[3][1] - cell.size_norm[1] * 0.10f,
                 };
-                CreateLabel(cellObject.transform, cell.id, ToWorld(labelPosition, 0.020f), 0.09f);
+                CreateLabel(cellObject.transform, cell.id, ToWorld(labelPosition, 0.031f), 0.027f);
                 TextMesh label = cellObject.GetComponentInChildren<TextMesh>();
-                label.color = new Color(0.42f, 0.49f, 0.40f, 1f);
-                label.GetComponent<Renderer>().sortingOrder = -28;
+                label.color = new Color(0.28f, 0.39f, 0.36f, 0.44f);
+                label.GetComponent<Renderer>().sortingOrder = -22;
                 GeneratedPlanningCellCount += 1;
                 if (cell.buildable && !cell.fixed_feature &&
                     string.IsNullOrWhiteSpace(cell.occupant_id))
@@ -309,21 +372,186 @@ namespace UrbanWildlife.Prototype
                 }
             }
 
-            Color boundaryColour = new Color(0.73f, 0.78f, 0.68f, 1f);
+            Color boundaryColour = new Color(0.38f, 0.50f, 0.45f, 0.16f);
             for (int col = 0; col <= grid.cols; col += 1)
             {
-                float x = (float)col / grid.cols;
+                float[][] points = Enumerable.Range(0, grid.rows + 1)
+                    .Select(row => VisualGridNode(row, col, grid))
+                    .ToArray();
                 CreateLine(boundariesRoot.transform, "Column " + col,
-                    new[] { new[] { x, 0f }, new[] { x, 1f } },
-                    0.014f, boundaryColour, 0.016f, -30);
+                    points,
+                    0.007f, boundaryColour, 0.025f, -30, true);
             }
             for (int row = 0; row <= grid.rows; row += 1)
             {
-                float y = (float)row / grid.rows;
+                float[][] points = Enumerable.Range(0, grid.cols + 1)
+                    .Select(col => VisualGridNode(row, col, grid))
+                    .ToArray();
                 CreateLine(boundariesRoot.transform, "Row " + row,
-                    new[] { new[] { 0f, y }, new[] { 1f, y } },
-                    0.014f, boundaryColour, 0.016f, -30);
+                    points,
+                    0.007f, boundaryColour, 0.025f, -30, true);
             }
+        }
+
+        private float[][] VisualCellPolygon(CityGridCell cell, CityPlanningGrid grid)
+        {
+            return new[]
+            {
+                VisualGridNode(cell.row, cell.col, grid),
+                VisualGridNode(cell.row, cell.col + 1, grid),
+                VisualGridNode(cell.row + 1, cell.col + 1, grid),
+                VisualGridNode(cell.row + 1, cell.col, grid),
+            };
+        }
+
+        private static float[] VisualGridNode(int row, int col, CityPlanningGrid grid)
+        {
+            float x = (float)col / grid.cols;
+            float y = (float)row / grid.rows;
+            if (col > 0 && col < grid.cols)
+            {
+                x += HashSigned(row, col, 17) * 0.022f;
+            }
+            if (row > 0 && row < grid.rows)
+            {
+                y += HashSigned(row, col, 43) * 0.026f;
+            }
+            return new[] { Mathf.Clamp01(x), Mathf.Clamp01(y) };
+        }
+
+        private static float HashSigned(int row, int col, int salt)
+        {
+            int value = (row * 73 + col * 151 + salt * 199) & 1023;
+            value = (value * 37 + 71) & 1023;
+            return value / 511.5f - 1f;
+        }
+
+        private void BuildNaturalCellFeature(Transform parent, CityGridCell cell)
+        {
+            Color colour;
+            float radiusX;
+            float radiusY;
+            int points;
+            switch (cell.current_cover)
+            {
+                case CityLandCover.Water:
+                    colour = new Color(0.47f, 0.76f, 0.84f, 0.16f);
+                    radiusX = 0.39f;
+                    radiusY = 0.34f;
+                    points = 28;
+                    break;
+                case CityLandCover.CivicPlaza:
+                    colour = new Color(0.88f, 0.79f, 0.63f, 0.20f);
+                    radiusX = 0.43f;
+                    radiusY = 0.39f;
+                    points = 14;
+                    break;
+                case CityLandCover.PublicGreen:
+                    colour = new Color(0.72f, 0.84f, 0.60f, 0.34f);
+                    radiusX = 0.46f;
+                    radiusY = 0.42f;
+                    points = 14;
+                    break;
+                default:
+                    return;
+            }
+
+            float[][] shape = OrganicCellShape(cell, points, radiusX, radiusY);
+            CreatePolygon(
+                parent,
+                cell.current_cover + " natural feature",
+                shape,
+                0.019f,
+                colour,
+                -26,
+                true);
+            if (cell.current_cover == CityLandCover.Water)
+            {
+                CreateFixedFeatureArtwork(
+                    parent,
+                    "Water artwork",
+                    CityPondResourcePath,
+                    cell,
+                    0.94f,
+                    -24);
+            }
+            else if (cell.current_cover == CityLandCover.CivicPlaza)
+            {
+                CreateFixedFeatureArtwork(
+                    parent,
+                    "Civic plaza artwork",
+                    CityPlazaResourcePath,
+                    cell,
+                    0.92f,
+                    -24);
+            }
+            if (cell.current_cover == CityLandCover.Water)
+            {
+                CreateLine(
+                    parent,
+                    "Pond soft edge",
+                    shape.Concat(new[] { shape[0] }).ToArray(),
+                    0.010f,
+                    new Color(0.76f, 0.89f, 0.88f, 0.38f),
+                    0.023f,
+                    -24,
+                    true);
+            }
+        }
+
+        private void CreateFixedFeatureArtwork(
+            Transform parent,
+            string name,
+            string resourcePath,
+            CityGridCell cell,
+            float fill,
+            int sortingOrder)
+        {
+            Sprite sprite = Resources.Load<Sprite>(resourcePath);
+            if (sprite == null)
+            {
+                Debug.LogWarning($"Fixed feature artwork was not found at Resources/{resourcePath}.");
+                return;
+            }
+
+            GameObject artwork = new GameObject(name);
+            artwork.transform.SetParent(parent, false);
+            artwork.transform.localPosition = ToWorld(cell.center_norm, 0.023f);
+            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            float targetWidth = cell.size_norm[0] * MapWidth * fill;
+            float targetDepth = cell.size_norm[1] * MapHeight * fill;
+            float scale = Mathf.Min(
+                targetWidth / Mathf.Max(0.001f, sprite.bounds.size.x),
+                targetDepth / Mathf.Max(0.001f, sprite.bounds.size.y));
+            artwork.transform.localScale = Vector3.one * scale;
+
+            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = sortingOrder;
+        }
+
+        private static float[][] OrganicCellShape(
+            CityGridCell cell,
+            int pointCount,
+            float radiusX,
+            float radiusY)
+        {
+            float phase = (cell.row * 7 + cell.col * 11) * 0.23f;
+            float centreX = cell.center_norm[0] + cell.size_norm[0] * HashSigned(cell.row, cell.col, 61) * 0.035f;
+            float centreY = cell.center_norm[1] + cell.size_norm[1] * HashSigned(cell.row, cell.col, 79) * 0.030f;
+            return Enumerable.Range(0, pointCount)
+                .Select(index =>
+                {
+                    float angle = Mathf.PI * 2f * index / pointCount;
+                    float ripple = 1f + 0.055f * Mathf.Sin(angle * 3f + phase) +
+                                   0.035f * Mathf.Cos(angle * 5f - phase);
+                    return new[]
+                    {
+                        centreX + Mathf.Cos(angle) * cell.size_norm[0] * radiusX * ripple,
+                        centreY + Mathf.Sin(angle) * cell.size_norm[1] * radiusY * ripple,
+                    };
+                })
+                .ToArray();
         }
 
         private static Color PlanningCellColour(CityLandCover cover)
@@ -331,23 +559,23 @@ namespace UrbanWildlife.Prototype
             switch (cover)
             {
                 case CityLandCover.Woodland:
-                    return new Color(0.73f, 0.82f, 0.65f, 1f);
+                    return new Color(0.49f, 0.68f, 0.38f, 0.18f);
                 case CityLandCover.PublicGreen:
-                    return new Color(0.80f, 0.88f, 0.69f, 1f);
+                    return new Color(0.59f, 0.76f, 0.43f, 0.15f);
                 case CityLandCover.CivicPlaza:
-                    return new Color(0.89f, 0.85f, 0.77f, 1f);
+                    return new Color(0.80f, 0.65f, 0.40f, 0.12f);
                 case CityLandCover.Water:
-                    return new Color(0.66f, 0.81f, 0.82f, 1f);
+                    return new Color(0.30f, 0.68f, 0.80f, 0.12f);
                 case CityLandCover.Building:
-                    return new Color(0.87f, 0.86f, 0.81f, 1f);
+                    return new Color(0.74f, 0.69f, 0.57f, 0.12f);
                 case CityLandCover.ShrubGarden:
-                    return new Color(0.79f, 0.85f, 0.68f, 1f);
+                    return new Color(0.47f, 0.69f, 0.36f, 0.17f);
                 case CityLandCover.Disturbed:
-                    return new Color(0.85f, 0.80f, 0.68f, 1f);
+                    return new Color(0.72f, 0.53f, 0.35f, 0.16f);
                 case CityLandCover.Recovering:
-                    return new Color(0.83f, 0.87f, 0.72f, 1f);
+                    return new Color(0.56f, 0.72f, 0.39f, 0.15f);
                 default:
-                    return new Color(0.88f, 0.91f, 0.78f, 1f);
+                    return new Color(0.75f, 0.81f, 0.55f, 0.12f);
             }
         }
 
@@ -360,7 +588,10 @@ namespace UrbanWildlife.Prototype
                 {
                     if (cell.current_cover == CityLandCover.Woodland)
                     {
-                        CreateWoodlandGrove(root.transform, cell.id, CityGridResolver.PolygonFor(cell));
+                        CreateWoodlandGrove(
+                            root.transform,
+                            cell.id,
+                            VisualCellPolygon(cell, city.planning_grid));
                     }
                     else if (cell.current_cover == CityLandCover.PublicGreen ||
                              cell.current_cover == CityLandCover.ShrubGarden ||
@@ -477,25 +708,25 @@ namespace UrbanWildlife.Prototype
                         wall = new Color(0.66f, 0.77f, 0.84f, 1f);
                         roof = new Color(0.28f, 0.52f, 0.70f, 1f);
                         height = 0.34f;
-                        shortLabel = "HOUSING";
+                        shortLabel = "Homes";
                         break;
                     case CityBuildingType.DetachedHouse:
                         wall = new Color(0.94f, 0.89f, 0.75f, 1f);
                         roof = new Color(0.88f, 0.39f, 0.28f, 1f);
                         height = 0.22f;
-                        shortLabel = "HOME";
+                        shortLabel = "Home";
                         break;
                     case CityBuildingType.Commercial:
                         wall = new Color(0.95f, 0.72f, 0.45f, 1f);
                         roof = new Color(0.91f, 0.45f, 0.25f, 1f);
                         height = 0.27f;
-                        shortLabel = "SHOPS";
+                        shortLabel = "Market";
                         break;
                     default:
                         wall = new Color(0.68f, 0.84f, 0.82f, 1f);
                         roof = new Color(0.20f, 0.55f, 0.53f, 1f);
                         height = 0.26f;
-                        shortLabel = "COMMUNITY";
+                        shortLabel = "Community";
                         break;
                 }
                 Vector3 position = ToWorld(building.position_norm, height * 0.5f + 0.09f);
@@ -517,7 +748,11 @@ namespace UrbanWildlife.Prototype
                 roofObject.transform.localScale = new Vector3(1.07f, 0.16f, 1.07f);
                 RemoveCollider(roofObject);
                 SetMaterial(roofObject, roof);
-                CreateLabel(root.transform, shortLabel, ToWorld(building.position_norm, height + 0.18f), 0.18f);
+                CreateLabel(
+                    root.transform,
+                    shortLabel,
+                    ToWorld(building.position_norm, height + 0.12f),
+                    0.032f);
             }
             GeneratedBuildingCount = activeBuildings.Length;
         }
@@ -632,7 +867,7 @@ namespace UrbanWildlife.Prototype
                 planningPreviewRoot.transform,
                 status,
                 ToWorld(building.position_norm, 0.18f),
-                0.13f);
+                0.055f);
         }
 
         private void DrawPlanningPatch(CityGreenPatch patch, string status)
@@ -648,7 +883,7 @@ namespace UrbanWildlife.Prototype
                 patch.polygon_norm.Average(point => point[0]),
                 patch.polygon_norm.Average(point => point[1]),
             };
-            CreateLabel(planningPreviewRoot.transform, status, ToWorld(centre, 0.16f), 0.13f);
+            CreateLabel(planningPreviewRoot.transform, status, ToWorld(centre, 0.16f), 0.055f);
         }
 
         private void BuildAmenities()
@@ -883,10 +1118,10 @@ namespace UrbanWildlife.Prototype
             float panelWidth = Screen.width * 0.23f;
             GUILayout.BeginArea(new Rect(panelX, 0f, panelWidth, Screen.height), panelStyle);
             sidebarScroll = GUILayout.BeginScrollView(sidebarScroll, false, true);
-            GUILayout.Space(20f);
-            GUILayout.Label("RIVERSIDE WILDLIFE DISTRICT", headingStyle);
-            GUILayout.Label("LIVE CITY", titleStyle);
-            GUILayout.Label("A shared city for people and wildlife", bodyStyle);
+            AddUiSpace(CityPrototypeUiTheme.SpaceLg);
+            GUILayout.Label("RIVERSIDE WILDLIFE DISTRICT", eyebrowStyle);
+            GUILayout.Label("Live city", titleStyle);
+            GUILayout.Label("A shared city for people and wildlife", captionStyle);
             if (strategy?.Snapshot != null)
             {
                 GUILayout.Label(
@@ -896,13 +1131,13 @@ namespace UrbanWildlife.Prototype
                     $"DP {strategy.Snapshot.development_points}  ·  Balance {strategy.Snapshot.balance.total:0}",
                     metricStyle);
             }
-            GUILayout.Space(18f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
             DrawPlanningWorkflowPanel();
-            GUILayout.Space(18f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
             GUILayout.Label(paused ? "PAUSED" : "LIVE CITY  ·  ×2", headingStyle);
-            GUILayout.Space(8f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceSm);
             GUILayout.Label($"Active residents  {mobility.ActiveHumanAgentCount}/{plan.RepresentativeAgentCount}", metricStyle);
             GUILayout.Label($"Represented people  {plan.RepresentedPopulation}", metricStyle);
             GUILayout.Label($"Walk / Drive  {plan.WalkTripCount} / {plan.DriveTripCount}", metricStyle);
@@ -911,7 +1146,7 @@ namespace UrbanWildlife.Prototype
             if (environment?.Snapshot != null)
             {
                 CityEnvironmentSnapshot snapshot = environment.Snapshot;
-                GUILayout.Space(12f);
+                AddUiSpace(CityPrototypeUiTheme.SpaceMd);
                 GUILayout.Label("CITY ENVIRONMENT", headingStyle);
                 GUILayout.Label($"Natural food  {snapshot.natural_food_total:0.00}", metricStyle);
                 GUILayout.Label($"Human food  {snapshot.anthropogenic_food_total:0.00}", metricStyle);
@@ -919,13 +1154,13 @@ namespace UrbanWildlife.Prototype
                     $"Waste  {snapshot.waste_demand:0.0} / {snapshot.waste_capacity:0.0}",
                     metricStyle);
                 GUILayout.Label(
-                    snapshot.overflow_active ? "● OVERFLOW · litter hotspot" : "● Waste contained",
+                    snapshot.overflow_active ? "ALERT · Overflow and litter hotspot" : "Waste contained",
                     bodyStyle);
                 GUILayout.Label($"Mean disturbance  {snapshot.average_disturbance:0.00}", bodyStyle);
             }
             if (wildlife?.Snapshot != null)
             {
-                GUILayout.Space(12f);
+                AddUiSpace(CityPrototypeUiTheme.SpaceMd);
                 GUILayout.Label("URBAN WILDLIFE", headingStyle);
                 GUILayout.Label(
                     $"Active  {wildlife.Snapshot.active_count}  ·  Feeding  {wildlife.Snapshot.feeding_events}",
@@ -938,14 +1173,14 @@ namespace UrbanWildlife.Prototype
                     bodyStyle);
             }
             DrawObservationPanel();
-            GUILayout.Space(16f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
             GUILayout.Label("MAP KEY", headingStyle);
             GUILayout.Label(
                 $"Planning cells  {GeneratedPlanningCellCount}  ·  Available  {AvailablePlanningCellCount}",
                 bodyStyle);
-            GUILayout.Label("Available cells include woodland.\n■ Open land   ■ Woodland   ■ Public green\n■ Plaza   ■ Water   ■ Buildings\n━ Road   ━ Footpath", bodyStyle);
-            GUILayout.Space(16f);
+            GUILayout.Label("Available cells include woodland.\nOpen land · Woodland · Public green\nPlaza · Water · Buildings\nRoad — Footpath", bodyStyle);
+            AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
             GUILayout.Label("DESTINATION PRESSURE", headingStyle);
             foreach (CityDestinationLoad load in plan.destination_loads.Where(item =>
@@ -958,15 +1193,15 @@ namespace UrbanWildlife.Prototype
             }
             GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button(paused ? "RESUME" : "PAUSE", buttonStyle))
+            if (GUILayout.Button(paused ? "Resume" : "Pause", buttonStyle))
             {
                 paused = !paused;
             }
-            if (GUILayout.Button("RESTART TRIPS", buttonStyle))
+            if (GUILayout.Button("Restart trips", buttonStyle))
             {
                 InitializePrototype(false);
             }
-            if (GUILayout.Button(showPedestrianNetwork ? "HIDE FOOTPATHS" : "SHOW FOOTPATHS", buttonStyle))
+            if (GUILayout.Button(showPedestrianNetwork ? "Hide footpaths" : "Show footpaths", buttonStyle))
             {
                 showPedestrianNetwork = !showPedestrianNetwork;
                 if (pedestrianRoot != null)
@@ -974,11 +1209,11 @@ namespace UrbanWildlife.Prototype
                     pedestrianRoot.SetActive(showPedestrianNetwork);
                 }
             }
-            GUILayout.Space(14f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceMd);
             GUILayout.Label(
                 "Residents emerge from housing and respond to destination appeal, distance and crowding. Vehicles only appear for Drive trips.",
-                bodyStyle);
-            GUILayout.Space(18f);
+                captionStyle);
+            AddUiSpace(CityPrototypeUiTheme.SpaceLg);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
         }
@@ -993,18 +1228,18 @@ namespace UrbanWildlife.Prototype
             GUILayout.Label("CITY PLANNING", headingStyle);
             GUILayout.Label(WorkflowStepLabel(snapshot.phase), metricStyle);
             GUILayout.Label(snapshot.message, bodyStyle);
-            GUILayout.Space(7f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceSm);
 
             switch (snapshot.phase)
             {
                 case CityPlanningWorkflowPhase.ReadyToScan:
-                    if (GUILayout.Button("LOAD LATEST CAMERA SCAN", buttonStyle))
+                    if (GUILayout.Button("Load latest camera scan", buttonStyle))
                     {
                         TryLoadLatestCameraScan();
                     }
                     GUILayout.Label(cityScanInputMessage, bodyStyle);
-                    GUILayout.Space(4f);
-                    if (GUILayout.Button("SCAN CITY · ELECTRONIC TEST", buttonStyle))
+                    AddUiSpace(CityPrototypeUiTheme.SpaceXs);
+                    if (GUILayout.Button("Scan city · electronic test", buttonStyle))
                     {
                         CityTokenScanPacket scan = CityPlanningDemoScanFactory.CreateElectronicSample(
                             city,
@@ -1028,13 +1263,13 @@ namespace UrbanWildlife.Prototype
                             bodyStyle);
                     }
                     GUI.enabled = snapshot.CanConfirmPreview;
-                    if (GUILayout.Button("CONFIRM PREVIEW", buttonStyle))
+                    if (GUILayout.Button("Confirm preview", buttonStyle))
                     {
                         planningWorkflow.ConfirmPreview(out _);
                         RefreshPlanningOverlay();
                     }
                     GUI.enabled = true;
-                    if (GUILayout.Button("CANCEL PREVIEW", buttonStyle))
+                    if (GUILayout.Button("Cancel preview", buttonStyle))
                     {
                         planningWorkflow.CancelPreview();
                         RefreshPlanningOverlay();
@@ -1050,7 +1285,7 @@ namespace UrbanWildlife.Prototype
                         $"Cost {snapshot.required_development_points} DP  ·  Available {snapshot.strategy.development_points} DP",
                         bodyStyle);
                     GUI.enabled = snapshot.CanStartConstruction;
-                    if (GUILayout.Button("START CONSTRUCTION", buttonStyle))
+                    if (GUILayout.Button("Start construction", buttonStyle))
                     {
                         if (planningWorkflow.StartConstruction(out _))
                         {
@@ -1073,11 +1308,11 @@ namespace UrbanWildlife.Prototype
                             bodyStyle);
                     }
                     GUILayout.BeginHorizontal();
-                    if (GUILayout.Button("PAUSE", buttonStyle)) planningWorkflow.SetTimeScale(0f);
+                    if (GUILayout.Button("Pause", buttonStyle)) planningWorkflow.SetTimeScale(0f);
                     if (GUILayout.Button("1×", buttonStyle)) planningWorkflow.SetTimeScale(1f);
                     if (GUILayout.Button("2×", buttonStyle)) planningWorkflow.SetTimeScale(2f);
                     GUILayout.EndHorizontal();
-                    if (GUILayout.Button("ADVANCE ONE BLOCK", buttonStyle))
+                    if (GUILayout.Button("Advance one block", buttonStyle))
                     {
                         planningWorkflow.AdvanceConstructionBlock();
                         if (planningWorkflow.Phase == CityPlanningWorkflowPhase.Complete)
@@ -1128,7 +1363,7 @@ namespace UrbanWildlife.Prototype
             {
                 return;
             }
-            GUILayout.Space(12f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceMd);
             GUILayout.Label("CITY TRACKS", headingStyle);
             GUILayout.BeginHorizontal();
             DrawTraceModeButton(CityTraceDisplayMode.HumanTrace, "PEOPLE");
@@ -1139,7 +1374,7 @@ namespace UrbanWildlife.Prototype
                 $"Visible marks {VisibleTraceMarkCount}/{CityTraceVisualizer.MaximumVisibleMarks}",
                 bodyStyle);
 
-            GUILayout.Space(10f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceMd);
             GUILayout.Label("CITY FEED", headingStyle);
             CityFeedEntry[] latest = observation.Snapshot.city_feed
                 .Reverse()
@@ -1160,7 +1395,7 @@ namespace UrbanWildlife.Prototype
             CityPhaseReport report = observation.BuildPhaseReport(
                 strategy.Snapshot,
                 wildlife.Snapshot);
-            GUILayout.Space(10f);
+            AddUiSpace(CityPrototypeUiTheme.SpaceMd);
             GUILayout.Label("PHASE SNAPSHOT", headingStyle);
             GUILayout.Label(
                 $"{report.phase}  ·  Balance {report.after.total:0} " +
@@ -1170,7 +1405,7 @@ namespace UrbanWildlife.Prototype
                 $"Tracks H {report.human_trace_points} / A {report.animal_trace_points}  ·  " +
                 $"Feed {report.feeding_events}  ·  Migration {report.migration_events}",
                 bodyStyle);
-            if (GUILayout.Button("CLEAR TRACKS & FEED", buttonStyle))
+            if (GUILayout.Button("Clear tracks & feed", buttonStyle))
             {
                 observation.ResetView(
                     mobility.Plan,
@@ -1183,7 +1418,7 @@ namespace UrbanWildlife.Prototype
 
         private void DrawTraceModeButton(CityTraceDisplayMode mode, string label)
         {
-            string text = traceDisplayMode == mode ? "● " + label : label;
+            string text = traceDisplayMode == mode ? "[On] " + label : label;
             if (GUILayout.Button(text, buttonStyle))
             {
                 traceDisplayMode = mode;
@@ -1196,13 +1431,13 @@ namespace UrbanWildlife.Prototype
             switch (type)
             {
                 case CityFeedEventType.WasteOverflow: return "!";
-                case CityFeedEventType.Crowding: return "↟";
-                case CityFeedEventType.Feeding: return "●";
+                case CityFeedEventType.Crowding: return "!";
+                case CityFeedEventType.Feeding: return "+";
                 case CityFeedEventType.MigrationIn: return "+";
                 case CityFeedEventType.MigrationOut: return "−";
                 case CityFeedEventType.Roadkill: return "×";
-                case CityFeedEventType.ProjectCompleted: return "✓";
-                default: return "△";
+                case CityFeedEventType.ProjectCompleted: return "OK";
+                default: return "~";
             }
         }
 
@@ -1282,13 +1517,13 @@ namespace UrbanWildlife.Prototype
                         bodyStyle);
                 }
             }
-            if (GUILayout.Button("USE LOW-IMPACT ROUTES", buttonStyle))
+            if (GUILayout.Button("Use low-impact routes", buttonStyle))
             {
                 planningWorkflow.SelectRecommendedLowImpactRoutes(out _);
                 RefreshPlanningOverlay();
             }
             GUI.enabled = preview.CanConfirm;
-            if (GUILayout.Button("CONFIRM ROUTES", buttonStyle))
+            if (GUILayout.Button("Confirm routes", buttonStyle))
             {
                 if (planningWorkflow.ConfirmRoutes(out _))
                 {
@@ -1347,57 +1582,152 @@ namespace UrbanWildlife.Prototype
 
         private void EnsureStyles()
         {
-            if (panelStyle != null)
+            if (panelStyle != null && styledScreenHeight == Screen.height)
             {
                 return;
             }
+
+            styledScreenHeight = Screen.height;
+            uiScale = CityPrototypeUiTheme.ScaleForScreen(Screen.height);
+            Font regularFont = CityPrototypeUiTheme.LoadRuntimeFont();
+            Font boldFont = CityPrototypeUiTheme.LoadRuntimeFont(true);
+            int panelHorizontal = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceLg,
+                uiScale);
+            int panelTop = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceMd,
+                uiScale);
+            int panelBottom = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceLg,
+                uiScale);
+
             panelStyle = new GUIStyle(GUI.skin.box)
             {
-                padding = new RectOffset(20, 20, 10, 18),
-                normal = { background = SolidTexture(new Color(0.975f, 0.965f, 0.93f, 0.995f)) },
+                padding = new RectOffset(
+                    panelHorizontal,
+                    panelHorizontal,
+                    panelTop,
+                    panelBottom),
+                normal = { background = SolidTexture(CityPrototypeUiTheme.Panel) },
             };
+
             titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 26,
-                fontStyle = FontStyle.Bold,
+                font = boldFont,
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(
+                    CityPrototypeUiTheme.DisplayFontSize,
+                    uiScale),
+                fontStyle = FontStyle.Normal,
                 wordWrap = true,
-                normal = { textColor = new Color(0.10f, 0.18f, 0.23f, 1f) },
+                margin = new RectOffset(
+                    0,
+                    0,
+                    0,
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceXs, uiScale)),
+                normal = { textColor = CityPrototypeUiTheme.Ink },
+            };
+            eyebrowStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = boldFont,
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(
+                    CityPrototypeUiTheme.EyebrowFontSize,
+                    uiScale),
+                fontStyle = FontStyle.Normal,
+                wordWrap = true,
+                margin = new RectOffset(
+                    0,
+                    0,
+                    0,
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceXs, uiScale)),
+                normal = { textColor = CityPrototypeUiTheme.Accent },
             };
             headingStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 15,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.16f, 0.50f, 0.55f, 1f) },
+                font = boldFont,
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(
+                    CityPrototypeUiTheme.SectionFontSize,
+                    uiScale),
+                fontStyle = FontStyle.Normal,
+                wordWrap = true,
+                margin = new RectOffset(
+                    0,
+                    0,
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceXs, uiScale),
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceXs, uiScale)),
+                normal = { textColor = CityPrototypeUiTheme.Accent },
             };
             bodyStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 14,
+                font = regularFont,
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(
+                    CityPrototypeUiTheme.BodyFontSize,
+                    uiScale),
                 wordWrap = true,
-                normal = { textColor = new Color(0.25f, 0.31f, 0.32f, 1f) },
+                margin = new RectOffset(0, 0, 1, 1),
+                normal = { textColor = CityPrototypeUiTheme.InkSecondary },
+            };
+            captionStyle = new GUIStyle(bodyStyle)
+            {
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(
+                    CityPrototypeUiTheme.CaptionFontSize,
+                    uiScale),
+                normal = { textColor = CityPrototypeUiTheme.InkMuted },
             };
             metricStyle = new GUIStyle(bodyStyle)
             {
-                fontSize = 16,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.12f, 0.25f, 0.27f, 1f) },
+                font = boldFont,
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(
+                    CityPrototypeUiTheme.MetricFontSize,
+                    uiScale),
+                fontStyle = FontStyle.Normal,
+                normal = { textColor = CityPrototypeUiTheme.Ink },
             };
             buttonStyle = new GUIStyle(GUI.skin.button)
             {
-                fixedHeight = 42f,
-                fontSize = 15,
-                fontStyle = FontStyle.Bold,
-                margin = new RectOffset(0, 0, 5, 5),
+                font = boldFont,
+                fixedHeight = CityPrototypeUiTheme.ScaledPixel(42, uiScale),
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(
+                    CityPrototypeUiTheme.ButtonFontSize,
+                    uiScale),
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Clip,
+                padding = new RectOffset(
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceMd, uiScale),
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceMd, uiScale),
+                    0,
+                    0),
+                margin = new RectOffset(
+                    0,
+                    0,
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceXs, uiScale),
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceXs, uiScale)),
                 normal =
                 {
-                    background = SolidTexture(new Color(0.78f, 0.90f, 0.92f, 1f)),
-                    textColor = new Color(0.10f, 0.22f, 0.26f, 1f),
+                    background = SolidTexture(CityPrototypeUiTheme.Button),
+                    textColor = CityPrototypeUiTheme.ButtonText,
                 },
                 hover =
                 {
-                    background = SolidTexture(new Color(0.67f, 0.85f, 0.88f, 1f)),
-                    textColor = new Color(0.08f, 0.18f, 0.22f, 1f),
+                    background = SolidTexture(CityPrototypeUiTheme.ButtonHover),
+                    textColor = CityPrototypeUiTheme.ButtonText,
+                },
+                active =
+                {
+                    background = SolidTexture(CityPrototypeUiTheme.ButtonPressed),
+                    textColor = CityPrototypeUiTheme.ButtonText,
+                },
+                focused =
+                {
+                    background = SolidTexture(CityPrototypeUiTheme.ButtonHover),
+                    textColor = CityPrototypeUiTheme.ButtonText,
                 },
             };
+        }
+
+        private void AddUiSpace(int referencePixels)
+        {
+            GUILayout.Space(CityPrototypeUiTheme.ScaledPixel(referencePixels, uiScale));
         }
 
         private void CreateWoodlandGrove(Transform parent, string id, float[][] polygon)
@@ -1507,7 +1837,8 @@ namespace UrbanWildlife.Prototype
             float width,
             Color colour,
             float height,
-            int sortingOrder)
+            int sortingOrder,
+            bool transparent = false)
         {
             GameObject lineObject = new GameObject(name);
             lineObject.transform.SetParent(parent, false);
@@ -1520,7 +1851,9 @@ namespace UrbanWildlife.Prototype
             line.numCapVertices = 5;
             line.startColor = Color.white;
             line.endColor = Color.white;
-            line.material = MaterialFor(colour);
+            line.material = transparent
+                ? TransparentMaterialFor(colour)
+                : MaterialFor(colour);
             line.sortingOrder = sortingOrder;
             for (int index = 0; index < points.Length; index += 1)
             {
@@ -1534,7 +1867,8 @@ namespace UrbanWildlife.Prototype
             float[][] points,
             float height,
             Color colour,
-            int sortingOrder = 0)
+            int sortingOrder = 0,
+            bool transparent = false)
         {
             GameObject polygon = new GameObject(name);
             polygon.transform.SetParent(parent, false);
@@ -1552,7 +1886,9 @@ namespace UrbanWildlife.Prototype
             mesh.RecalculateBounds();
             polygon.AddComponent<MeshFilter>().sharedMesh = mesh;
             MeshRenderer renderer = polygon.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = MaterialFor(colour);
+            renderer.sharedMaterial = transparent
+                ? TransparentMaterialFor(colour)
+                : MaterialFor(colour);
             renderer.sortingOrder = sortingOrder;
         }
 
@@ -1570,9 +1906,12 @@ namespace UrbanWildlife.Prototype
             label.text = text;
             label.anchor = TextAnchor.MiddleCenter;
             label.alignment = TextAlignment.Center;
+            label.font = CityPrototypeUiTheme.LoadRuntimeFont(true);
             label.fontSize = 48;
             label.characterSize = characterSize;
+            label.fontStyle = FontStyle.Normal;
             label.color = new Color(0.10f, 0.23f, 0.28f, 1f);
+            label.GetComponent<Renderer>().sharedMaterial = label.font.material;
         }
 
         private Vector3 ToWorld(float[] normalized, float height)
@@ -1597,6 +1936,28 @@ namespace UrbanWildlife.Prototype
                 color = colour,
                 hideFlags = HideFlags.DontSave,
             };
+            return material;
+        }
+
+        private static Material TransparentMaterialFor(Color colour)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit") ??
+                            Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Transparent");
+            Material material = new Material(shader)
+            {
+                color = colour,
+                hideFlags = HideFlags.DontSave,
+                renderQueue = 3000,
+            };
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             return material;
         }
 

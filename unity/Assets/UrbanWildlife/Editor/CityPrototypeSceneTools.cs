@@ -224,7 +224,7 @@ namespace UrbanWildlife.EditorTools
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
                 "represented_population=24 external_return_routes=True " +
                 "live_vehicle_agents=True max_speed=2x no_questionnaire=True " +
-                "activity_heatmap=True heatmap_hotkey_h=True footprints_removed=True city_feed_panel=True phase_snapshot=True " +
+                "animal_activity_heatmap=True heatmap_hotkey_h=True footprints_removed=True city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
                 "sparse_opening_map=True road_following=True no_premature_buildings=True " +
@@ -259,7 +259,7 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("The activity heatmap must start hidden.");
             }
             prototype.SetHeatmapVisible(true);
-            bool prototypeToggleOn = prototype.HeatmapVisible;
+            bool prototypeToggleOn = prototype.HeatmapVisible && prototype.HeatmapUsesAnimalData;
             prototype.SetHeatmapVisible(false);
 
             GameObject host = new GameObject("Heatmap smoke host");
@@ -274,20 +274,15 @@ namespace UrbanWildlife.EditorTools
                 };
                 visualizer.Render(samples);
                 visualizer.SetVisible(true);
-                visualizer.SetMode(CityTraceDisplayMode.CombinedTrace);
-                bool combinedAggregates = visualizer.VisibleCellCount == 2;
-                visualizer.SetMode(CityTraceDisplayMode.HumanTrace);
-                bool humanFilter = visualizer.VisibleCellCount == 1;
                 visualizer.SetMode(CityTraceDisplayMode.AnimalTrace);
-                bool animalFilter = visualizer.VisibleCellCount == 1;
+                bool animalOnly = visualizer.VisibleCellCount == 1;
                 bool noFootprintObjects = !host.GetComponentsInChildren<Transform>(true)
                     .Any(item =>
                         item.name.IndexOf("shoe", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         item.name.IndexOf("tyre", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         item.name.IndexOf("paw", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         item.name.IndexOf("toe", StringComparison.OrdinalIgnoreCase) >= 0);
-                if (!prototypeToggleOn || !combinedAggregates || !humanFilter ||
-                    !animalFilter || !noFootprintObjects)
+                if (!prototypeToggleOn || !animalOnly || !noFootprintObjects)
                 {
                     throw new InvalidOperationException(
                         "The activity heatmap must aggregate trace samples, filter layers and contain no footprint geometry.");
@@ -299,7 +294,7 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_ACTIVITY_HEATMAP_SMOKE_OK default_hidden=True h_toggle=True " +
-                "combined_cells=2 human_cells=1 animal_cells=1 individual_marks=False");
+                "animal_only=True animal_cells=1 human_samples_excluded=True individual_marks=False");
         }
 
         private static CityTracePoint HeatSample(

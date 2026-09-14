@@ -122,7 +122,7 @@ namespace UrbanWildlife.Prototype
         private CityPhysicalTokenType desktopBuildingType = CityPhysicalTokenType.DetachedHouse;
         private string desktopInputMessage =
             "Choose a building, then click an open part of the map.";
-        private CityTraceDisplayMode traceDisplayMode = CityTraceDisplayMode.CombinedTrace;
+        private CityTraceDisplayMode traceDisplayMode = CityTraceDisplayMode.AnimalTrace;
         private string cityScanInputMessage =
             "Camera scans remain pending until you load and confirm them.";
         private Vector2 sidebarScroll;
@@ -168,6 +168,7 @@ namespace UrbanWildlife.Prototype
         public int VisibleTraceMarkCount => traceVisualizer?.VisibleMarkCount ?? 0;
         public int VisibleHeatCellCount => traceVisualizer?.VisibleCellCount ?? 0;
         public bool HeatmapVisible => showHeatmap;
+        public bool HeatmapUsesAnimalData => traceDisplayMode == CityTraceDisplayMode.AnimalTrace;
         public bool PlanningWorkflowConnected => planningWorkflow != null;
         public string ResolvedCityScanPath => CityTokenScanFileSource.Resolve(cityScanPath);
         public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
@@ -1948,23 +1949,19 @@ namespace UrbanWildlife.Prototype
                 return;
             }
             AddUiSpace(CityPrototypeUiTheme.SpaceMd);
-            GUILayout.Label(T("ACTIVITY HEATMAP", "活动热点图"), headingStyle);
+            GUILayout.Label(T("WILDLIFE HEATMAP", "动物活动热点"), headingStyle);
             if (GUILayout.Button(
                     showHeatmap
-                        ? T("HIDE HEATMAP  [H]", "隐藏热点图  [H]")
-                        : T("SHOW HEATMAP  [H]", "显示热点图  [H]"),
+                        ? T("HIDE WILDLIFE HEATMAP  [H]", "隐藏动物热点  [H]")
+                        : T("SHOW WILDLIFE HEATMAP  [H]", "显示动物热点  [H]"),
                     buttonStyle))
             {
                 SetHeatmapVisible(!showHeatmap);
             }
-            GUILayout.BeginHorizontal();
-            DrawTraceModeButton(CityTraceDisplayMode.HumanTrace, T("PEOPLE", "人类"));
-            DrawTraceModeButton(CityTraceDisplayMode.AnimalTrace, T("WILDLIFE", "动物"));
-            DrawTraceModeButton(CityTraceDisplayMode.CombinedTrace, T("ALL", "全部"));
-            GUILayout.EndHorizontal();
             GUILayout.Label(
-                $"{T("Active heat cells", "活跃热点单元")} " +
+                $"{T("Active wildlife cells", "动物活跃单元")} " +
                 $"{VisibleHeatCellCount}/{CityTraceVisualizer.MaximumVisibleMarks}  ·  " +
+                $"{T("Samples", "样本")} {AnimalTracePointCount}  ·  " +
                 (showHeatmap ? T("VISIBLE", "显示中") : T("HIDDEN", "已隐藏")),
                 bodyStyle);
 
@@ -2009,16 +2006,6 @@ namespace UrbanWildlife.Prototype
                     wildlife.Snapshot,
                     strategy.Snapshot);
                 RefreshTraceLayer();
-            }
-        }
-
-        private void DrawTraceModeButton(CityTraceDisplayMode mode, string label)
-        {
-            string text = traceDisplayMode == mode ? T("[On] ", "● ") + label : label;
-            if (GUILayout.Button(text, buttonStyle))
-            {
-                traceDisplayMode = mode;
-                traceVisualizer?.SetMode(mode);
             }
         }
 
@@ -2067,7 +2054,9 @@ namespace UrbanWildlife.Prototype
 
         public void SetHeatmapVisible(bool visible)
         {
+            traceDisplayMode = CityTraceDisplayMode.AnimalTrace;
             showHeatmap = visible;
+            traceVisualizer?.SetMode(CityTraceDisplayMode.AnimalTrace);
             traceVisualizer?.SetVisible(visible);
         }
 

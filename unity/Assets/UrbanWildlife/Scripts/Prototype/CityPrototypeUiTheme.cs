@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using UnityEngine;
 
 namespace UrbanWildlife.Prototype
@@ -36,27 +38,68 @@ namespace UrbanWildlife.Prototype
         public static readonly Color ButtonText = Hex(0x17, 0x39, 0x42);
         private static Font runtimeFontRegular;
         private static Font runtimeFontBold;
+        private static Font runtimeFontCjkRegular;
+        private static Font runtimeFontCjkBold;
 
-        public static Font LoadRuntimeFont(bool bold = false)
+        public static Font LoadRuntimeFont(bool bold = false, bool preferCjk = false)
         {
-            Font runtimeFont = bold ? runtimeFontBold : runtimeFontRegular;
+            Font runtimeFont = preferCjk
+                ? (bold ? runtimeFontCjkBold : runtimeFontCjkRegular)
+                : (bold ? runtimeFontBold : runtimeFontRegular);
             if (runtimeFont == null)
             {
-                string resource = bold
-                    ? "UrbanWildlife/Fonts/Nunito-Bold"
-                    : "UrbanWildlife/Fonts/Nunito-Regular";
-                runtimeFont = Resources.Load<Font>(resource) ??
-                              Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                if (bold)
+                if (preferCjk)
                 {
-                    runtimeFontBold = runtimeFont;
+                    runtimeFont = CreateCjkFont(bold);
+                }
+                if (runtimeFont == null)
+                {
+                    string resource = bold
+                        ? "UrbanWildlife/Fonts/Nunito-Bold"
+                        : "UrbanWildlife/Fonts/Nunito-Regular";
+                    runtimeFont = Resources.Load<Font>(resource) ??
+                                  Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                }
+                if (preferCjk)
+                {
+                    if (bold) runtimeFontCjkBold = runtimeFont;
+                    else runtimeFontCjkRegular = runtimeFont;
                 }
                 else
                 {
-                    runtimeFontRegular = runtimeFont;
+                    if (bold) runtimeFontBold = runtimeFont;
+                    else runtimeFontRegular = runtimeFont;
                 }
             }
             return runtimeFont;
+        }
+
+        private static Font CreateCjkFont(bool bold)
+        {
+            string[] preferred = bold
+                ? new[]
+                {
+                    "Microsoft YaHei UI Bold",
+                    "Microsoft YaHei Bold",
+                    "PingFang SC Semibold",
+                    "Noto Sans CJK SC Bold",
+                    "Noto Sans SC Bold",
+                }
+                : new[]
+                {
+                    "Microsoft YaHei UI",
+                    "Microsoft YaHei",
+                    "PingFang SC",
+                    "Noto Sans CJK SC",
+                    "Noto Sans SC",
+                    "Arial Unicode MS",
+                };
+            string[] installed = Font.GetOSInstalledFontNames();
+            string selected = preferred.FirstOrDefault(candidate =>
+                installed.Any(font => string.Equals(font, candidate, StringComparison.OrdinalIgnoreCase)));
+            return string.IsNullOrEmpty(selected)
+                ? null
+                : Font.CreateDynamicFontFromOSFont(selected, 18);
         }
 
         public static float ScaleForScreen(int screenHeight)

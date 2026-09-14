@@ -19,6 +19,8 @@ namespace UrbanWildlife.Prototype
     public sealed class CityPrototypeDemo : MonoBehaviour
     {
         private const float MapWidth = 12f;
+        private const string UiLanguagePreferenceKey =
+            "UrbanWildlife.CityPrototype.UiLanguage";
         private const float MapHeight = 8f;
         private const float MapViewportWidth = 0.77f;
         private const float BoardViewMargin = 0.55f;
@@ -112,6 +114,10 @@ namespace UrbanWildlife.Prototype
         private bool showPedestrianNetwork;
         [SerializeField]
         private bool useCameraInput;
+        [SerializeField]
+        private bool useChineseUi;
+        private bool languageInitialised;
+        private bool styledChineseUi;
         private CityPhysicalTokenType desktopBuildingType = CityPhysicalTokenType.DetachedHouse;
         private string desktopInputMessage =
             "Choose a building, then click an open part of the map.";
@@ -164,14 +170,56 @@ namespace UrbanWildlife.Prototype
         public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
                                                            CityPlanningWorkflowPhase.ReadyToScan;
         public bool DesktopPlayEnabled => !useCameraInput;
+        public bool ChineseUiEnabled => useChineseUi;
+        public string CurrentUiLanguageCode => useChineseUi ? "zh-CN" : "en";
+        public string LocalizedPlanningHeading => T("CITY PLANNING", "城市规划");
+        public string ChineseUiFontName =>
+            CityPrototypeUiTheme.LoadRuntimeFont(false, true)?.name ?? string.Empty;
+        public bool ChineseUiFontSupportsCoreGlyphs
+        {
+            get
+            {
+                Font font = CityPrototypeUiTheme.LoadRuntimeFont(false, true);
+                return font != null && font.HasCharacter('城') && font.HasCharacter('市');
+            }
+        }
 
         private void OnEnable()
         {
+            InitialiseUiLanguage();
             ConfigureCamera();
             if (!Application.isPlaying)
             {
                 InitializePrototype(true);
             }
+        }
+
+        public void SetUiLanguage(bool chinese)
+        {
+            useChineseUi = chinese;
+            languageInitialised = true;
+            PlayerPrefs.SetInt(UiLanguagePreferenceKey, chinese ? 1 : 0);
+            PlayerPrefs.Save();
+            styledScreenHeight = -1;
+            if (planningWorkflow != null && generatedRoot != null)
+            {
+                RefreshPlanningOverlay();
+            }
+        }
+
+        private void InitialiseUiLanguage()
+        {
+            if (languageInitialised)
+            {
+                return;
+            }
+            bool systemUsesChinese = Application.systemLanguage == SystemLanguage.Chinese ||
+                                     Application.systemLanguage == SystemLanguage.ChineseSimplified ||
+                                     Application.systemLanguage == SystemLanguage.ChineseTraditional;
+            useChineseUi = PlayerPrefs.GetInt(
+                UiLanguagePreferenceKey,
+                systemUsesChinese ? 1 : 0) == 1;
+            languageInitialised = true;
         }
 
         private void Start()
@@ -828,25 +876,25 @@ namespace UrbanWildlife.Prototype
                         wall = new Color(0.66f, 0.77f, 0.84f, 1f);
                         roof = new Color(0.28f, 0.52f, 0.70f, 1f);
                         height = 0.34f;
-                        shortLabel = "Homes";
+                        shortLabel = T("Homes", "住宅");
                         break;
                     case CityBuildingType.DetachedHouse:
                         wall = new Color(0.94f, 0.89f, 0.75f, 1f);
                         roof = new Color(0.88f, 0.39f, 0.28f, 1f);
                         height = 0.22f;
-                        shortLabel = "Home";
+                        shortLabel = T("Home", "住宅");
                         break;
                     case CityBuildingType.Commercial:
                         wall = new Color(0.95f, 0.72f, 0.45f, 1f);
                         roof = new Color(0.91f, 0.45f, 0.25f, 1f);
                         height = 0.27f;
-                        shortLabel = "Market";
+                        shortLabel = T("Market", "市场");
                         break;
                     default:
                         wall = new Color(0.68f, 0.84f, 0.82f, 1f);
                         roof = new Color(0.20f, 0.55f, 0.53f, 1f);
                         height = 0.26f;
-                        shortLabel = "Community";
+                        shortLabel = T("Community", "社区");
                         break;
                 }
                 Vector3 position = ToWorld(building.position_norm, height * 0.5f + 0.09f);
@@ -946,7 +994,7 @@ namespace UrbanWildlife.Prototype
                             patch,
                             city.revision + 1,
                             out _);
-                        DrawPlanningPatch(patch, "SCAN PREVIEW");
+                        DrawPlanningPatch(patch, T("SCAN PREVIEW", "扫描预览"));
                     }
                     else
                     {
@@ -959,7 +1007,7 @@ namespace UrbanWildlife.Prototype
                             building,
                             city.revision + 1,
                             out _);
-                        DrawPlanningFootprint(building, "SCAN PREVIEW");
+                        DrawPlanningFootprint(building, T("SCAN PREVIEW", "扫描预览"));
                     }
                 }
                 return;
@@ -971,8 +1019,8 @@ namespace UrbanWildlife.Prototype
                 DrawPlanningFootprint(
                     building,
                     building.construction_state == CityConstructionState.UnderConstruction
-                        ? "BUILDING"
-                        : "PROPOSED");
+                        ? T("BUILDING", "建设中")
+                        : T("PROPOSED", "待建设"));
             }
             foreach (CityGreenPatch patch in planningWorkflow.CurrentState.green_patches.Where(item =>
                          item.construction_state != CityConstructionState.Existing))
@@ -980,8 +1028,8 @@ namespace UrbanWildlife.Prototype
                 DrawPlanningPatch(
                     patch,
                     patch.construction_state == CityConstructionState.UnderConstruction
-                        ? "GROWING"
-                        : "PROPOSED");
+                        ? T("GROWING", "生长中")
+                        : T("PROPOSED", "待建设"));
             }
             foreach (CityVehicleRoad road in planningWorkflow.CurrentState.vehicle_roads.Where(item =>
                          item.construction_state != CityConstructionState.Existing))
@@ -1468,16 +1516,22 @@ namespace UrbanWildlife.Prototype
             GUILayout.BeginArea(new Rect(panelX, 0f, panelWidth, Screen.height), panelStyle);
             sidebarScroll = GUILayout.BeginScrollView(sidebarScroll, false, true);
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
-            GUILayout.Label("RIVERSIDE WILDLIFE DISTRICT", eyebrowStyle);
-            GUILayout.Label("Live city", titleStyle);
-            GUILayout.Label("A shared city for people and wildlife", captionStyle);
+            DrawLanguageSwitch();
+            AddUiSpace(CityPrototypeUiTheme.SpaceSm);
+            GUILayout.Label(T("RIVERSIDE WILDLIFE DISTRICT", "河畔野生动物社区"), eyebrowStyle);
+            GUILayout.Label(T("Live city", "共生城市"), titleStyle);
+            GUILayout.Label(
+                T("A shared city for people and wildlife", "一座由人与野生动物共同生活的城市"),
+                captionStyle);
             if (strategy?.Snapshot != null)
             {
                 GUILayout.Label(
-                    $"{strategy.Snapshot.phase}  ·  {strategy.Snapshot.time_block}",
+                    $"{DevelopmentPhaseLabel(strategy.Snapshot.phase)}  ·  " +
+                    $"{T("Time block", "时段")} {strategy.Snapshot.time_block}",
                     headingStyle);
                 GUILayout.Label(
-                    $"DP {strategy.Snapshot.development_points}  ·  Balance {strategy.Snapshot.balance.total:0}",
+                    $"{T("DP", "发展点")} {strategy.Snapshot.development_points}  ·  " +
+                    $"{T("Balance", "综合平衡")} {strategy.Snapshot.balance.total:0}",
                     metricStyle);
             }
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
@@ -1485,74 +1539,91 @@ namespace UrbanWildlife.Prototype
             DrawPlanningWorkflowPanel();
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
-            GUILayout.Label(paused ? "PAUSED" : "LIVE CITY  ·  ×2", headingStyle);
+            GUILayout.Label(
+                paused ? T("PAUSED", "已暂停") : T("LIVE CITY  ·  ×2", "城市运行中  ·  ×2"),
+                headingStyle);
             AddUiSpace(CityPrototypeUiTheme.SpaceSm);
-            GUILayout.Label($"Active residents  {mobility.ActiveHumanAgentCount}/{plan.RepresentativeAgentCount}", metricStyle);
-            GUILayout.Label($"Represented people  {plan.RepresentedPopulation}", metricStyle);
-            GUILayout.Label($"Walk / Drive  {plan.WalkTripCount} / {plan.DriveTripCount}", metricStyle);
-            GUILayout.Label($"Active vehicles  {mobility.ActiveVehicleAgents.Length}", metricStyle);
-            GUILayout.Label($"Completed returns  {mobility.CompletedTripCount}", metricStyle);
+            GUILayout.Label($"{T("Active residents", "活动居民")}  {mobility.ActiveHumanAgentCount}/{plan.RepresentativeAgentCount}", metricStyle);
+            GUILayout.Label($"{T("Represented people", "代表人口")}  {plan.RepresentedPopulation}", metricStyle);
+            GUILayout.Label($"{T("Walk / Drive", "步行 / 驾车")}  {plan.WalkTripCount} / {plan.DriveTripCount}", metricStyle);
+            GUILayout.Label($"{T("Active vehicles", "行驶车辆")}  {mobility.ActiveVehicleAgents.Length}", metricStyle);
+            GUILayout.Label($"{T("Completed returns", "已完成往返")}  {mobility.CompletedTripCount}", metricStyle);
             if (environment?.Snapshot != null)
             {
                 CityEnvironmentSnapshot snapshot = environment.Snapshot;
                 AddUiSpace(CityPrototypeUiTheme.SpaceMd);
-                GUILayout.Label("CITY ENVIRONMENT", headingStyle);
-                GUILayout.Label($"Natural food  {snapshot.natural_food_total:0.00}", metricStyle);
-                GUILayout.Label($"Human food  {snapshot.anthropogenic_food_total:0.00}", metricStyle);
+                GUILayout.Label(T("CITY ENVIRONMENT", "城市环境"), headingStyle);
+                GUILayout.Label($"{T("Natural food", "自然食物")}  {snapshot.natural_food_total:0.00}", metricStyle);
+                GUILayout.Label($"{T("Human food", "人工食物")}  {snapshot.anthropogenic_food_total:0.00}", metricStyle);
                 GUILayout.Label(
-                    $"Waste  {snapshot.waste_demand:0.0} / {snapshot.waste_capacity:0.0}",
+                    $"{T("Waste", "垃圾负荷")}  {snapshot.waste_demand:0.0} / {snapshot.waste_capacity:0.0}",
                     metricStyle);
                 GUILayout.Label(
-                    snapshot.overflow_active ? "ALERT · Overflow and litter hotspot" : "Waste contained",
+                    snapshot.overflow_active
+                        ? T("ALERT · Overflow and litter hotspot", "警报 · 垃圾溢出并形成热点")
+                        : T("Waste contained", "垃圾处置正常"),
                     bodyStyle);
-                GUILayout.Label($"Mean disturbance  {snapshot.average_disturbance:0.00}", bodyStyle);
+                GUILayout.Label($"{T("Mean disturbance", "平均干扰度")}  {snapshot.average_disturbance:0.00}", bodyStyle);
             }
             if (wildlife?.Snapshot != null)
             {
                 AddUiSpace(CityPrototypeUiTheme.SpaceMd);
-                GUILayout.Label("URBAN WILDLIFE", headingStyle);
+                GUILayout.Label(T("URBAN WILDLIFE", "城市野生动物"), headingStyle);
                 GUILayout.Label(
-                    $"Active  {wildlife.Snapshot.active_count}  ·  Feeding  {wildlife.Snapshot.feeding_events}",
+                    $"{T("Active", "活动")}  {wildlife.Snapshot.active_count}  ·  " +
+                    $"{T("Feeding", "进食")}  {wildlife.Snapshot.feeding_events}",
                     metricStyle);
                 GUILayout.Label(
-                    $"Migrated  {wildlife.Snapshot.migrated_count}  ·  Roadkill  {wildlife.Snapshot.roadkill_events}",
+                    $"{T("Migrated", "迁移")}  {wildlife.Snapshot.migrated_count}  ·  " +
+                    $"{T("Roadkill", "道路伤亡")}  {wildlife.Snapshot.roadkill_events}",
                     bodyStyle);
                 GUILayout.Label(
-                    $"Traces  H {HumanTracePointCount}  ·  A {AnimalTracePointCount}",
+                    $"{T("Traces", "轨迹")}  {T("H", "人")} {HumanTracePointCount}  ·  " +
+                    $"{T("A", "动物")} {AnimalTracePointCount}",
                     bodyStyle);
             }
             DrawObservationPanel();
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
-            GUILayout.Label("MAP KEY", headingStyle);
+            GUILayout.Label(T("MAP KEY", "地图图例"), headingStyle);
             GUILayout.Label(
-                $"Planning cells  {GeneratedPlanningCellCount}  ·  Available  {AvailablePlanningCellCount}",
+                $"{T("Planning cells", "规划单元")}  {GeneratedPlanningCellCount}  ·  " +
+                $"{T("Available", "可用")}  {AvailablePlanningCellCount}",
                 bodyStyle);
             GUILayout.Label(
-                "Warm-white ground · Woodland · Buildings\nRiver cells block construction\nMain road — Automatic access road",
+                T(
+                    "Warm-white ground · Woodland · Buildings\nRiver cells block construction\nMain road — Automatic access road",
+                    "暖白空地 · 林地 · 建筑\n河流区域禁止建设\n主干道 — 自动接入道路"),
                 bodyStyle);
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
-            GUILayout.Label("DESTINATION PRESSURE", headingStyle);
+            GUILayout.Label(T("DESTINATION PRESSURE", "目的地压力"), headingStyle);
             foreach (CityDestinationLoad load in plan.destination_loads.Where(item =>
                          item.assigned_representative_agents > 0))
             {
-                string status = load.crowd_penalty > 0f ? "CROWDED" : "COMFORTABLE";
+                string status = load.crowd_penalty > 0f
+                    ? T("CROWDED", "拥挤")
+                    : T("COMFORTABLE", "舒适");
                 GUILayout.Label(
-                    $"{load.building_id}\n  {load.assigned_people}/{load.comfortable_capacity} people · {status}",
+                    $"{load.building_id}\n  {load.assigned_people}/{load.comfortable_capacity} " +
+                    $"{T("people", "人")} · {status}",
                     bodyStyle);
             }
             GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button(paused ? "Resume" : "Pause", buttonStyle))
+            if (GUILayout.Button(paused ? T("Resume", "继续") : T("Pause", "暂停"), buttonStyle))
             {
                 paused = !paused;
             }
-            if (GUILayout.Button("Restart trips", buttonStyle))
+            if (GUILayout.Button(T("Restart trips", "重新开始行程"), buttonStyle))
             {
                 InitializePrototype(false);
             }
-            if (GUILayout.Button(showVehicleNetwork ? "Hide road routes" : "Show road routes", buttonStyle))
+            if (GUILayout.Button(
+                    showVehicleNetwork
+                        ? T("Hide road routes", "隐藏车辆路线")
+                        : T("Show road routes", "显示车辆路线"),
+                    buttonStyle))
             {
                 showVehicleNetwork = !showVehicleNetwork;
                 if (vehicleRoadRoot != null)
@@ -1560,7 +1631,11 @@ namespace UrbanWildlife.Prototype
                     vehicleRoadRoot.SetActive(showVehicleNetwork);
                 }
             }
-            if (GUILayout.Button(showPedestrianNetwork ? "Hide footpaths" : "Show footpaths", buttonStyle))
+            if (GUILayout.Button(
+                    showPedestrianNetwork
+                        ? T("Hide footpaths", "隐藏步行路径")
+                        : T("Show footpaths", "显示步行路径"),
+                    buttonStyle))
             {
                 showPedestrianNetwork = !showPedestrianNetwork;
                 if (pedestrianRoot != null)
@@ -1570,11 +1645,28 @@ namespace UrbanWildlife.Prototype
             }
             AddUiSpace(CityPrototypeUiTheme.SpaceMd);
             GUILayout.Label(
-                "Residents emerge from housing and respond to destination appeal, distance and crowding. Vehicles only appear for Drive trips.",
+                T(
+                    "Residents emerge from housing and respond to destination appeal, distance and crowding. Vehicles only appear for Drive trips.",
+                    "居民从住宅出发，并根据目的地吸引力、距离和拥挤程度选择行程；车辆只会出现在驾车行程中。"),
                 captionStyle);
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        private void DrawLanguageSwitch()
+        {
+            GUILayout.Label("LANGUAGE / 语言", eyebrowStyle);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(useChineseUi ? "● 中文" : "中文", buttonStyle))
+            {
+                SetUiLanguage(true);
+            }
+            if (GUILayout.Button(useChineseUi ? "EN" : "● EN", buttonStyle))
+            {
+                SetUiLanguage(false);
+            }
+            GUILayout.EndHorizontal();
         }
 
         private void DrawPlanningWorkflowPanel()
@@ -1584,17 +1676,21 @@ namespace UrbanWildlife.Prototype
                 return;
             }
             CityPlanningWorkflowSnapshot snapshot = planningWorkflow.Snapshot;
-            GUILayout.Label("CITY PLANNING", headingStyle);
+            GUILayout.Label(T("CITY PLANNING", "城市规划"), headingStyle);
             GUILayout.BeginHorizontal();
             bool canSwitchInput = snapshot.phase == CityPlanningWorkflowPhase.ReadyToScan;
             bool previousEnabled = GUI.enabled;
             GUI.enabled = previousEnabled && canSwitchInput;
-            if (GUILayout.Button(useCameraInput ? "Desktop" : "DESKTOP", buttonStyle))
+            if (GUILayout.Button(
+                    useCameraInput ? T("Desktop", "桌面") : T("DESKTOP", "● 桌面"),
+                    buttonStyle))
             {
                 useCameraInput = false;
                 desktopInputMessage = "Choose a building, then click an open part of the map.";
             }
-            if (GUILayout.Button(useCameraInput ? "CAMERA" : "Camera", buttonStyle))
+            if (GUILayout.Button(
+                    useCameraInput ? T("CAMERA", "● 摄像头") : T("Camera", "摄像头"),
+                    buttonStyle))
             {
                 useCameraInput = true;
             }
@@ -1607,19 +1703,19 @@ namespace UrbanWildlife.Prototype
                 return;
             }
             GUILayout.Label(WorkflowStepLabel(snapshot.phase), metricStyle);
-            GUILayout.Label(snapshot.message, bodyStyle);
+            GUILayout.Label(LocaliseRuntimeMessage(snapshot.message), bodyStyle);
             AddUiSpace(CityPrototypeUiTheme.SpaceSm);
 
             switch (snapshot.phase)
             {
                 case CityPlanningWorkflowPhase.ReadyToScan:
-                    if (GUILayout.Button("Load latest camera scan", buttonStyle))
+                    if (GUILayout.Button(T("Load latest camera scan", "载入最新摄像头扫描"), buttonStyle))
                     {
                         TryLoadLatestCameraScan();
                     }
-                    GUILayout.Label(cityScanInputMessage, bodyStyle);
+                    GUILayout.Label(LocaliseRuntimeMessage(cityScanInputMessage), bodyStyle);
                     AddUiSpace(CityPrototypeUiTheme.SpaceXs);
-                    if (GUILayout.Button("Scan city · electronic test", buttonStyle))
+                    if (GUILayout.Button(T("Scan city · electronic test", "扫描城市 · 电子测试"), buttonStyle))
                     {
                         CityTokenScanPacket scan = CityPlanningDemoScanFactory.CreateElectronicSample(
                             city,
@@ -1630,7 +1726,9 @@ namespace UrbanWildlife.Prototype
                         RefreshPlanningOverlay();
                     }
                     GUILayout.Label(
-                        "The electronic sample stays available while the physical board is unavailable.",
+                        T(
+                            "The electronic sample stays available while the physical board is unavailable.",
+                            "实体沙盘不可用时，仍可使用电子测试样本。"),
                         bodyStyle);
                     break;
 
@@ -1639,17 +1737,19 @@ namespace UrbanWildlife.Prototype
                     if (construction != null)
                     {
                         GUILayout.Label(
-                            $"New {construction.NewCount}  ·  Moved {construction.MovedCount}  ·  Missing {construction.MissingCount}",
+                            $"{T("New", "新增")} {construction.NewCount}  ·  " +
+                            $"{T("Moved", "移动")} {construction.MovedCount}  ·  " +
+                            $"{T("Missing", "缺失")} {construction.MissingCount}",
                             bodyStyle);
                     }
                     GUI.enabled = snapshot.CanConfirmPreview;
-                    if (GUILayout.Button("Confirm preview", buttonStyle))
+                    if (GUILayout.Button(T("Confirm preview", "确认预览"), buttonStyle))
                     {
                         planningWorkflow.ConfirmPreview(out _);
                         RefreshPlanningOverlay();
                     }
                     GUI.enabled = true;
-                    if (GUILayout.Button("Cancel preview", buttonStyle))
+                    if (GUILayout.Button(T("Cancel preview", "取消预览"), buttonStyle))
                     {
                         planningWorkflow.CancelPreview();
                         RefreshPlanningOverlay();
@@ -1662,10 +1762,11 @@ namespace UrbanWildlife.Prototype
 
                 case CityPlanningWorkflowPhase.ReadyToBuild:
                     GUILayout.Label(
-                        $"Cost {snapshot.required_development_points} DP  ·  Available {snapshot.strategy.development_points} DP",
+                        $"{T("Cost", "消耗")} {snapshot.required_development_points} DP  ·  " +
+                        $"{T("Available", "可用")} {snapshot.strategy.development_points} DP",
                         bodyStyle);
                     GUI.enabled = snapshot.CanStartConstruction;
-                    if (GUILayout.Button("Start construction", buttonStyle))
+                    if (GUILayout.Button(T("Start construction", "开始建设"), buttonStyle))
                     {
                         if (planningWorkflow.StartConstruction(out _))
                         {
@@ -1679,20 +1780,21 @@ namespace UrbanWildlife.Prototype
                     int active = snapshot.strategy.projects.Count(item =>
                         item.state == CityStrategyProjectState.Active);
                     int total = snapshot.strategy.projects.Length;
-                    GUILayout.Label($"Active projects  {active}/{total}", bodyStyle);
+                    GUILayout.Label($"{T("Active projects", "进行中项目")}  {active}/{total}", bodyStyle);
                     foreach (CityStrategyProject project in snapshot.strategy.projects.Where(item =>
                                  item.state == CityStrategyProjectState.Active).Take(3))
                     {
                         GUILayout.Label(
-                            $"{project.target_id}  ·  {project.remaining_time_blocks} block(s)",
+                            $"{project.target_id}  ·  {project.remaining_time_blocks} " +
+                            T("block(s)", "个时段"),
                             bodyStyle);
                     }
                     GUILayout.BeginHorizontal();
-                    if (GUILayout.Button("Pause", buttonStyle)) planningWorkflow.SetTimeScale(0f);
+                    if (GUILayout.Button(T("Pause", "暂停"), buttonStyle)) planningWorkflow.SetTimeScale(0f);
                     if (GUILayout.Button("1×", buttonStyle)) planningWorkflow.SetTimeScale(1f);
                     if (GUILayout.Button("2×", buttonStyle)) planningWorkflow.SetTimeScale(2f);
                     GUILayout.EndHorizontal();
-                    if (GUILayout.Button("Advance one block", buttonStyle))
+                    if (GUILayout.Button(T("Advance one block", "推进一个时段"), buttonStyle))
                     {
                         planningWorkflow.AdvanceConstructionBlock();
                         if (planningWorkflow.Phase == CityPlanningWorkflowPhase.Complete)
@@ -1708,65 +1810,82 @@ namespace UrbanWildlife.Prototype
 
                 case CityPlanningWorkflowPhase.Complete:
                     GUILayout.Label(
-                        $"Built {snapshot.completed_object_ids.Length} confirmed city objects.",
+                        T(
+                            $"Built {snapshot.completed_object_ids.Length} confirmed city objects.",
+                            $"已建成 {snapshot.completed_object_ids.Length} 个确认的城市对象。"),
                         bodyStyle);
-                    GUILayout.Label("The Preview footprints are now live city geometry.", bodyStyle);
+                    GUILayout.Label(
+                        T(
+                            "The Preview footprints are now live city geometry.",
+                            "预览占地已转化为城市中的正式对象。"),
+                        bodyStyle);
                     break;
             }
         }
 
         private void DrawDesktopPlanningPanel(CityPlanningWorkflowSnapshot snapshot)
         {
-            GUILayout.Label("PLAY DIRECTLY IN UNITY", metricStyle);
+            GUILayout.Label(T("PLAY DIRECTLY IN UNITY", "直接在 UNITY 中游玩"), metricStyle);
             switch (snapshot.phase)
             {
                 case CityPlanningWorkflowPhase.ReadyToScan:
-                    GUILayout.Label("1  CHOOSE A BUILDING", headingStyle);
+                    GUILayout.Label(T("1  CHOOSE A BUILDING", "1  选择建筑"), headingStyle);
                     GUILayout.BeginHorizontal();
-                    DrawDesktopBuildingButton(CityPhysicalTokenType.DetachedHouse, "HOUSE");
-                    DrawDesktopBuildingButton(CityPhysicalTokenType.Apartment, "FLATS");
+                    DrawDesktopBuildingButton(
+                        CityPhysicalTokenType.DetachedHouse,
+                        T("HOUSE", "住宅"));
+                    DrawDesktopBuildingButton(
+                        CityPhysicalTokenType.Apartment,
+                        T("FLATS", "公寓"));
                     GUILayout.EndHorizontal();
                     GUILayout.BeginHorizontal();
-                    DrawDesktopBuildingButton(CityPhysicalTokenType.Commercial, "MARKET");
-                    DrawDesktopBuildingButton(CityPhysicalTokenType.CommunityFacility, "CIVIC");
+                    DrawDesktopBuildingButton(
+                        CityPhysicalTokenType.Commercial,
+                        T("MARKET", "市场"));
+                    DrawDesktopBuildingButton(
+                        CityPhysicalTokenType.CommunityFacility,
+                        T("CIVIC", "社区"));
                     GUILayout.EndHorizontal();
                     GUILayout.Label(
-                        $"Selected  ·  {DesktopBuildingLabel(desktopBuildingType)}",
+                        $"{T("Selected", "已选择")}  ·  {DesktopBuildingLabel(desktopBuildingType)}",
                         bodyStyle);
-                    GUILayout.Label("2  CLICK OPEN GROUND ON THE MAP", headingStyle);
+                    GUILayout.Label(T("2  CLICK OPEN GROUND ON THE MAP", "2  点击地图上的可用空地"), headingStyle);
                     GUILayout.Label(
-                        "Buildings cannot overlap the main road or river. Woodland is cleared to warm-white ground, and a smooth access road is added automatically.",
+                        T(
+                            "Buildings cannot overlap the main road or river. Woodland is cleared to warm-white ground, and a smooth access road is added automatically.",
+                            "建筑不能覆盖主干道或河流。占用林地时会将其改为暖白空地，并自动生成平滑的接入道路。"),
                         bodyStyle);
-                    GUILayout.Label(desktopInputMessage, captionStyle);
+                    GUILayout.Label(LocaliseRuntimeMessage(desktopInputMessage), captionStyle);
                     break;
 
                 case CityPlanningWorkflowPhase.Preview:
                     CityConstructionPreview preview = snapshot.construction_preview;
-                    GUILayout.Label("PLACEMENT PREVIEW", headingStyle);
+                    GUILayout.Label(T("PLACEMENT PREVIEW", "放置预览"), headingStyle);
                     if (preview != null)
                     {
                         GUILayout.Label(
-                            $"New {preview.NewCount}  ·  Blocked {preview.changes.Count(item => item.blocks_confirmation)}",
+                            $"{T("New", "新增")} {preview.NewCount}  ·  " +
+                            $"{T("Blocked", "受阻")} {preview.changes.Count(item => item.blocks_confirmation)}",
                             bodyStyle);
                     }
-                    GUILayout.Label(desktopInputMessage, bodyStyle);
+                    GUILayout.Label(LocaliseRuntimeMessage(desktopInputMessage), bodyStyle);
                     bool canConfirm = snapshot.CanConfirmPreview;
                     bool previous = GUI.enabled;
                     GUI.enabled = previous && canConfirm;
-                    if (GUILayout.Button("BUILD + CONNECT ROAD", buttonStyle))
+                    if (GUILayout.Button(T("BUILD + CONNECT ROAD", "建造并连接道路"), buttonStyle))
                     {
                         ConfirmDesktopPlacement(out _);
                     }
                     GUI.enabled = previous;
-                    if (GUILayout.Button("Choose another position", buttonStyle))
+                    if (GUILayout.Button(T("Choose another position", "选择其他位置"), buttonStyle))
                     {
                         CancelDesktopPlacement();
                     }
                     break;
 
                 default:
-                    GUILayout.Label("BUILDING…", headingStyle);
-                    GUILayout.Label(snapshot.message, bodyStyle);
+                    GUILayout.Label(T("BUILDING…", "建设中……"), headingStyle);
+                    GUILayout.Label(LocaliseRuntimeMessage(snapshot.message), bodyStyle);
                     break;
             }
         }
@@ -1782,14 +1901,14 @@ namespace UrbanWildlife.Prototype
             }
         }
 
-        private static string DesktopBuildingLabel(CityPhysicalTokenType type)
+        private string DesktopBuildingLabel(CityPhysicalTokenType type)
         {
             switch (type)
             {
-                case CityPhysicalTokenType.Apartment: return "Apartment";
-                case CityPhysicalTokenType.Commercial: return "Market";
-                case CityPhysicalTokenType.CommunityFacility: return "Community building";
-                default: return "Detached house";
+                case CityPhysicalTokenType.Apartment: return T("Apartment", "公寓");
+                case CityPhysicalTokenType.Commercial: return T("Market", "市场");
+                case CityPhysicalTokenType.CommunityFacility: return T("Community building", "社区设施");
+                default: return T("Detached house", "独栋住宅");
             }
         }
 
@@ -1822,48 +1941,50 @@ namespace UrbanWildlife.Prototype
                 return;
             }
             AddUiSpace(CityPrototypeUiTheme.SpaceMd);
-            GUILayout.Label("CITY TRACKS", headingStyle);
+            GUILayout.Label(T("CITY TRACKS", "城市轨迹"), headingStyle);
             GUILayout.BeginHorizontal();
-            DrawTraceModeButton(CityTraceDisplayMode.HumanTrace, "PEOPLE");
-            DrawTraceModeButton(CityTraceDisplayMode.AnimalTrace, "WILDLIFE");
-            DrawTraceModeButton(CityTraceDisplayMode.CombinedTrace, "ALL");
+            DrawTraceModeButton(CityTraceDisplayMode.HumanTrace, T("PEOPLE", "人类"));
+            DrawTraceModeButton(CityTraceDisplayMode.AnimalTrace, T("WILDLIFE", "动物"));
+            DrawTraceModeButton(CityTraceDisplayMode.CombinedTrace, T("ALL", "全部"));
             GUILayout.EndHorizontal();
             GUILayout.Label(
-                $"Visible marks {VisibleTraceMarkCount}/{CityTraceVisualizer.MaximumVisibleMarks}",
+                $"{T("Visible marks", "可见痕迹")} {VisibleTraceMarkCount}/{CityTraceVisualizer.MaximumVisibleMarks}",
                 bodyStyle);
 
             AddUiSpace(CityPrototypeUiTheme.SpaceMd);
-            GUILayout.Label("CITY FEED", headingStyle);
+            GUILayout.Label(T("CITY FEED", "城市动态"), headingStyle);
             CityFeedEntry[] latest = observation.Snapshot.city_feed
                 .Reverse()
                 .Take(4)
                 .ToArray();
             if (latest.Length == 0)
             {
-                GUILayout.Label("Waiting for a meaningful city event…", bodyStyle);
+                GUILayout.Label(T("Waiting for a meaningful city event…", "等待有意义的城市事件……"), bodyStyle);
             }
             foreach (CityFeedEntry entry in latest)
             {
                 GUILayout.Label(
                     $"{FeedSymbol(entry.type)}  {FeedTitle(entry.type)}  ·  {entry.elapsed_seconds:0}s",
                     metricStyle);
-                GUILayout.Label(entry.message, bodyStyle);
+                GUILayout.Label(LocaliseFeedMessage(entry), bodyStyle);
             }
 
             CityPhaseReport report = observation.BuildPhaseReport(
                 strategy.Snapshot,
                 wildlife.Snapshot);
             AddUiSpace(CityPrototypeUiTheme.SpaceMd);
-            GUILayout.Label("PHASE SNAPSHOT", headingStyle);
+            GUILayout.Label(T("PHASE SNAPSHOT", "阶段快照"), headingStyle);
             GUILayout.Label(
-                $"{report.phase}  ·  Balance {report.after.total:0} " +
+                $"{DevelopmentPhaseLabel(report.phase)}  ·  {T("Balance", "综合平衡")} {report.after.total:0} " +
                 $"({Signed(report.change.total)})",
                 metricStyle);
             GUILayout.Label(
-                $"Tracks H {report.human_trace_points} / A {report.animal_trace_points}  ·  " +
-                $"Feed {report.feeding_events}  ·  Migration {report.migration_events}",
+                $"{T("Tracks", "轨迹")} {T("H", "人")} {report.human_trace_points} / " +
+                $"{T("A", "动物")} {report.animal_trace_points}  ·  " +
+                $"{T("Feed", "进食")} {report.feeding_events}  ·  " +
+                $"{T("Migration", "迁移")} {report.migration_events}",
                 bodyStyle);
-            if (GUILayout.Button("Clear tracks & feed", buttonStyle))
+            if (GUILayout.Button(T("Clear tracks & feed", "清除轨迹与动态"), buttonStyle))
             {
                 observation.ResetView(
                     mobility.Plan,
@@ -1876,7 +1997,7 @@ namespace UrbanWildlife.Prototype
 
         private void DrawTraceModeButton(CityTraceDisplayMode mode, string label)
         {
-            string text = traceDisplayMode == mode ? "[On] " + label : label;
+            string text = traceDisplayMode == mode ? T("[On] ", "● ") + label : label;
             if (GUILayout.Button(text, buttonStyle))
             {
                 traceDisplayMode = mode;
@@ -1899,18 +2020,18 @@ namespace UrbanWildlife.Prototype
             }
         }
 
-        private static string FeedTitle(CityFeedEventType type)
+        private string FeedTitle(CityFeedEventType type)
         {
             switch (type)
             {
-                case CityFeedEventType.WasteOverflow: return "WASTE PRESSURE";
-                case CityFeedEventType.Crowding: return "CROWDING";
-                case CityFeedEventType.Feeding: return "FEEDING";
-                case CityFeedEventType.MigrationIn: return "MIGRATION IN";
-                case CityFeedEventType.MigrationOut: return "MIGRATION OUT";
-                case CityFeedEventType.Roadkill: return "ROAD INCIDENT";
-                case CityFeedEventType.ProjectCompleted: return "PROJECT COMPLETE";
-                default: return "BALANCE WARNING";
+                case CityFeedEventType.WasteOverflow: return T("WASTE PRESSURE", "垃圾压力");
+                case CityFeedEventType.Crowding: return T("CROWDING", "拥挤");
+                case CityFeedEventType.Feeding: return T("FEEDING", "进食");
+                case CityFeedEventType.MigrationIn: return T("MIGRATION IN", "迁入");
+                case CityFeedEventType.MigrationOut: return T("MIGRATION OUT", "迁出");
+                case CityFeedEventType.Roadkill: return T("ROAD INCIDENT", "道路事件");
+                case CityFeedEventType.ProjectCompleted: return T("PROJECT COMPLETE", "项目完成");
+                default: return T("BALANCE WARNING", "平衡警告");
             }
         }
 
@@ -1963,25 +2084,27 @@ namespace UrbanWildlife.Prototype
             {
                 GUILayout.Label(choice.building_id, bodyStyle);
                 GUILayout.BeginHorizontal();
-                DrawRoadChoiceButton(choice, CityRoadRouteOption.Direct, "DIRECT");
-                DrawRoadChoiceButton(choice, CityRoadRouteOption.ExistingNetwork, "EXISTING");
-                DrawRoadChoiceButton(choice, CityRoadRouteOption.LowImpact, "LOW");
+                DrawRoadChoiceButton(choice, CityRoadRouteOption.Direct, T("DIRECT", "直接"));
+                DrawRoadChoiceButton(choice, CityRoadRouteOption.ExistingNetwork, T("EXISTING", "既有"));
+                DrawRoadChoiceButton(choice, CityRoadRouteOption.LowImpact, T("LOW", "低影响"));
                 GUILayout.EndHorizontal();
                 if (choice.HasSelection)
                 {
                     GUILayout.Label(
-                        $"Selected: {choice.SelectedCandidate.route_option} · " +
-                        $"green impact {choice.SelectedCandidate.estimated_green_impact_units:0.0}",
+                        $"{T("Selected", "已选择")}: " +
+                        $"{RoadOptionLabel(choice.SelectedCandidate.route_option)} · " +
+                        $"{T("green impact", "绿地影响")} " +
+                        $"{choice.SelectedCandidate.estimated_green_impact_units:0.0}",
                         bodyStyle);
                 }
             }
-            if (GUILayout.Button("Use low-impact routes", buttonStyle))
+            if (GUILayout.Button(T("Use low-impact routes", "使用低影响路线"), buttonStyle))
             {
                 planningWorkflow.SelectRecommendedLowImpactRoutes(out _);
                 RefreshPlanningOverlay();
             }
             GUI.enabled = preview.CanConfirm;
-            if (GUILayout.Button("Confirm routes", buttonStyle))
+            if (GUILayout.Button(T("Confirm routes", "确认路线"), buttonStyle))
             {
                 if (planningWorkflow.ConfirmRoutes(out _))
                 {
@@ -2007,16 +2130,162 @@ namespace UrbanWildlife.Prototype
             GUI.enabled = previous;
         }
 
-        private static string WorkflowStepLabel(CityPlanningWorkflowPhase phase)
+        private string WorkflowStepLabel(CityPlanningWorkflowPhase phase)
         {
             switch (phase)
             {
-                case CityPlanningWorkflowPhase.ReadyToScan: return "1  SCAN CITY";
-                case CityPlanningWorkflowPhase.Preview: return "2  PREVIEW";
-                case CityPlanningWorkflowPhase.RouteSelection: return "3  CHOOSE ACCESS";
-                case CityPlanningWorkflowPhase.ReadyToBuild: return "4  COMMIT DP";
-                case CityPlanningWorkflowPhase.Construction: return "5  CONSTRUCTION";
-                default: return "COMPLETE";
+                case CityPlanningWorkflowPhase.ReadyToScan: return T("1  SCAN CITY", "1  扫描城市");
+                case CityPlanningWorkflowPhase.Preview: return T("2  PREVIEW", "2  预览");
+                case CityPlanningWorkflowPhase.RouteSelection: return T("3  CHOOSE ACCESS", "3  选择接入道路");
+                case CityPlanningWorkflowPhase.ReadyToBuild: return T("4  COMMIT DP", "4  提交发展点");
+                case CityPlanningWorkflowPhase.Construction: return T("5  CONSTRUCTION", "5  建设");
+                default: return T("COMPLETE", "完成");
+            }
+        }
+
+        private string T(string english, string chinese)
+        {
+            return useChineseUi ? chinese : english;
+        }
+
+        private string DevelopmentPhaseLabel(CityDevelopmentPhase phase)
+        {
+            switch (phase)
+            {
+                case CityDevelopmentPhase.PopulationGrowth:
+                    return T("Population growth", "人口增长");
+                case CityDevelopmentPhase.PublicLife:
+                    return T("Public life", "公共生活");
+                case CityDevelopmentPhase.WastePressure:
+                    return T("Waste pressure", "垃圾压力");
+                case CityDevelopmentPhase.MobilityPressure:
+                    return T("Mobility pressure", "交通压力");
+                case CityDevelopmentPhase.Redevelopment:
+                    return T("Redevelopment", "更新建设");
+                default:
+                    return phase.ToString();
+            }
+        }
+
+        private string RoadOptionLabel(CityRoadRouteOption option)
+        {
+            switch (option)
+            {
+                case CityRoadRouteOption.ExistingNetwork:
+                    return T("Existing network", "接入既有路网");
+                case CityRoadRouteOption.LowImpact:
+                    return T("Low impact", "低影响");
+                default:
+                    return T("Direct", "直接连接");
+            }
+        }
+
+        private string LocaliseRuntimeMessage(string message)
+        {
+            if (!useChineseUi || string.IsNullOrWhiteSpace(message))
+            {
+                return message;
+            }
+            switch (message)
+            {
+                case "Choose a building, then click an open part of the map.":
+                    return "选择一种建筑，然后点击地图上的可用空地。";
+                case "Camera scans remain pending until you load and confirm them.":
+                    return "摄像头扫描会保持待处理，直到你载入并确认。";
+                case "The map camera is unavailable.":
+                    return "地图摄像机当前不可用。";
+                case "That click did not reach the map.":
+                    return "这次点击没有落在地图范围内。";
+                case "Preview ready. Confirm to build and connect it to the main road.":
+                    return "预览已就绪。确认后将建造建筑并连接主干道。";
+                case "Built. Choose another building and click the map.":
+                    return "建造完成。请选择下一栋建筑并点击地图。";
+                case "Placement cancelled. Choose another position.":
+                    return "已取消放置，请选择其他位置。";
+                case "Electronic sample accepted. This is not a physical-camera claim.":
+                    return "已接受电子测试样本；这不代表已完成实体摄像头识别。";
+                case "Ready to Scan City. New objects stay in Preview until confirmed.":
+                    return "可以开始扫描城市；新增对象会先停留在预览状态，确认后才会生效。";
+                case "Construction paused.":
+                    return "建设已暂停。";
+                case "Construction complete. The confirmed objects are now part of the live city.":
+                    return "建设完成；已确认对象现在正式成为城市的一部分。";
+            }
+            const string selectedSuffix = " selected. Click an open part of the map.";
+            if (message.EndsWith(selectedSuffix, StringComparison.Ordinal))
+            {
+                string building = message.Substring(0, message.Length - selectedSuffix.Length);
+                return $"已选择{ChineseBuildingName(building)}。请点击地图上的可用空地。";
+            }
+            const string scanPrefix = "Validated city scan loaded from ";
+            if (message.StartsWith(scanPrefix, StringComparison.Ordinal))
+            {
+                string fileName = message.Substring(scanPrefix.Length)
+                    .Replace(". Review Preview before confirming.", string.Empty);
+                return $"已从 {fileName} 载入并验证城市扫描。确认前请检查预览。";
+            }
+            if (message.StartsWith("Placement confirmed. Added ", StringComparison.Ordinal))
+            {
+                return "放置已确认，并已自动生成连接主干道的平滑道路。";
+            }
+            if (message.StartsWith("Plan ready.", StringComparison.Ordinal))
+            {
+                return "方案已就绪；开始建设时将扣除所需的发展点。";
+            }
+            if (message.StartsWith("Plan needs ", StringComparison.Ordinal))
+            {
+                return "当前发展点不足，请修改方案或获得更多发展点。";
+            }
+            if (message.StartsWith("Construction started:", StringComparison.Ordinal))
+            {
+                return "建设已开始，相关发展点已提交。";
+            }
+            if (message.StartsWith("Construction speed set to ", StringComparison.Ordinal))
+            {
+                return "建设速度已更新。";
+            }
+            if (message.StartsWith("Preview blocked.", StringComparison.Ordinal))
+            {
+                return "预览受阻：请将移动过的实体放回原位，或明确规划拆除。";
+            }
+            return "系统提示：" + message;
+        }
+
+        private static string ChineseBuildingName(string english)
+        {
+            switch (english)
+            {
+                case "Apartment": return "公寓";
+                case "Market": return "市场";
+                case "Community building": return "社区设施";
+                default: return "独栋住宅";
+            }
+        }
+
+        private string LocaliseFeedMessage(CityFeedEntry entry)
+        {
+            if (!useChineseUi)
+            {
+                return entry.message;
+            }
+            switch (entry.type)
+            {
+                case CityFeedEventType.WasteOverflow:
+                    return "垃圾容量持续超载，地图上形成了垃圾热点。";
+                case CityFeedEventType.Crowding:
+                    return $"{entry.subject_id} 超过了舒适目的地容量。";
+                case CityFeedEventType.Feeding:
+                    return $"{entry.subject_id} 完成了一次进食。";
+                case CityFeedEventType.MigrationIn:
+                    return $"{entry.subject_id} 迁入了当前城区。";
+                case CityFeedEventType.MigrationOut:
+                    return $"{entry.subject_id} 因栖息地效用持续偏低而离开。";
+                case CityFeedEventType.Roadkill:
+                    return $"{entry.subject_id} 发生了道路伤亡事件。";
+                case CityFeedEventType.ProjectCompleted:
+                    return $"{entry.subject_id} 已完成建设。";
+                default:
+                    return $"{entry.subject_id} 低于35分警戒线。";
             }
         }
 
@@ -2040,15 +2309,18 @@ namespace UrbanWildlife.Prototype
 
         private void EnsureStyles()
         {
-            if (panelStyle != null && styledScreenHeight == Screen.height)
+            if (panelStyle != null &&
+                styledScreenHeight == Screen.height &&
+                styledChineseUi == useChineseUi)
             {
                 return;
             }
 
             styledScreenHeight = Screen.height;
+            styledChineseUi = useChineseUi;
             uiScale = CityPrototypeUiTheme.ScaleForScreen(Screen.height);
-            Font regularFont = CityPrototypeUiTheme.LoadRuntimeFont();
-            Font boldFont = CityPrototypeUiTheme.LoadRuntimeFont(true);
+            Font regularFont = CityPrototypeUiTheme.LoadRuntimeFont(false, useChineseUi);
+            Font boldFont = CityPrototypeUiTheme.LoadRuntimeFont(true, useChineseUi);
             int panelHorizontal = CityPrototypeUiTheme.ScaledPixel(
                 CityPrototypeUiTheme.SpaceLg,
                 uiScale);

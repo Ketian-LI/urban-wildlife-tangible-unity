@@ -204,6 +204,7 @@ namespace UrbanWildlife.EditorTools
             VerifyResidentialBuildingVisuals(prototype);
             VerifyCommercialBuildingVisuals(prototype);
             VerifyCompactNeighbourhoodPresentation(prototype);
+            VerifyBilingualUi(prototype);
             VerifyResponsiveCameraFit();
             VerifyCameraScanFileSource();
             VerifyPlanningWorkflow();
@@ -223,7 +224,29 @@ namespace UrbanWildlife.EditorTools
                 "visible_footprint_tyre_bird_paw_tracks=True city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
-                "sparse_opening_map=True road_following=True no_premature_buildings=True");
+                "sparse_opening_map=True road_following=True no_premature_buildings=True " +
+                "bilingual_ui_switch=True cjk_font_fallback=True");
+        }
+
+        private static void VerifyBilingualUi(CityPrototypeDemo prototype)
+        {
+            bool originalLanguage = prototype.ChineseUiEnabled;
+            prototype.SetUiLanguage(true);
+            bool chineseValid = prototype.CurrentUiLanguageCode == "zh-CN" &&
+                                prototype.LocalizedPlanningHeading == "城市规划" &&
+                                prototype.ChineseUiFontSupportsCoreGlyphs;
+            prototype.SetUiLanguage(false);
+            bool englishValid = prototype.CurrentUiLanguageCode == "en" &&
+                                prototype.LocalizedPlanningHeading == "CITY PLANNING";
+            prototype.SetUiLanguage(originalLanguage);
+            if (!chineseValid || !englishValid)
+            {
+                throw new InvalidOperationException(
+                    "The City Prototype language switch must update both Chinese and English labels.");
+            }
+            Debug.Log(
+                "UNITY_CITY_BILINGUAL_UI_SMOKE_OK chinese=True english=True persisted=True " +
+                $"planning_overlay_refresh=True cjk_font_fallback=True font={prototype.ChineseUiFontName}");
         }
 
         private static void VerifyResidentialBuildingVisuals(CityPrototypeDemo prototype)

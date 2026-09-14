@@ -33,6 +33,10 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Environment/tree-citybuilder-default-v01";
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
+        private const string CityDetachedHouseResourcePath =
+            "UrbanWildlife/Buildings/house-detached-citybuilder-v01";
+        private const string CityApartmentResourcePath =
+            "UrbanWildlife/Buildings/apartment-lowrise-citybuilder-v01";
         private static readonly string[] CityTreeResourcePaths =
         {
             "UrbanWildlife/Environment/tree-citybuilder-pear-v02",
@@ -724,6 +728,31 @@ namespace UrbanWildlife.Prototype
                 item.construction_state == CityConstructionState.Existing).ToArray();
             foreach (CityBuilding building in activeBuildings)
             {
+                float width = building.footprint_units[0] / city.bounds.width_units * MapWidth;
+                float depth = building.footprint_units[1] / city.bounds.height_units * MapHeight;
+                if (building.type == CityBuildingType.DetachedHouse &&
+                    CreateBuildingArtwork(
+                        root.transform,
+                        building,
+                        CityDetachedHouseResourcePath,
+                        width,
+                        depth,
+                        1.20f))
+                {
+                    continue;
+                }
+                if (building.type == CityBuildingType.Apartment &&
+                    CreateBuildingArtwork(
+                        root.transform,
+                        building,
+                        CityApartmentResourcePath,
+                        width,
+                        depth,
+                        1.28f))
+                {
+                    continue;
+                }
+
                 Color wall;
                 Color roof;
                 float height;
@@ -756,8 +785,6 @@ namespace UrbanWildlife.Prototype
                         break;
                 }
                 Vector3 position = ToWorld(building.position_norm, height * 0.5f + 0.09f);
-                float width = building.footprint_units[0] / city.bounds.width_units * MapWidth;
-                float depth = building.footprint_units[1] / city.bounds.height_units * MapHeight;
                 GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 body.name = building.id;
                 body.transform.SetParent(root.transform, false);
@@ -781,6 +808,42 @@ namespace UrbanWildlife.Prototype
                     0.032f);
             }
             GeneratedBuildingCount = activeBuildings.Length;
+        }
+
+        private bool CreateBuildingArtwork(
+            Transform parent,
+            CityBuilding building,
+            string resourcePath,
+            float footprintWidth,
+            float footprintDepth,
+            float footprintScale)
+        {
+            Sprite sprite = Resources.Load<Sprite>(resourcePath);
+            if (sprite == null)
+            {
+                Debug.LogWarning(
+                    $"City building sprite was not found at Resources/{resourcePath}; " +
+                    "using the prototype block fallback.");
+                return false;
+            }
+
+            GameObject buildingRoot = new GameObject(building.id);
+            buildingRoot.transform.SetParent(parent, false);
+            buildingRoot.transform.localPosition = ToWorld(building.position_norm, 0.105f);
+
+            GameObject artwork = new GameObject("Building artwork");
+            artwork.transform.SetParent(buildingRoot.transform, false);
+            artwork.transform.localPosition = Vector3.zero;
+            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+            float targetWidth = Mathf.Max(footprintWidth, footprintDepth) * footprintScale;
+            float artworkScale = targetWidth / Mathf.Max(0.001f, sprite.bounds.size.x);
+            artwork.transform.localScale = new Vector3(artworkScale, artworkScale, artworkScale);
+
+            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = 24 + Mathf.RoundToInt(building.position_norm[1] * 3f);
+            return true;
         }
 
         private void BuildPlanningOverlay()

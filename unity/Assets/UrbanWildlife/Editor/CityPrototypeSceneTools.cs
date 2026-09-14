@@ -147,6 +147,7 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("City prototype is missing a generated visual layer.");
             }
             VerifyPlanningGridVisuals(prototype);
+            VerifyResidentialBuildingVisuals(prototype);
             VerifyResponsiveCameraFit();
             VerifyCameraScanFileSource();
             VerifyPlanningWorkflow();
@@ -163,6 +164,30 @@ namespace UrbanWildlife.EditorTools
                 "visible_footprint_tyre_bird_paw_tracks=True city_feed_panel=True phase_snapshot=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
                 "no_premature_buildings=True");
+        }
+
+        private static void VerifyResidentialBuildingVisuals(CityPrototypeDemo prototype)
+        {
+            Transform buildings = prototype.transform.Find("Generated City Prototype/Buildings");
+            SpriteRenderer[] renderers = buildings == null
+                ? Array.Empty<SpriteRenderer>()
+                : buildings.GetComponentsInChildren<SpriteRenderer>();
+            int detachedHouseCount = renderers.Count(renderer =>
+                renderer.sprite != null &&
+                renderer.sprite.name == "house-detached-citybuilder-v01");
+            int apartmentCount = renderers.Count(renderer =>
+                renderer.sprite != null &&
+                renderer.sprite.name == "apartment-lowrise-citybuilder-v01");
+            if (detachedHouseCount != 1 || apartmentCount != 2)
+            {
+                throw new InvalidOperationException(
+                    "Residential buildings must use one British detached-house sprite and " +
+                    $"two matching low-rise apartment sprites; detached={detachedHouseCount}, " +
+                    $"apartments={apartmentCount}.");
+            }
+            Debug.Log(
+                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK detached_house=1 lowrise_apartments=2 " +
+                "citybuilder_sprites=True placeholder_blocks=False");
         }
 
         private static void VerifyPlanningGridVisuals(CityPrototypeDemo prototype)

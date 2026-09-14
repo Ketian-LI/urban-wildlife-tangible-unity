@@ -1,8 +1,8 @@
 # Residential building review set v02
 
 These four candidates were generated with built-in ImageGen and exported with
-transparent RGBA backgrounds. Candidate A and candidate C are the selected
-production set and are now wired into the Unity prototype.
+transparent RGBA backgrounds. Candidates A, B and C are the selected production
+set and are now wired into the Unity prototype as three distinct residences.
 
 ## Reference decisions
 
@@ -46,9 +46,10 @@ loggia-style balconies.
 ## Selected Unity application
 
 - Detached house: A, red-brick bay house.
+- Lower-rise residence: B, London-stock-brick house.
 - Apartment: C, three-storey corner apartment.
-- The house is rendered at 1.24 map scale and the apartment at 1.34 map scale
-  so their silhouettes remain readable without covering neighbouring cells.
+- The three silhouettes use independent map scales so they remain readable
+  without covering neighbouring cells.
 
 ## Shared production constraints
 

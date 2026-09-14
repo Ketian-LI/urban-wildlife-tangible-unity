@@ -33,10 +33,16 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Environment/tree-citybuilder-default-v01";
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
-        private const string CityDetachedHouseResourcePath =
+        private const string CityRedBrickHouseResourcePath =
             "UrbanWildlife/Buildings/house-detached-red-brick-bay-v02";
-        private const string CityApartmentResourcePath =
+        private const string CityStockBrickHouseResourcePath =
+            "UrbanWildlife/Buildings/house-stock-brick-v02";
+        private const string CityApartmentCornerResourcePath =
             "UrbanWildlife/Buildings/apartment-lowrise-corner-v02";
+        private const string CityMarketHallResourcePath =
+            "UrbanWildlife/Buildings/market-hall-citybuilder-v01";
+        private const string CityCornerShopsResourcePath =
+            "UrbanWildlife/Buildings/corner-shops-citybuilder-v01";
         private static readonly string[] CityTreeResourcePaths =
         {
             "UrbanWildlife/Environment/tree-citybuilder-pear-v02",
@@ -734,7 +740,7 @@ namespace UrbanWildlife.Prototype
                     CreateBuildingArtwork(
                         root.transform,
                         building,
-                        CityDetachedHouseResourcePath,
+                        CityRedBrickHouseResourcePath,
                         width,
                         depth,
                         1.24f))
@@ -745,10 +751,25 @@ namespace UrbanWildlife.Prototype
                     CreateBuildingArtwork(
                         root.transform,
                         building,
-                        CityApartmentResourcePath,
+                        building.id == "apartment-court"
+                            ? CityStockBrickHouseResourcePath
+                            : CityApartmentCornerResourcePath,
                         width,
                         depth,
-                        1.34f))
+                        building.id == "apartment-court" ? 1.22f : 1.34f))
+                {
+                    continue;
+                }
+                if (building.type == CityBuildingType.Commercial &&
+                    CreateBuildingArtwork(
+                        root.transform,
+                        building,
+                        building.id == "market-hall"
+                            ? CityMarketHallResourcePath
+                            : CityCornerShopsResourcePath,
+                        width,
+                        depth,
+                        building.id == "market-hall" ? 1.36f : 1.42f))
                 {
                     continue;
                 }

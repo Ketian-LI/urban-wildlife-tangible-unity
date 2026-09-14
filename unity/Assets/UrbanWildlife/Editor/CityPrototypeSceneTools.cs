@@ -148,6 +148,7 @@ namespace UrbanWildlife.EditorTools
             }
             VerifyPlanningGridVisuals(prototype);
             VerifyResidentialBuildingVisuals(prototype);
+            VerifyCommercialBuildingVisuals(prototype);
             VerifyResponsiveCameraFit();
             VerifyCameraScanFileSource();
             VerifyPlanningWorkflow();
@@ -172,22 +173,50 @@ namespace UrbanWildlife.EditorTools
             SpriteRenderer[] renderers = buildings == null
                 ? Array.Empty<SpriteRenderer>()
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
-            int detachedHouseCount = renderers.Count(renderer =>
+            int redBrickHouseCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
                 renderer.sprite.name == "house-detached-red-brick-bay-v02");
-            int apartmentCount = renderers.Count(renderer =>
+            int stockBrickHouseCount = renderers.Count(renderer =>
+                renderer.sprite != null &&
+                renderer.sprite.name == "house-stock-brick-v02");
+            int cornerApartmentCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
                 renderer.sprite.name == "apartment-lowrise-corner-v02");
-            if (detachedHouseCount != 1 || apartmentCount != 2)
+            if (redBrickHouseCount != 1 || stockBrickHouseCount != 1 ||
+                cornerApartmentCount != 1)
             {
                 throw new InvalidOperationException(
-                    "Residential buildings must use one British detached-house sprite and " +
-                    $"two matching low-rise apartment sprites; detached={detachedHouseCount}, " +
-                    $"apartments={apartmentCount}.");
+                    "Residential buildings must use the selected A, B and C sprite set; " +
+                    $"redBrick={redBrickHouseCount}, stockBrick={stockBrickHouseCount}, " +
+                    $"cornerApartment={cornerApartmentCount}.");
             }
             Debug.Log(
-                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK detached_house=1 lowrise_apartments=2 " +
-                "selected_visuals=A+C citybuilder_sprites=True placeholder_blocks=False");
+                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK red_brick_house=1 stock_brick_house=1 " +
+                "corner_apartment=1 selected_visuals=A+B+C citybuilder_sprites=True " +
+                "placeholder_blocks=False");
+        }
+
+        private static void VerifyCommercialBuildingVisuals(CityPrototypeDemo prototype)
+        {
+            Transform buildings = prototype.transform.Find("Generated City Prototype/Buildings");
+            SpriteRenderer[] renderers = buildings == null
+                ? Array.Empty<SpriteRenderer>()
+                : buildings.GetComponentsInChildren<SpriteRenderer>();
+            int marketHallCount = renderers.Count(renderer =>
+                renderer.sprite != null &&
+                renderer.sprite.name == "market-hall-citybuilder-v01");
+            int cornerShopsCount = renderers.Count(renderer =>
+                renderer.sprite != null &&
+                renderer.sprite.name == "corner-shops-citybuilder-v01");
+            if (marketHallCount != 1 || cornerShopsCount != 1)
+            {
+                throw new InvalidOperationException(
+                    "Commercial buildings must use one market hall and one corner-shops sprite; " +
+                    $"marketHall={marketHallCount}, cornerShops={cornerShopsCount}.");
+            }
+            Debug.Log(
+                "UNITY_CITY_COMMERCIAL_VISUAL_SMOKE_OK market_hall=1 corner_shops=1 " +
+                "citybuilder_sprites=True placeholder_blocks=False");
         }
 
         private static void VerifyPlanningGridVisuals(CityPrototypeDemo prototype)

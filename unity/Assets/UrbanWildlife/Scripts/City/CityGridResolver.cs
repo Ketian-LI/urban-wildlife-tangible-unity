@@ -127,27 +127,75 @@ namespace UrbanWildlife.City
             {
                 return false;
             }
-            if (!cell.buildable || cell.fixed_feature)
+            CityGridCell[] footprintCells = BuildingFootprintCells(
+                grid,
+                bounds,
+                building,
+                cell,
+                out error);
+            if (footprintCells.Length == 0)
             {
-                error = $"Grid cell {cell.id} does not allow building placement.";
                 return false;
             }
-            if (!string.IsNullOrWhiteSpace(cell.occupant_id) && cell.occupant_id != building.id)
+            CityGridCell unavailable = footprintCells.FirstOrDefault(candidate =>
+                !candidate.buildable || candidate.fixed_feature);
+            if (unavailable != null)
             {
-                error = $"Grid cell {cell.id} is already occupied by {cell.occupant_id}.";
+                error = $"Grid cell {unavailable.id} does not allow building placement.";
+                return false;
+            }
+            CityGridCell occupied = footprintCells.FirstOrDefault(candidate =>
+                !string.IsNullOrWhiteSpace(candidate.occupant_id) &&
+                candidate.occupant_id != building.id);
+            if (occupied != null)
+            {
+                error = $"Grid cell {occupied.id} is already occupied by {occupied.occupant_id}.";
                 return false;
             }
 
-            cell.was_woodland = cell.was_woodland ||
-                                cell.baseline_cover == CityLandCover.Woodland ||
-                                cell.current_cover == CityLandCover.Woodland;
-            cell.current_cover = CityLandCover.Building;
-            cell.occupant_id = building.id;
-            cell.habitat_patch_id = null;
-            cell.last_changed_revision = revision;
+            foreach (CityGridCell footprintCell in footprintCells)
+            {
+                footprintCell.was_woodland = footprintCell.was_woodland ||
+                                              footprintCell.baseline_cover == CityLandCover.Woodland ||
+                                              footprintCell.current_cover == CityLandCover.Woodland;
+                footprintCell.current_cover = CityLandCover.Building;
+                footprintCell.occupant_id = building.id;
+                footprintCell.habitat_patch_id = null;
+                footprintCell.last_changed_revision = revision;
+            }
             building.planning_cell_id = cell.id;
-            building.position_norm = ClonePoint(cell.center_norm);
+            building.planning_cell_ids = footprintCells.Select(candidate => candidate.id).ToArray();
+            building.position_norm = new[]
+            {
+                footprintCells.Average(candidate => candidate.center_norm[0]),
+                footprintCells.Average(candidate => candidate.center_norm[1]),
+            };
             return true;
+        }
+
+        public static CityGridCell[] GetBuildingFootprintCells(
+            CityPlanningGrid grid,
+            CityBounds bounds,
+            CityBuilding building,
+            out string error)
+        {
+            error = string.Empty;
+            if (building == null)
+            {
+                error = "Building is missing.";
+                return Array.Empty<CityGridCell>();
+            }
+            if (!TryResolveAssignedCell(
+                    grid,
+                    bounds,
+                    building.planning_cell_id,
+                    building.position_norm,
+                    out CityGridCell anchor,
+                    out error))
+            {
+                return Array.Empty<CityGridCell>();
+            }
+            return BuildingFootprintCells(grid, bounds, building, anchor, out error);
         }
 
         public static bool TryOccupyWithGreenPatch(
@@ -231,15 +279,28 @@ namespace UrbanWildlife.City
                 return false;
             }
 
-            cell.was_woodland = cell.was_woodland ||
-                                cell.baseline_cover == CityLandCover.Woodland ||
-                                cell.current_cover == CityLandCover.Woodland;
-            cell.current_cover = cell.was_woodland
-                ? CityLandCover.Disturbed
-                : CityLandCover.OpenLand;
-            cell.occupant_id = null;
-            cell.habitat_patch_id = null;
-            cell.last_changed_revision = revision;
+            CityGridCell[] releasedCells = string.IsNullOrWhiteSpace(cell.occupant_id)
+                ? new[] { cell }
+                : grid.cells.Where(candidate => candidate != null &&
+                                                candidate.occupant_id == cell.occupant_id)
+                    .ToArray();
+            if (releasedCells.Any(candidate => candidate.fixed_feature))
+            {
+                error = "A fixed planning feature cannot be released.";
+                return false;
+            }
+            foreach (CityGridCell releasedCell in releasedCells)
+            {
+                releasedCell.was_woodland = releasedCell.was_woodland ||
+                                             releasedCell.baseline_cover == CityLandCover.Woodland ||
+                                             releasedCell.current_cover == CityLandCover.Woodland;
+                releasedCell.current_cover = releasedCell.was_woodland
+                    ? CityLandCover.Disturbed
+                    : CityLandCover.OpenLand;
+                releasedCell.occupant_id = null;
+                releasedCell.habitat_patch_id = null;
+                releasedCell.last_changed_revision = revision;
+            }
             return true;
         }
 
@@ -306,6 +367,67 @@ namespace UrbanWildlife.City
                    cover == CityLandCover.PublicGreen ||
                    cover == CityLandCover.ShrubGarden ||
                    cover == CityLandCover.Recovering;
+        }
+
+        private static CityGridCell[] BuildingFootprintCells(
+            CityPlanningGrid grid,
+            CityBounds bounds,
+            CityBuilding building,
+            CityGridCell anchor,
+            out string error)
+        {
+            error = string.Empty;
+            if (grid?.cells == null || bounds == null || anchor == null ||
+                building.footprint_units == null || building.footprint_units.Length != 2 ||
+                !PositiveFinite(building.footprint_units[0]) ||
+                !PositiveFinite(building.footprint_units[1]))
+            {
+                error = "Building footprint or planning grid is incomplete.";
+                return Array.Empty<CityGridCell>();
+            }
+
+            float cellWidth = bounds.width_units / grid.cols;
+            float cellHeight = bounds.height_units / grid.rows;
+            bool quarterTurn = IsQuarterTurn(building.rotation_deg);
+            float footprintWidth = quarterTurn
+                ? building.footprint_units[1]
+                : building.footprint_units[0];
+            float footprintHeight = quarterTurn
+                ? building.footprint_units[0]
+                : building.footprint_units[1];
+            int spanColumns = Math.Max(1, (int)Math.Ceiling(
+                footprintWidth / cellWidth - GeometryTolerance));
+            int spanRows = Math.Max(1, (int)Math.Ceiling(
+                footprintHeight / cellHeight - GeometryTolerance));
+            if (anchor.col + spanColumns > grid.cols || anchor.row + spanRows > grid.rows)
+            {
+                error =
+                    $"The {spanColumns}×{spanRows} building footprint extends beyond the planning grid.";
+                return Array.Empty<CityGridCell>();
+            }
+
+            List<CityGridCell> cells = new List<CityGridCell>();
+            for (int row = anchor.row; row < anchor.row + spanRows; row += 1)
+            {
+                for (int col = anchor.col; col < anchor.col + spanColumns; col += 1)
+                {
+                    CityGridCell cell = grid.cells.FirstOrDefault(candidate =>
+                        candidate != null && candidate.row == row && candidate.col == col);
+                    if (cell == null)
+                    {
+                        error = $"Planning grid is missing the cell at row {row}, column {col}.";
+                        return Array.Empty<CityGridCell>();
+                    }
+                    cells.Add(cell);
+                }
+            }
+            return cells.ToArray();
+        }
+
+        private static bool IsQuarterTurn(float rotationDeg)
+        {
+            double radians = rotationDeg * Math.PI / 180d;
+            return Math.Abs(Math.Sin(radians)) > Math.Abs(Math.Cos(radians));
         }
 
         private static bool TryResolveAssignedCell(

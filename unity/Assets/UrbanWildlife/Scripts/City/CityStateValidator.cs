@@ -238,7 +238,6 @@ namespace UrbanWildlife.City
             Dictionary<string, CityGridCell> cellsById = new Dictionary<string, CityGridCell>(
                 StringComparer.Ordinal);
             HashSet<string> coordinates = new HashSet<string>(StringComparer.Ordinal);
-            HashSet<string> occupiedBuildingIds = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> occupiedPatchIds = new HashSet<string>(StringComparer.Ordinal);
             int buildableCellCount = 0;
 
@@ -333,14 +332,15 @@ namespace UrbanWildlife.City
                     patches,
                     buildingIds,
                     patchIds,
-                    occupiedBuildingIds,
                     occupiedPatchIds,
                     errors);
             }
 
             if (expectedDimensions && coordinates.Count != CityPlanningGrid.DefaultCellCount)
             {
-                errors.Add("Planning grid must contain each of the 24 row and column coordinates once.");
+                errors.Add(
+                    $"Planning grid must contain each of the {CityPlanningGrid.DefaultCellCount} " +
+                    "row and column coordinates once.");
             }
             if (grid.max_active_player_buildings < 0 ||
                 grid.max_active_player_buildings > buildableCellCount)
@@ -352,16 +352,54 @@ namespace UrbanWildlife.City
             foreach (CityBuilding building in buildings.Where(item =>
                          item != null && !string.IsNullOrWhiteSpace(item.planning_cell_id)))
             {
-                if (!cellsById.TryGetValue(building.planning_cell_id, out CityGridCell cell))
+                string[] occupiedCellIds = BuildingCellIds(building);
+                if (!cellsById.TryGetValue(building.planning_cell_id, out CityGridCell anchorCell))
                 {
                     errors.Add(
                         $"Building {building.id} references unknown planning cell " +
                         $"{building.planning_cell_id}.");
                 }
-                else if (cell.occupant_id != building.id)
+                else if (anchorCell.occupant_id != building.id)
                 {
                     errors.Add(
-                        $"Building {building.id} and planning cell {cell.id} do not reference each other.");
+                        $"Building {building.id} and planning cell {anchorCell.id} do not reference each other.");
+                }
+                if (occupiedCellIds.Length == 0)
+                {
+                    errors.Add($"Building {building.id} must occupy at least one planning cell.");
+                }
+                if (occupiedCellIds.Distinct(StringComparer.Ordinal).Count() != occupiedCellIds.Length)
+                {
+                    errors.Add($"Building {building.id} repeats a planning cell in its footprint.");
+                }
+                CityGridCell[] expectedFootprint = CityGridResolver.GetBuildingFootprintCells(
+                    grid,
+                    state.bounds,
+                    building,
+                    out string footprintError);
+                if (!string.IsNullOrEmpty(footprintError))
+                {
+                    errors.Add($"Building {building.id} has an invalid grid footprint: {footprintError}");
+                }
+                else if (!new HashSet<string>(
+                             expectedFootprint.Select(cell => cell.id),
+                             StringComparer.Ordinal).SetEquals(occupiedCellIds))
+                {
+                    errors.Add(
+                        $"Building {building.id} occupied cells do not match its size and rotation.");
+                }
+                foreach (string occupiedCellId in occupiedCellIds)
+                {
+                    if (!cellsById.TryGetValue(occupiedCellId, out CityGridCell footprintCell))
+                    {
+                        errors.Add(
+                            $"Building {building.id} references unknown footprint cell {occupiedCellId}.");
+                    }
+                    else if (footprintCell.occupant_id != building.id)
+                    {
+                        errors.Add(
+                            $"Building {building.id} and footprint cell {footprintCell.id} do not reference each other.");
+                    }
                 }
             }
 
@@ -388,7 +426,6 @@ namespace UrbanWildlife.City
             CityGreenPatch[] patches,
             HashSet<string> buildingIds,
             HashSet<string> patchIds,
-            HashSet<string> occupiedBuildingIds,
             HashSet<string> occupiedPatchIds,
             List<string> errors)
         {
@@ -414,14 +451,9 @@ namespace UrbanWildlife.City
                     errors.Add(
                         $"Planning grid cell {cell.id} references unknown building {cell.occupant_id}.");
                 }
-                if (!occupiedBuildingIds.Add(cell.occupant_id))
-                {
-                    errors.Add(
-                        $"Building {cell.occupant_id} occupies more than one planning grid cell.");
-                }
                 CityBuilding building = buildings.FirstOrDefault(item =>
                     item != null && item.id == cell.occupant_id);
-                if (building != null && building.planning_cell_id != cell.id)
+                if (building != null && !BuildingCellIds(building).Contains(cell.id))
                 {
                     errors.Add(
                         $"Planning grid cell {cell.id} and building {building.id} do not reference each other.");
@@ -463,6 +495,23 @@ namespace UrbanWildlife.City
                     }
                 }
             }
+        }
+
+        private static string[] BuildingCellIds(CityBuilding building)
+        {
+            if (building == null)
+            {
+                return Array.Empty<string>();
+            }
+            if (building.planning_cell_ids != null && building.planning_cell_ids.Length > 0)
+            {
+                return building.planning_cell_ids
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .ToArray();
+            }
+            return string.IsNullOrWhiteSpace(building.planning_cell_id)
+                ? Array.Empty<string>()
+                : new[] { building.planning_cell_id };
         }
 
         private static CityLandCover GreenPatchCover(CityGreenPatch patch)

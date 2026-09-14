@@ -17,12 +17,12 @@ namespace UrbanWildlife.Prototype
             };
             CityBuilding[] buildings =
             {
-                Building("apartment-west", CityBuildingType.Apartment, 100, 0.083333f, 0.125f, 60, 0.85f, 0.25f, 8, 0.80f),
-                Building("apartment-court", CityBuildingType.Apartment, 101, 0.416667f, 0.125f, 60, 0.85f, 0.25f, 8, 0.80f),
-                Building("detached-garden", CityBuildingType.DetachedHouse, 110, 0.583333f, 0.875f, 12, 0.35f, 0.15f, 4, 0.45f),
-                Building("market-hall", CityBuildingType.Commercial, 120, 0.75f, 0.125f, 0, 0.05f, 0.90f, 16, 0.70f),
-                Building("corner-shops", CityBuildingType.Commercial, 121, 0.916667f, 0.875f, 0, 0.05f, 0.82f, 12, 0.65f),
-                Building("community-centre", CityBuildingType.CommunityFacility, 130, 0.916667f, 0.375f, 0, 0.05f, 0.72f, 24, 0.50f),
+                Building("apartment-west", CityBuildingType.Apartment, 100, 0.166667f, 0.083333f, 60, 0.85f, 0.25f, 8, 0.80f),
+                Building("apartment-court", CityBuildingType.Apartment, 101, 0.50f, 0.083333f, 60, 0.85f, 0.25f, 8, 0.80f),
+                Building("detached-garden", CityBuildingType.DetachedHouse, 110, 0.277778f, 0.75f, 12, 0.35f, 0.15f, 4, 0.45f),
+                Building("market-hall", CityBuildingType.Commercial, 120, 0.166667f, 0.416667f, 0, 0.05f, 0.90f, 16, 0.70f),
+                Building("corner-shops", CityBuildingType.Commercial, 121, 0.611111f, 0.75f, 0, 0.05f, 0.82f, 12, 0.65f),
+                Building("community-centre", CityBuildingType.CommunityFacility, 130, 0.722222f, 0.416667f, 0, 0.05f, 0.72f, 24, 0.50f),
             };
             CityPlanningGrid planningGrid = CreatePlanningGrid(buildings, bounds);
 
@@ -35,8 +35,8 @@ namespace UrbanWildlife.Prototype
                     route_option = CityRoadRouteOption.Existing,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.04f, 0.53f), (0.16f, 0.51f), (0.29f, 0.53f), (0.43f, 0.50f), (0.57f, 0.53f), (0.73f, 0.50f), (0.87f, 0.52f), (0.96f, 0.54f)),
-                    width_units = 4.2f,
+                    points_norm = Points((0.03f, 0.50f), (0.22f, 0.50f), (0.42f, 0.50f), (0.61f, 0.50f), (0.78f, 0.50f), (0.97f, 0.50f)),
+                    width_units = 2.4f,
                     speed_units_per_second = 7f,
                     traffic_load = 0.46f,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
@@ -49,8 +49,8 @@ namespace UrbanWildlife.Prototype
                     route_option = CityRoadRouteOption.Existing,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.50f, 0.52f), (0.55f, 0.62f), (0.68f, 0.79f), (0.94f, 0.79f)),
-                    width_units = 3.2f,
+                    points_norm = Points((0.50f, 0.50f), (0.50f, 0.67f), (0.50f, 0.83f), (0.94f, 0.83f)),
+                    width_units = 1.8f,
                     speed_units_per_second = 5f,
                     traffic_load = 0.24f,
                     connected_building_ids = new[] { "detached-garden", "corner-shops" },
@@ -66,8 +66,8 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.04f, 0.46f), (0.18f, 0.47f), (0.33f, 0.45f), (0.48f, 0.47f), (0.63f, 0.45f), (0.79f, 0.47f), (0.96f, 0.46f)),
-                    width_units = 1.8f,
+                    points_norm = Points((0.03f, 0.455f), (0.22f, 0.455f), (0.42f, 0.455f), (0.61f, 0.455f), (0.78f, 0.455f), (0.97f, 0.455f)),
+                    width_units = 0.8f,
                     step_free_accessible = true,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
                     connected_link_ids = new[] { "pedestrian-garden-branch" },
@@ -78,8 +78,8 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.48f, 0.47f), (0.52f, 0.67f), (0.63f, 0.82f), (0.91f, 0.84f)),
-                    width_units = 1.5f,
+                    points_norm = Points((0.46f, 0.455f), (0.46f, 0.67f), (0.46f, 0.785f), (0.94f, 0.785f)),
+                    width_units = 0.7f,
                     step_free_accessible = true,
                     connected_building_ids = new[] { "detached-garden", "corner-shops" },
                     connected_link_ids = new[] { "pedestrian-park-spine" },
@@ -98,8 +98,8 @@ namespace UrbanWildlife.Prototype
                     : "pedestrian-park-spine";
                 string roadId = $"road-access-{building.id}";
                 string linkId = $"walk-access-{building.id}";
-                float roadY = roadNetwork == "vehicle-main-street" ? 0.53f : 0.79f;
-                float linkY = linkNetwork == "pedestrian-park-spine" ? 0.46f : 0.84f;
+                float roadY = roadNetwork == "vehicle-main-street" ? 0.50f : 0.83f;
+                float linkY = linkNetwork == "pedestrian-park-spine" ? 0.455f : 0.785f;
                 roads.Add(new CityVehicleRoad
                 {
                     id = roadId,
@@ -110,7 +110,7 @@ namespace UrbanWildlife.Prototype
                     points_norm = Points(
                         (building.position_norm[0], building.position_norm[1]),
                         (building.position_norm[0], roadY)),
-                    width_units = 2.6f,
+                    width_units = 1.2f,
                     speed_units_per_second = 4.5f,
                     traffic_load = building.vehicle_demand * 0.5f,
                     connected_building_ids = new[] { building.id },
@@ -125,7 +125,7 @@ namespace UrbanWildlife.Prototype
                     points_norm = Points(
                         (building.position_norm[0], building.position_norm[1]),
                         (building.position_norm[0], linkY)),
-                    width_units = 1.2f,
+                    width_units = 0.55f,
                     step_free_accessible = true,
                     connected_building_ids = new[] { building.id },
                     connected_link_ids = new[] { linkNetwork },
@@ -206,9 +206,11 @@ namespace UrbanWildlife.Prototype
                 construction_state = CityConstructionState.Existing,
                 position_norm = new[] { x, y },
                 rotation_deg = 0f,
-                footprint_units = type == CityBuildingType.DetachedHouse
-                    ? new[] { 10f, 9f }
-                    : new[] { 9f, community ? 8f : 7f },
+                footprint_units = type == CityBuildingType.Apartment
+                    ? new[] { 20f, 20f }
+                    : type == CityBuildingType.DetachedHouse
+                        ? new[] { 10f, 10f }
+                        : new[] { 20f, 10f },
                 housing_capacity = housing,
                 human_origin_rate = origin,
                 human_destination_weight = destination,
@@ -228,11 +230,11 @@ namespace UrbanWildlife.Prototype
         {
             CityPlanningGrid grid = new CityPlanningGrid
             {
-                cols = 6,
-                rows = 4,
+                cols = CityPlanningGrid.DefaultColumns,
+                rows = CityPlanningGrid.DefaultRows,
                 max_active_player_buildings = 9,
-                cells = Enumerable.Range(0, 4)
-                    .SelectMany(row => Enumerable.Range(0, 6)
+                cells = Enumerable.Range(0, CityPlanningGrid.DefaultRows)
+                    .SelectMany(row => Enumerable.Range(0, CityPlanningGrid.DefaultColumns)
                         .Select(col => CreateGridCell(row, col)))
                     .ToArray(),
             };
@@ -268,8 +270,16 @@ namespace UrbanWildlife.Prototype
                 id = CellId(row, col),
                 row = row,
                 col = col,
-                center_norm = new[] { (col + 0.5f) / 6f, (row + 0.5f) / 4f },
-                size_norm = new[] { 1f / 6f, 1f / 4f },
+                center_norm = new[]
+                {
+                    (col + 0.5f) / CityPlanningGrid.DefaultColumns,
+                    (row + 0.5f) / CityPlanningGrid.DefaultRows,
+                },
+                size_norm = new[]
+                {
+                    1f / CityPlanningGrid.DefaultColumns,
+                    1f / CityPlanningGrid.DefaultRows,
+                },
                 baseline_cover = cover,
                 current_cover = cover,
                 buildable = !fixedFeature,
@@ -283,29 +293,27 @@ namespace UrbanWildlife.Prototype
 
         private static CityLandCover BaselineCover(int row, int col)
         {
-            // Two uneven edge groves frame a readable central planning meadow.
-            // The logical grid remains regular for camera snapping; only the landscape
-            // composition is deliberately asymmetrical.
-            bool westWoodland = (row == 0 && col == 1) ||
-                                (row == 2 && col == 0) ||
-                                (row == 3 && col <= 1);
-            bool eastWoodland = (row == 0 && col == 5) ||
-                                (row == 2 && col >= 4);
+            bool westWoodland = (row <= 2 && col == 0) ||
+                                (row == 4 && col <= 1) ||
+                                (row == 5 && col <= 2);
+            bool eastWoodland = (row == 0 && col >= 7) ||
+                                (row == 1 && col == 8) ||
+                                (row == 2 && col == 8) ||
+                                (row == 4 && col == 8) ||
+                                (row == 5 && col >= 7);
             if (westWoodland || eastWoodland)
             {
                 return CityLandCover.Woodland;
             }
-            if (row == 1 && col == 3)
+            if (row == 3 && col == 2)
             {
                 return CityLandCover.PublicGreen;
             }
-            if (row == 1 && col == 1)
+            if (row == 2 && col == 4)
             {
                 return CityLandCover.CivicPlaza;
             }
-            // The pond sits against the western habitat edge rather than on the
-            // outer board border, leaving a calmer buildable foreground.
-            if (row == 2 && col == 1)
+            if (row == 3 && col == 4)
             {
                 return CityLandCover.Water;
             }

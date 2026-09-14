@@ -83,8 +83,11 @@ namespace UrbanWildlife.Construction
 
             public bool Overlaps(Footprint other)
             {
-                return MinX < other.MaxX && MaxX > other.MinX &&
-                       MinY < other.MaxY && MaxY > other.MinY;
+                const float edgeContactToleranceUnits = 0.001f;
+                return MinX < other.MaxX - edgeContactToleranceUnits &&
+                       MaxX > other.MinX + edgeContactToleranceUnits &&
+                       MinY < other.MaxY - edgeContactToleranceUnits &&
+                       MaxY > other.MinY + edgeContactToleranceUnits;
             }
         }
     }

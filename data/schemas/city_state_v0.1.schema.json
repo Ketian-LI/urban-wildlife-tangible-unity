@@ -174,6 +174,11 @@
         "id": { "type": "string", "minLength": 1 },
         "source_token_id": { "type": "integer", "minimum": -1 },
         "planning_cell_id": { "type": ["string", "null"] },
+        "planning_cell_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
         "type": { "enum": ["Apartment", "DetachedHouse", "Commercial", "CommunityFacility"] },
         "construction_state": { "$ref": "#/$defs/constructionState" },
         "position_norm": { "$ref": "#/$defs/point" },

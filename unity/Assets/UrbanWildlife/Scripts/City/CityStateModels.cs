@@ -115,6 +115,7 @@ namespace UrbanWildlife.City
         public string id;
         public int source_token_id = -1;
         public string planning_cell_id;
+        public string[] planning_cell_ids = Array.Empty<string>();
         public CityBuildingType type;
         public CityConstructionState construction_state;
         public float[] position_norm;

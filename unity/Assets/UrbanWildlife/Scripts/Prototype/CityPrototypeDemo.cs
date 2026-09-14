@@ -55,23 +55,19 @@ namespace UrbanWildlife.Prototype
         };
         private static readonly Vector2[] WoodlandTreeOffsets =
         {
-            new Vector2(-0.29f, -0.27f),
-            new Vector2(0.00f, -0.28f),
-            new Vector2(0.29f, -0.20f),
-            new Vector2(-0.23f, 0.02f),
-            new Vector2(0.16f, 0.04f),
-            new Vector2(-0.07f, 0.29f),
-            new Vector2(0.30f, 0.27f),
+            new Vector2(-0.27f, -0.25f),
+            new Vector2(0.24f, -0.22f),
+            new Vector2(-0.22f, 0.18f),
+            new Vector2(0.27f, 0.23f),
+            new Vector2(0.02f, 0.00f),
         };
         private static readonly float[] WoodlandTreeScales =
         {
-            0.52f,
-            0.48f,
-            0.50f,
-            0.47f,
-            0.53f,
-            0.49f,
             0.46f,
+            0.43f,
+            0.45f,
+            0.42f,
+            0.47f,
         };
 
         [SerializeField]
@@ -393,15 +389,6 @@ namespace UrbanWildlife.Prototype
                     -40,
                     true);
                 BuildNaturalCellFeature(cellObject.transform, cell);
-                float[] labelPosition =
-                {
-                    visualPolygon[3][0] + cell.size_norm[0] * 0.12f,
-                    visualPolygon[3][1] - cell.size_norm[1] * 0.10f,
-                };
-                CreateLabel(cellObject.transform, cell.id, ToWorld(labelPosition, 0.031f), 0.027f);
-                TextMesh label = cellObject.GetComponentInChildren<TextMesh>();
-                label.color = new Color(0.28f, 0.39f, 0.36f, 0.44f);
-                label.GetComponent<Renderer>().sortingOrder = -22;
                 GeneratedPlanningCellCount += 1;
                 if (cell.buildable && !cell.fixed_feature &&
                     string.IsNullOrWhiteSpace(cell.occupant_id))
@@ -410,7 +397,7 @@ namespace UrbanWildlife.Prototype
                 }
             }
 
-            Color boundaryColour = new Color(0.38f, 0.50f, 0.45f, 0.16f);
+            Color boundaryColour = new Color(0.34f, 0.48f, 0.52f, 0.11f);
             for (int col = 0; col <= grid.cols; col += 1)
             {
                 float[][] points = Enumerable.Range(0, grid.rows + 1)
@@ -418,7 +405,7 @@ namespace UrbanWildlife.Prototype
                     .ToArray();
                 CreateLine(boundariesRoot.transform, "Column " + col,
                     points,
-                    0.007f, boundaryColour, 0.025f, -30, true);
+                    0.004f, boundaryColour, 0.025f, -30, true);
             }
             for (int row = 0; row <= grid.rows; row += 1)
             {
@@ -427,7 +414,7 @@ namespace UrbanWildlife.Prototype
                     .ToArray();
                 CreateLine(boundariesRoot.transform, "Row " + row,
                     points,
-                    0.007f, boundaryColour, 0.025f, -30, true);
+                    0.004f, boundaryColour, 0.025f, -30, true);
             }
         }
 
@@ -444,17 +431,7 @@ namespace UrbanWildlife.Prototype
 
         private static float[] VisualGridNode(int row, int col, CityPlanningGrid grid)
         {
-            float x = (float)col / grid.cols;
-            float y = (float)row / grid.rows;
-            if (col > 0 && col < grid.cols)
-            {
-                x += HashSigned(row, col, 17) * 0.022f;
-            }
-            if (row > 0 && row < grid.rows)
-            {
-                y += HashSigned(row, col, 43) * 0.026f;
-            }
-            return new[] { Mathf.Clamp01(x), Mathf.Clamp01(y) };
+            return new[] { (float)col / grid.cols, (float)row / grid.rows };
         }
 
         private static float HashSigned(int row, int col, int salt)
@@ -597,23 +574,23 @@ namespace UrbanWildlife.Prototype
             switch (cover)
             {
                 case CityLandCover.Woodland:
-                    return new Color(0.49f, 0.68f, 0.38f, 0.18f);
+                    return new Color(0.49f, 0.68f, 0.38f, 0.09f);
                 case CityLandCover.PublicGreen:
-                    return new Color(0.59f, 0.76f, 0.43f, 0.15f);
+                    return new Color(0.59f, 0.76f, 0.43f, 0.08f);
                 case CityLandCover.CivicPlaza:
-                    return new Color(0.80f, 0.65f, 0.40f, 0.12f);
+                    return new Color(0.80f, 0.65f, 0.40f, 0.06f);
                 case CityLandCover.Water:
-                    return new Color(0.30f, 0.68f, 0.80f, 0.12f);
+                    return new Color(0.30f, 0.68f, 0.80f, 0.06f);
                 case CityLandCover.Building:
-                    return new Color(0.74f, 0.69f, 0.57f, 0.12f);
+                    return new Color(0.74f, 0.69f, 0.57f, 0.035f);
                 case CityLandCover.ShrubGarden:
-                    return new Color(0.47f, 0.69f, 0.36f, 0.17f);
+                    return new Color(0.47f, 0.69f, 0.36f, 0.09f);
                 case CityLandCover.Disturbed:
                     return new Color(0.72f, 0.53f, 0.35f, 0.16f);
                 case CityLandCover.Recovering:
-                    return new Color(0.56f, 0.72f, 0.39f, 0.15f);
+                    return new Color(0.56f, 0.72f, 0.39f, 0.08f);
                 default:
-                    return new Color(0.75f, 0.81f, 0.55f, 0.12f);
+                    return new Color(0.75f, 0.81f, 0.55f, 0.025f);
             }
         }
 
@@ -745,7 +722,7 @@ namespace UrbanWildlife.Prototype
                         CityResidentialLotAResourcePath,
                         width,
                         depth,
-                        1.24f))
+                        0.90f))
                 {
                     continue;
                 }
@@ -758,7 +735,7 @@ namespace UrbanWildlife.Prototype
                             : CityResidentialLotCResourcePath,
                         width,
                         depth,
-                        building.id == "apartment-court" ? 1.22f : 1.34f))
+                        0.88f))
                 {
                     continue;
                 }
@@ -771,7 +748,7 @@ namespace UrbanWildlife.Prototype
                             : CityCornerShopsResourcePath,
                         width,
                         depth,
-                        building.id == "market-hall" ? 1.32f : 1.34f))
+                        0.90f))
                 {
                     continue;
                 }
@@ -782,7 +759,7 @@ namespace UrbanWildlife.Prototype
                         CityCommunityCentreResourcePath,
                         width,
                         depth,
-                        1.36f))
+                        0.92f))
                 {
                     continue;
                 }
@@ -913,6 +890,8 @@ namespace UrbanWildlife.Prototype
             if (planningWorkflow.Phase == CityPlanningWorkflowPhase.Preview &&
                 planningWorkflow.ConstructionPreview != null)
             {
+                CityPlanningGrid previewGrid = CityGridResolver.DeepClone(
+                    planningWorkflow.CurrentState.planning_grid);
                 foreach (CityTokenChange change in planningWorkflow.ConstructionPreview.changes
                              .Where(item => item.change_kind == CityTokenChangeKind.New &&
                                             !item.blocks_confirmation))
@@ -923,6 +902,12 @@ namespace UrbanWildlife.Prototype
                             change.scanned_state,
                             city.bounds,
                             CityConstructionState.Proposed);
+                        CityGridResolver.TryOccupyWithGreenPatch(
+                            previewGrid,
+                            city.bounds,
+                            patch,
+                            city.revision + 1,
+                            out _);
                         DrawPlanningPatch(patch, "SCAN PREVIEW");
                     }
                     else
@@ -930,6 +915,12 @@ namespace UrbanWildlife.Prototype
                         CityBuilding building = CityConstructionFactory.CreateBuilding(
                             change.scanned_state,
                             CityConstructionState.Proposed);
+                        CityGridResolver.TryOccupyWithBuilding(
+                            previewGrid,
+                            city.bounds,
+                            building,
+                            city.revision + 1,
+                            out _);
                         DrawPlanningFootprint(building, "SCAN PREVIEW");
                     }
                 }

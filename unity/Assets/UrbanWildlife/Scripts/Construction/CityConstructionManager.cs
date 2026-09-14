@@ -99,7 +99,7 @@ namespace UrbanWildlife.Construction
                         CityConstructionState.Proposed);
                     string issue = string.Empty;
                     CityPlanningGrid candidateGrid = CityGridResolver.DeepClone(previewGrid);
-                    string overwrittenPatchId = null;
+                    string[] overwrittenPatchIds = Array.Empty<string>();
                     if (candidateGrid != null)
                     {
                         if (activePlayerBuildings + proposedBuildings.Count >=
@@ -109,29 +109,30 @@ namespace UrbanWildlife.Construction
                                 $"The city allows at most {candidateGrid.max_active_player_buildings} " +
                                 "active player buildings.";
                         }
-                        else if (!CityGridResolver.TryResolveNearestCell(
-                                     candidateGrid,
-                                     CurrentState.bounds,
-                                     new[]
-                                     {
-                                         change.scanned_state.x_norm,
-                                         change.scanned_state.y_norm,
-                                     },
-                                     out CityGridCell targetCell))
-                        {
-                            issue = "Building Token is not within 5 cm of a planning cell centre.";
-                        }
                         else
                         {
-                            overwrittenPatchId = targetCell.habitat_patch_id;
-                            if (!CityGridResolver.TryOccupyWithBuilding(
+                            CityGridCell[] footprintCells =
+                                CityGridResolver.GetBuildingFootprintCells(
                                     candidateGrid,
                                     CurrentState.bounds,
                                     building,
-                                    CurrentState.revision + 1,
-                                    out issue))
+                                    out issue);
+                            if (string.IsNullOrEmpty(issue))
                             {
-                                // Resolver supplies the placement issue.
+                                overwrittenPatchIds = footprintCells
+                                    .Select(cell => cell.habitat_patch_id)
+                                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                                    .Distinct(StringComparer.Ordinal)
+                                    .ToArray();
+                                if (!CityGridResolver.TryOccupyWithBuilding(
+                                        candidateGrid,
+                                        CurrentState.bounds,
+                                        building,
+                                        CurrentState.revision + 1,
+                                        out issue))
+                                {
+                                    // Resolver supplies the placement issue.
+                                }
                             }
                         }
                     }
@@ -148,7 +149,7 @@ namespace UrbanWildlife.Construction
                     {
                         previewGrid = candidateGrid;
                         proposedBuildings.Add(building);
-                        if (!string.IsNullOrWhiteSpace(overwrittenPatchId))
+                        foreach (string overwrittenPatchId in overwrittenPatchIds)
                         {
                             removedPatchIds.Add(overwrittenPatchId);
                         }

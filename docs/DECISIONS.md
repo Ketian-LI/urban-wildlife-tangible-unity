@@ -104,6 +104,7 @@
 | D096 | 城市轨迹以语义足迹而非连续色带呈现：人类鞋印、车辆双轮迹、鸽子鸟爪、松鼠小爪、狐狸大爪、刺猬点印；屏幕只滚动保留最新900个标记，完整数据保留在Observation与日志中 | 已实现People/Wildlife/All切换、City Feed与阶段快照原型 |
 | D097 | 正式城市扫描使用独立`DICT_4X4_1000`字典：四角为0–3，五类实体Token为100–142；Python只在稳定、已校准且无未知/重复/越界ID时原子更新收件箱，Unity显式读取后二次验证并只进入Preview | 软件桥已实现；实物尺寸、相机高度与曝光待到货后验收 |
 | D098 | 正式城市地图采用6 × 4、共24个15 × 15 cm逻辑单元；基线含6个既有建筑、8格Open Land、7格Woodland（5格核心＋2格碎片）、1格Public Green、1格Civic Plaza和1格Water，Open Land与Woodland共15个规划候选。11枚建筑Token作为备选库存、3枚Green Intervention，玩家建筑同时上限9个。摄像头保留连续坐标，由Unity以5 cm半径吸附到单元中心，同格位置抖动不算Moved。Woodland建设保留`was_woodland`，拆除后先变Disturbed；Water、Civic Plaza和Public Green固定，动物初始优先使用Woodland | 已实现首版并通过网格、建设事务和动物跨障碍烟雾测试；四邻接寻路与单元容量待下一阶段，替代D083的位置移动阈值 |
+| D099 | 参考城市建造游戏的“隐性细网格＋小组团建筑＋道路连接”方法，将正式地图改为9 × 6、共54个10 × 10 cm单元；Detached House占1 × 1，Commercial与Community Facility占2 × 1，Apartment占2 × 2，90°旋转交换跨度。格线常态弱化且不显示坐标，Token格作为占地锚点，多格确认和拆除均为整体事务 | 已实现并通过54格视觉、多格覆盖、旋转占地、林地替换、整体拆除和完整规划流程烟雾测试；替代D098的网格尺寸与单格建筑规则 |
 
 ## 待确定顺序
 

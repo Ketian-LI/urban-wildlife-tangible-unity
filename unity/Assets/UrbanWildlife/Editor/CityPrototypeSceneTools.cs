@@ -89,8 +89,8 @@ namespace UrbanWildlife.EditorTools
                                     Math.Abs(camera.rect.x) < 0.001f &&
                                     Math.Abs(camera.rect.width - 0.77f) < 0.001f;
             if (prototype == null || prototype.GeneratedBuildingCount != 6 ||
-                prototype.GeneratedPlanningCellCount != 24 ||
-                prototype.AvailablePlanningCellCount != 15 ||
+                prototype.GeneratedPlanningCellCount != 54 ||
+                prototype.AvailablePlanningCellCount != 36 ||
                 prototype.GeneratedVehicleRoadCount != 8 ||
                 prototype.GeneratedPedestrianLinkCount != 8 ||
                 prototype.GeneratedAmenityCount != 3 ||
@@ -155,7 +155,7 @@ namespace UrbanWildlife.EditorTools
             VerifyGridConstructionRules();
             Debug.Log(
                 "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True buildings=6 vehicle_roads=8 " +
-                "planning_grid=6x4 planning_cells=24 available_cells=15 cell_bound_land_cover=True " +
+                "planning_grid=9x6 planning_cells=54 available_cells=36 multi_cell_buildings=True hidden_grid=True " +
                 "pedestrian_links=8 amenities=3 food_sources=True waste_pressure=True " +
                 "wildlife_agents=15 species=4 utility_targets=True " +
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
@@ -239,14 +239,14 @@ namespace UrbanWildlife.EditorTools
                 "UrbanWildlife/Fonts/Nunito-Regular");
             Font boldFont = Resources.Load<Font>(
                 "UrbanWildlife/Fonts/Nunito-Bold");
-            if (grid.cols != 6 || grid.rows != 4 || cells.childCount != 24 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.OpenLand) != 8 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland) != 7 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.Building) != 6 ||
+            if (grid.cols != 9 || grid.rows != 6 || cells.childCount != 54 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.OpenLand) != 21 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland) != 15 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.Building) != 15 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.PublicGreen) != 1 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.CivicPlaza) != 1 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 1 ||
-                boundaries.GetComponentsInChildren<LineRenderer>().Length != 12 ||
+                boundaries.GetComponentsInChildren<LineRenderer>().Length != 17 ||
                 underlayRenderer?.sprite == null ||
                 underlayRenderer.sprite.name != "city-board-organic-underlay-v01" ||
                 underlayRenderer.sortingOrder != -50 ||
@@ -254,22 +254,22 @@ namespace UrbanWildlife.EditorTools
                 prototype.GetComponentsInChildren<Transform>().Any(item => item.name == "East canal"))
             {
                 throw new InvalidOperationException(
-                    "City planning grid must render its organic terrain underlay, 24 cells " +
-                    "(8 open, 7 woodland, 6 building, 3 fixed public features), " +
-                    "12 grid lines and no east canal.");
+                    "City planning grid must render its organic terrain underlay, 54 cells " +
+                    "(21 open, 15 woodland, 15 building, 3 fixed public features), " +
+                    "17 faint grid lines and no east canal.");
             }
 
             LineRenderer[] boundaryLines = boundaries.GetComponentsInChildren<LineRenderer>();
-            bool naturalBoundaryGeometry = boundaryLines
+            bool regularBoundaryGeometry = boundaryLines
                 .Where(line => line.name.StartsWith("Column", StringComparison.Ordinal))
                 .All(line => line.positionCount == grid.rows + 1) &&
                 boundaryLines
                     .Where(line => line.name.StartsWith("Row", StringComparison.Ordinal))
                     .All(line => line.positionCount == grid.cols + 1);
-            if (!naturalBoundaryGeometry)
+            if (!regularBoundaryGeometry)
             {
                 throw new InvalidOperationException(
-                    "Planning boundaries must follow shared multi-point landscape edges, not isolated straight cell lines.");
+                    "Planning boundaries must form one shared, camera-readable city grid.");
             }
 
             foreach (CityGridCell cell in grid.cells)
@@ -278,9 +278,10 @@ namespace UrbanWildlife.EditorTools
                 Transform cover = cellObject?.Find("Land cover " + cell.current_cover);
                 MeshFilter mesh = cover == null ? null : cover.GetComponent<MeshFilter>();
                 if (mesh?.sharedMesh == null || mesh.sharedMesh.vertexCount != 4 ||
-                    cellObject.GetComponentInChildren<TextMesh>()?.text != cell.id)
+                    cellObject.GetComponentInChildren<TextMesh>() != null)
                 {
-                    throw new InvalidOperationException($"Planning cell {cell.id} is missing its land cover or coordinate label.");
+                    throw new InvalidOperationException(
+                        $"Planning cell {cell.id} must keep its land cover while hiding developer coordinate labels.");
                 }
 
                 if (cell.current_cover == CityLandCover.Woodland)
@@ -297,13 +298,13 @@ namespace UrbanWildlife.EditorTools
                         "tree-citybuilder-two-lobe-v02",
                         "tree-citybuilder-tapered-v02",
                     };
-                    if (trees.Length != 7 ||
+                    if (trees.Length != 5 ||
                         trees.Any(tree => tree.sprite == null ||
                                           !expectedTreeSprites.Contains(tree.sprite.name)) ||
                         trees.Select(tree => tree.sprite.name).Distinct().Count() != 5)
                     {
                         throw new InvalidOperationException(
-                            $"Woodland cell {cell.id} must contain seven spaced trees using all five approved silhouettes.");
+                            $"Woodland cell {cell.id} must contain five spaced trees using all five approved silhouettes.");
                     }
                 }
                 else if (cell.current_cover == CityLandCover.PublicGreen)
@@ -341,7 +342,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException($"Expected {expectedGroves} cell-aligned woodland groves, found {actualGroves}.");
             }
-            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=6x4 cells=24 available=15 woodland_groves={actualGroves} dynamic_trees=7x5-shapes organic_underlay=True transparent_land_cover=True natural_boundaries=True detailed_pond_plaza=True static_nunito=Regular/Bold public_green=True no_east_canal=True");
+            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=9x6 cells=54 available=36 woodland_groves={actualGroves} dynamic_trees=5-per-cell/5-shapes organic_underlay=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False detailed_pond_plaza=True static_nunito=Regular/Bold public_green=True no_east_canal=True");
         }
 
         private static void VerifyResponsiveCameraFit()
@@ -413,7 +414,12 @@ namespace UrbanWildlife.EditorTools
                 workflow.CurrentState.buildings.Count(item =>
                     item.construction_state == CityConstructionState.Proposed) != 1)
             {
-                throw new InvalidOperationException($"City planning Preview confirmation failed: {error}");
+                string changeSummary = workflow.ConstructionPreview == null
+                    ? "no preview"
+                    : string.Join(" | ", workflow.ConstructionPreview.changes.Select(change =>
+                        $"{change.token_id}:{change.change_kind}:blocked={change.blocks_confirmation}:{change.message}"));
+                throw new InvalidOperationException(
+                    $"City planning Preview confirmation failed: {error}. Changes: {changeSummary}");
             }
             if (!workflow.SelectRecommendedLowImpactRoutes(out error) ||
                 !workflow.NetworkPreview.CanConfirm ||
@@ -475,9 +481,9 @@ namespace UrbanWildlife.EditorTools
             }
             woodlandConstruction.CancelPreview();
 
-            CityGridCell woodland = woodlandCity.planning_grid.cells.First(cell =>
+            CityGridCell woodland = woodlandCity.planning_grid.cells.Single(cell =>
+                cell.row == 0 && cell.col == 7 &&
                 cell.current_cover == CityLandCover.Woodland);
-            string replacedPatchId = woodland.habitat_patch_id;
             CityTokenState woodlandBuildingToken = new CityTokenState
             {
                 id = 102,
@@ -487,6 +493,24 @@ namespace UrbanWildlife.EditorTools
                 rotation_deg = 0f,
                 confidence = 1f,
             };
+            CityBuilding proposedWoodlandBuilding = CityConstructionFactory.CreateBuilding(
+                woodlandBuildingToken,
+                CityConstructionState.Proposed);
+            CityGridCell[] originalFootprintCells = CityGridResolver.GetBuildingFootprintCells(
+                woodlandCity.planning_grid,
+                woodlandCity.bounds,
+                proposedWoodlandBuilding,
+                out string footprintError);
+            string[] replacedPatchIds = originalFootprintCells
+                .Select(cell => cell.habitat_patch_id)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToArray();
+            if (!string.IsNullOrEmpty(footprintError) || originalFootprintCells.Length != 4 ||
+                replacedPatchIds.Length < 2)
+            {
+                throw new InvalidOperationException(
+                    $"The 2x2 woodland test footprint is invalid: {footprintError}");
+            }
             CityConstructionPreview woodlandPreview = woodlandConstruction.ScanCity(
                 ScanPacket(
                     "grid-woodland-build",
@@ -502,16 +526,19 @@ namespace UrbanWildlife.EditorTools
             CityState builtCity = woodlandConstruction.CurrentState;
             CityBuilding woodlandBuilding = builtCity.buildings.Single(building =>
                 building.source_token_id == woodlandBuildingToken.id);
-            CityGridCell builtCell = CityGridResolver.GetCell(
-                builtCity.planning_grid,
-                woodland.id);
+            CityGridCell[] builtCells = woodlandBuilding.planning_cell_ids
+                .Select(id => CityGridResolver.GetCell(builtCity.planning_grid, id))
+                .ToArray();
             if (woodlandBuilding.planning_cell_id != woodland.id ||
-                builtCell.current_cover != CityLandCover.Building ||
-                !builtCell.was_woodland ||
-                builtCity.green_patches.Any(patch => patch.id == replacedPatchId))
+                woodlandBuilding.planning_cell_ids.Length != 4 ||
+                builtCells.Any(cell => cell == null ||
+                                       cell.current_cover != CityLandCover.Building ||
+                                       cell.occupant_id != woodlandBuilding.id) ||
+                !builtCells.Any(cell => cell.was_woodland) ||
+                builtCity.green_patches.Any(patch => replacedPatchIds.Contains(patch.id)))
             {
                 throw new InvalidOperationException(
-                    "Building on woodland must bind to the cell, retain woodland history and remove its habitat patch.");
+                    "A 2x2 building must occupy four cells, retain woodland history and remove every overwritten habitat patch.");
             }
 
             woodlandBuilding.construction_state = CityConstructionState.DemolitionProposed;
@@ -530,16 +557,19 @@ namespace UrbanWildlife.EditorTools
             {
                 demolition.AdvanceTimeBlock();
             }
-            CityGridCell releasedCell = CityGridResolver.GetCell(
-                builtCity.planning_grid,
-                woodland.id);
+            CityGridCell[] releasedCells = woodlandBuilding.planning_cell_ids
+                .Select(id => CityGridResolver.GetCell(builtCity.planning_grid, id))
+                .ToArray();
             if (builtCity.buildings.Any(building => building.id == woodlandBuilding.id) ||
-                releasedCell.current_cover != CityLandCover.Disturbed ||
-                !releasedCell.was_woodland ||
-                !string.IsNullOrWhiteSpace(releasedCell.occupant_id))
+                releasedCells.Any(cell => cell == null ||
+                                           !string.IsNullOrWhiteSpace(cell.occupant_id)) ||
+                releasedCells.Where(cell => cell.was_woodland)
+                    .Any(cell => cell.current_cover != CityLandCover.Disturbed) ||
+                releasedCells.Where(cell => !cell.was_woodland)
+                    .Any(cell => cell.current_cover != CityLandCover.OpenLand))
             {
                 throw new InvalidOperationException(
-                    "Demolishing a former woodland cell must leave persistent Disturbed land.");
+                    "Demolishing a multi-cell building must release its full footprint and preserve disturbed woodland history.");
             }
 
             CityState fixedCity = CityPrototypeStateFactory.Create();
@@ -569,6 +599,35 @@ namespace UrbanWildlife.EditorTools
                     "A fixed water cell must reject building construction.");
             }
 
+            CityState rotationCity = CityPrototypeStateFactory.Create();
+            CityPlanningGrid rotationGrid = CityGridResolver.DeepClone(rotationCity.planning_grid);
+            CityGridCell rotationAnchor = rotationGrid.cells.Single(cell =>
+                cell.row == 3 && cell.col == 7);
+            CityBuilding rotatedCommunity = CityConstructionFactory.CreateBuilding(
+                TokenAt(131, CityPhysicalTokenType.CommunityFacility, rotationAnchor),
+                CityConstructionState.Proposed);
+            rotatedCommunity.rotation_deg = 90f;
+            if (!CityGridResolver.TryOccupyWithBuilding(
+                    rotationGrid,
+                    rotationCity.bounds,
+                    rotatedCommunity,
+                    rotationCity.revision + 1,
+                    out string rotationError) ||
+                rotatedCommunity.planning_cell_ids.Length != 2)
+            {
+                throw new InvalidOperationException(
+                    $"A rotated 2x1 building did not occupy a 1x2 footprint: {rotationError}");
+            }
+            CityGridCell[] rotatedCells = rotatedCommunity.planning_cell_ids
+                .Select(id => CityGridResolver.GetCell(rotationGrid, id))
+                .ToArray();
+            if (rotatedCells.Select(cell => cell.col).Distinct().Count() != 1 ||
+                rotatedCells.Select(cell => cell.row).Distinct().Count() != 2)
+            {
+                throw new InvalidOperationException(
+                    "A 90-degree building rotation must swap its grid width and height.");
+            }
+
             CityState capCity = CityPrototypeStateFactory.Create();
             CityTokenState[] capBaseline = CityPlanningDemoScanFactory.ConfirmedTokensFrom(capCity);
             CityGridCell[] openCells = capCity.planning_grid.cells
@@ -577,9 +636,9 @@ namespace UrbanWildlife.EditorTools
                 .ToArray();
             CityTokenState[] threeAdditions =
             {
-                TokenAt(102, CityPhysicalTokenType.Apartment, openCells[0]),
-                TokenAt(111, CityPhysicalTokenType.DetachedHouse, openCells[2]),
-                TokenAt(131, CityPhysicalTokenType.CommunityFacility, openCells[7]),
+                TokenAt(111, CityPhysicalTokenType.DetachedHouse, openCells[0]),
+                TokenAt(112, CityPhysicalTokenType.DetachedHouse, openCells[2]),
+                TokenAt(113, CityPhysicalTokenType.DetachedHouse, openCells[7]),
             };
             CityConstructionManager capConstruction =
                 new CityConstructionManager(capCity, capBaseline);
@@ -595,8 +654,8 @@ namespace UrbanWildlife.EditorTools
                     $"The city could not reach its nine-building cap: {capError}");
             }
             CityTokenState tenth = TokenAt(
-                112,
-                CityPhysicalTokenType.DetachedHouse,
+                102,
+                CityPhysicalTokenType.Apartment,
                 openCells[1]);
             CityConstructionPreview overCapPreview = capConstruction.ScanCity(
                 ScanPacket(
@@ -610,8 +669,8 @@ namespace UrbanWildlife.EditorTools
 
             Debug.Log(
                 "UNITY_CITY_GRID_RULES_SMOKE_OK snap_radius_cm=5 same_cell_jitter=Unchanged " +
-                "woodland_build=Building woodland_patch_removed=True " +
-                "demolition_cover=Disturbed fixed_water_rejected=True active_building_cap=9");
+                "footprints=1x1/2x1/2x2 woodland_build=Building woodland_patches_removed=True " +
+                "multi_cell_demolition=Released fixed_water_rejected=True active_building_cap=9");
         }
 
         private static CityTokenScanPacket ScanPacket(string id, CityTokenState[] tokens)

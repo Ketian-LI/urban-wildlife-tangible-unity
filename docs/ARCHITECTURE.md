@@ -24,13 +24,15 @@
 
 `CityStateValidator` 在状态进入后续模拟前检查 schema、唯一 ID、归一化坐标、网络几何、建筑引用与数值范围，并要求至少一块 GreenPatch 保留 Natural Food。迁移期间，`LegacyParkCityAdapter` 只在旧 S001 约束检查旁路生成兼容 CityState；旧 Human/Animal 系统继续读取原 P0 数据，不会被未完成的城市功能打断。
 
-### 6 × 4 城市规划网格
+### 9 × 6 城市建设网格
 
-正式城市地图在 90 × 60 cm 板面上使用 6 列 × 4 行、共 24 个逻辑单元，每格对应 15 × 15 cm。界面仍显示连续的柔和城市地图，不绘制醒目的棋盘线；Plan 与 Preview 阶段只用轻微描边、悬停和状态色提示单元边界。摄像头仍输出连续归一化坐标，Unity 才把 Token 中心吸附到最近单元中心；默认吸附半径为 5 cm，一格只允许一个占用对象，水体、广场或公共绿地等固定单元拒绝建设。
+正式城市地图在 90 × 60 cm 板面上使用 9 列 × 6 行、共 54 个逻辑单元，每格对应 10 × 10 cm。界面以连续的柔和城市底图为主，格线只作很淡的对齐提示且不显示开发者坐标；Plan 与 Preview 再用占地色显示即将改变的单元。摄像头继续输出归一化连续坐标，Unity 将 Token 吸附到最近单元中心，默认吸附半径为 5 cm。水体、广场和公共绿地等固定单元拒绝建设。
 
-初始地图基线由 6 个既有建筑单元、7 个 Woodland 单元（5格相邻核心林地＋2格碎片林地）、1 个 Water 单元、1 个 Civic Plaza 单元、1 个 Public Green 单元和 8 个 Open Land 单元组成；Open Land 与 Woodland 合计 15 个规划候选。玩家有 11 枚建筑 Token 作为备选库存和 3 枚 Green Intervention，但玩家建筑同时上限为 9 个，每个规划周期仍受变更预算约束，避免把 24 格一次填满。当前地面动物会对整段移动轨迹检查 Water 与 Building，避免大步穿越障碍；上下左右四邻接寻路与单元容量是下一阶段的精细化规则。
+建筑使用真实的多格占地：Detached House 为 1 × 1，Commercial 与 Community Facility 为 2 × 1，Apartment 为 2 × 2；旋转 90° 会交换横纵跨度。Token 所在格是建筑锚点，确认前一次检查完整矩形占地，任一格越界、固定或已有建筑都会阻止建设。确认后 `planning_cell_ids` 保存全部占用格，建筑视觉位于这些格的几何中心；拆除会整体释放，而不是只清除锚点。
 
-`CityPlanningGrid` 与 `CityGridCell` 保存行列、归一化中心与尺寸、基线/当前土地覆盖、建设许可、固定状态、建筑或栖息地引用以及最后变更 revision。建筑放入 Woodland 时，单元切换为 Building 并永久保留 `was_woodland = true`；建筑拆除后先进入 Disturbed，而不是立即恢复林地，后续 Green Intervention 才能推进 Recovering。该状态随 `CityState` revision 跨周期保留。松鼠、狐狸与刺猬初始优先从 Woodland 生成；鸽子可从 Public Green、Civic Plaza 与 Open Land 起飞或落脚，也可飞越障碍。地面物种不会穿越水体或建筑；相邻栖息地容量尚未接入。
+初始地图包含 6 栋既有建筑，共占 15 格；另有 15 格 Woodland、1 格 Water、1 格 Civic Plaza、1 格 Public Green 与 21 格 Open Land。扣除固定设施和既有建筑后还有 36 个可规划单元。玩家有 11 枚建筑 Token 和 3 枚 Green Intervention，玩家建筑同时上限仍为 9 个，每周期也继续受变更预算约束。当前地面动物会检查 Water 与 Building，避免跨越障碍；上下左右四邻接继续作为通行和栖息地连接基础。
+
+`CityPlanningGrid` 与 `CityGridCell` 保存行列、归一化中心与尺寸、基线/当前土地覆盖、建设许可、固定状态、建筑或栖息地引用以及最后变更 revision。建筑覆盖 Woodland 时，涉及单元切换为 Building 并永久保留 `was_woodland = true`；建筑拆除后这些单元进入 Disturbed，而不是立即恢复林地，后续 Green Intervention 才能推进 Recovering。该状态随 `CityState` revision 跨周期保留。松鼠、狐狸与刺猬初始优先从 Woodland 生成；鸽子可从 Public Green、Civic Plaza 与 Open Land 起飞或落脚，也可飞越障碍。
 
 ### 城市 Token 扫描与建设事务
 

@@ -17,7 +17,7 @@
 
 ## 打开和验证
 
-如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为可滚动的固定城市信息栏，不发生遮挡。地图使用6 × 4、共24个逻辑规划单元；90 × 60 cm实体板上每格对应15 × 15 cm，Unity以5 cm半径把连续Token坐标吸附到最近单元中心，同格内的位置抖动不会算作Moved。视觉端生成 `data/raw/city-token-scans/latest_city_scan.json` 后，点击 **LOAD LATEST CAMERA SCAN** 即可把稳定相机帧送入Preview；文件不存在、时间戳过旧或内容无效时保持当前城市不变。点击 **SCAN CITY · ELECTRONIC TEST** 仍可依次检查Preview、三种道路候选、DP提交、Pause/1x/2x与跨Time Block施工；电子夹具只是实体板到货前的替代输入。Preview与施工中只显示青色占地/线路提示，第二个施工时段完成后才生成正式城市对象。地图会滚动保留最多900个人类鞋印、车辆双轮迹、鸟爪、松鼠小爪、狐狸大爪和刺猬短点印；右侧可切换People/Wildlife/All，并查看最新City Feed与阶段Balance变化。场景基线包含6栋既有建筑、7格初始林地（5格核心＋2格碎片）、1格水体、1格广场、1格公共绿地与8格开放地，Open Land与Woodland共15个规划候选；11枚建筑Token与3枚Green Intervention作为备选库存，玩家建筑同时上限为9个。Drive Trip才生成车辆。
+如需检查新版框架，打开 `Assets/Scenes/City_Prototype.unity` 后点击Play。左侧77%为独立地图视口，右侧23%为可滚动的固定城市信息栏，不发生遮挡。地图使用9 × 6、共54个逻辑规划单元；90 × 60 cm实体板上每格对应10 × 10 cm，Unity以5 cm半径把连续Token坐标吸附到最近单元中心，同格内的位置抖动不会算作Moved。Detached House占1 × 1格，Commercial与Community Facility占2 × 1格，Apartment占2 × 2格，90°旋转会交换横纵跨度。视觉端生成 `data/raw/city-token-scans/latest_city_scan.json` 后，点击 **LOAD LATEST CAMERA SCAN** 即可把稳定相机帧送入Preview；文件不存在、时间戳过旧或内容无效时保持当前城市不变。点击 **SCAN CITY · ELECTRONIC TEST** 仍可依次检查Preview、三种道路候选、DP提交、Pause/1x/2x与跨Time Block施工；电子夹具只是实体板到货前的替代输入。Preview与施工中只显示青色占地/线路提示，第二个施工时段完成后才生成正式城市对象。地图会滚动保留最多900个人类鞋印、车辆双轮迹、鸟爪、松鼠小爪、狐狸大爪和刺猬短点印；右侧可切换People/Wildlife/All，并查看最新City Feed与阶段Balance变化。场景基线包含6栋既有建筑（共占15格）、15格初始林地、1格水体、1格广场、1格公共绿地与21格开放地；扣除固定设施和既有建筑后有36个可规划单元。11枚建筑Token与3枚Green Intervention作为备选库存，玩家建筑同时上限为9个。Drive Trip才生成车辆。
 
 1. 在Unity Hub中选择 **Add project from disk**，打开本仓库的 `unity` 文件夹。
 2. 确认编辑器版本为 `6000.3.4f1`，打开 `Assets/Scenes/P0_InputSpike.unity`。
@@ -45,7 +45,7 @@
 ## 已实现组件
 
 - `CityStateModels.cs`：统一保存四类核心 Building、三类 GreenPatch、独立 VehicleRoad/PedestrianLink 网络与 WasteSystem。
-- `CityGridModels.cs` 与 `CityGridResolver.cs`：保存6 × 4规划单元、土地覆盖和跨周期林地历史，把连续Token坐标吸附到最近单元，并以四邻接提供后续通行和栖息地连接基础。
+- `CityGridModels.cs` 与 `CityGridResolver.cs`：保存9 × 6建设单元、多格建筑占地、土地覆盖和跨周期林地历史，把连续Token坐标吸附到最近单元，并以四邻接提供通行和栖息地连接基础。
 - `CityStateValidator.cs`：验证城市状态版本、ID、坐标、数值、引用关系和 Natural Food 保留原则。
 - `LegacyParkCityAdapter.cs`：在不改变现有 P0 行为的情况下，把旧 S001 布局旁路映射为 CityState；正式城市输入接入后移除该过渡职责。
 - `CityTokenScanModels.cs`、`CityTokenInventory.cs` 与 `CityTokenScanReader.cs`：定义五类14件实体库存，读取并验证稳定的城市扫描、校准信息、Token位置、角度、置信度及ID/类型对应关系。

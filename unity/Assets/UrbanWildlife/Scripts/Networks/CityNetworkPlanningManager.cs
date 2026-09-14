@@ -423,6 +423,7 @@ namespace UrbanWildlife.Networks
                 id = building.id,
                 source_token_id = building.source_token_id,
                 planning_cell_id = building.planning_cell_id,
+                planning_cell_ids = (building.planning_cell_ids ?? Array.Empty<string>()).ToArray(),
                 type = building.type,
                 construction_state = building.construction_state,
                 position_norm = building.position_norm == null

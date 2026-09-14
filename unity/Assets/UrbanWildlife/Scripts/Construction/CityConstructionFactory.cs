@@ -31,7 +31,7 @@ namespace UrbanWildlife.Construction
             {
                 case CityPhysicalTokenType.Apartment:
                     building.type = CityBuildingType.Apartment;
-                    building.footprint_units = new[] { 8f, 6f };
+                    building.footprint_units = new[] { 20f, 20f };
                     building.housing_capacity = 60;
                     building.human_origin_rate = 0.85f;
                     building.human_destination_weight = 0.25f;
@@ -43,7 +43,7 @@ namespace UrbanWildlife.Construction
                     break;
                 case CityPhysicalTokenType.DetachedHouse:
                     building.type = CityBuildingType.DetachedHouse;
-                    building.footprint_units = new[] { 10f, 9f };
+                    building.footprint_units = new[] { 10f, 10f };
                     building.housing_capacity = 12;
                     building.human_origin_rate = 0.35f;
                     building.human_destination_weight = 0.15f;
@@ -55,7 +55,7 @@ namespace UrbanWildlife.Construction
                     break;
                 case CityPhysicalTokenType.Commercial:
                     building.type = CityBuildingType.Commercial;
-                    building.footprint_units = new[] { 9f, 7f };
+                    building.footprint_units = new[] { 20f, 10f };
                     building.housing_capacity = 0;
                     building.human_origin_rate = 0.05f;
                     building.human_destination_weight = 0.9f;
@@ -67,7 +67,7 @@ namespace UrbanWildlife.Construction
                     break;
                 case CityPhysicalTokenType.CommunityFacility:
                     building.type = CityBuildingType.CommunityFacility;
-                    building.footprint_units = new[] { 9f, 8f };
+                    building.footprint_units = new[] { 20f, 10f };
                     building.housing_capacity = 0;
                     building.human_origin_rate = 0.05f;
                     building.human_destination_weight = 0.7f;
@@ -150,6 +150,7 @@ namespace UrbanWildlife.Construction
                 construction_state = constructionState,
                 position_norm = new[] { token.x_norm, token.y_norm },
                 rotation_deg = token.rotation_deg,
+                planning_cell_ids = Array.Empty<string>(),
                 requires_vehicle_access = true,
                 requires_pedestrian_access = true,
                 vehicle_road_ids = Array.Empty<string>(),

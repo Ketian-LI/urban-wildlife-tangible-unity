@@ -173,26 +173,26 @@ namespace UrbanWildlife.EditorTools
             SpriteRenderer[] renderers = buildings == null
                 ? Array.Empty<SpriteRenderer>()
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
-            int redBrickHouseCount = renderers.Count(renderer =>
+            int residentialLotACount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "house-detached-red-brick-bay-v02");
-            int stockBrickHouseCount = renderers.Count(renderer =>
+                renderer.sprite.name == "residential-lot-a-simplified-v03");
+            int residentialLotBCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "house-stock-brick-v02");
-            int cornerApartmentCount = renderers.Count(renderer =>
+                renderer.sprite.name == "residential-lot-b-simplified-v03");
+            int residentialLotCCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "apartment-lowrise-corner-v02");
-            if (redBrickHouseCount != 1 || stockBrickHouseCount != 1 ||
-                cornerApartmentCount != 1)
+                renderer.sprite.name == "residential-lot-c-sand-v03");
+            if (residentialLotACount != 1 || residentialLotBCount != 1 ||
+                residentialLotCCount != 1)
             {
                 throw new InvalidOperationException(
                     "Residential buildings must use the selected A, B and C sprite set; " +
-                    $"redBrick={redBrickHouseCount}, stockBrick={stockBrickHouseCount}, " +
-                    $"cornerApartment={cornerApartmentCount}.");
+                    $"lotA={residentialLotACount}, lotB={residentialLotBCount}, " +
+                    $"lotC={residentialLotCCount}.");
             }
             Debug.Log(
-                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK red_brick_house=1 stock_brick_house=1 " +
-                "corner_apartment=1 selected_visuals=A+B+C citybuilder_sprites=True " +
+                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK lot_a=1 lot_b=1 lot_c=1 " +
+                "selected_visuals=A+B+C landscaped_lots=True lawn_retained=True " +
                 "placeholder_blocks=False");
         }
 

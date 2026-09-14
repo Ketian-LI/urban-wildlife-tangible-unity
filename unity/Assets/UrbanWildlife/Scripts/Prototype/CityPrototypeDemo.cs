@@ -33,12 +33,12 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Environment/tree-citybuilder-default-v01";
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
-        private const string CityRedBrickHouseResourcePath =
-            "UrbanWildlife/Buildings/house-detached-red-brick-bay-v02";
-        private const string CityStockBrickHouseResourcePath =
-            "UrbanWildlife/Buildings/house-stock-brick-v02";
-        private const string CityApartmentCornerResourcePath =
-            "UrbanWildlife/Buildings/apartment-lowrise-corner-v02";
+        private const string CityResidentialLotAResourcePath =
+            "UrbanWildlife/Buildings/residential-lot-a-simplified-v03";
+        private const string CityResidentialLotBResourcePath =
+            "UrbanWildlife/Buildings/residential-lot-b-simplified-v03";
+        private const string CityResidentialLotCResourcePath =
+            "UrbanWildlife/Buildings/residential-lot-c-sand-v03";
         private const string CityMarketHallResourcePath =
             "UrbanWildlife/Buildings/market-hall-citybuilder-v02";
         private const string CityCornerShopsResourcePath =
@@ -742,7 +742,7 @@ namespace UrbanWildlife.Prototype
                     CreateBuildingArtwork(
                         root.transform,
                         building,
-                        CityRedBrickHouseResourcePath,
+                        CityResidentialLotAResourcePath,
                         width,
                         depth,
                         1.24f))
@@ -754,8 +754,8 @@ namespace UrbanWildlife.Prototype
                         root.transform,
                         building,
                         building.id == "apartment-court"
-                            ? CityStockBrickHouseResourcePath
-                            : CityApartmentCornerResourcePath,
+                            ? CityResidentialLotBResourcePath
+                            : CityResidentialLotCResourcePath,
                         width,
                         depth,
                         building.id == "apartment-court" ? 1.22f : 1.34f))

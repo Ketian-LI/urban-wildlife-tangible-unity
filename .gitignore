@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 tmp/
+.tmp/
 
 # Local capture and private research data
 data/raw/

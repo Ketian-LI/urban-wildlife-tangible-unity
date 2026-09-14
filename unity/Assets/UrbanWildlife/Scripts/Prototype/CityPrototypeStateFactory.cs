@@ -35,8 +35,8 @@ namespace UrbanWildlife.Prototype
                     route_option = CityRoadRouteOption.Existing,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.03f, 0.50f), (0.22f, 0.50f), (0.42f, 0.50f), (0.61f, 0.50f), (0.78f, 0.50f), (0.97f, 0.50f)),
-                    width_units = 2.4f,
+                    points_norm = Points((0.03f, 0.52f), (0.15f, 0.52f), (0.28f, 0.47f), (0.41f, 0.50f), (0.53f, 0.55f), (0.66f, 0.51f), (0.80f, 0.46f), (0.97f, 0.47f)),
+                    width_units = 1.1f,
                     speed_units_per_second = 7f,
                     traffic_load = 0.46f,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
@@ -49,8 +49,8 @@ namespace UrbanWildlife.Prototype
                     route_option = CityRoadRouteOption.Existing,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.50f, 0.50f), (0.50f, 0.67f), (0.50f, 0.83f), (0.94f, 0.83f)),
-                    width_units = 1.8f,
+                    points_norm = Points((0.10f, 0.18f), (0.35f, 0.18f), (0.35f, 0.33f), (0.62f, 0.33f), (0.62f, 0.18f), (0.90f, 0.18f), (0.90f, 0.52f), (0.75f, 0.52f), (0.75f, 0.79f), (0.20f, 0.79f), (0.20f, 0.52f)),
+                    width_units = 0.72f,
                     speed_units_per_second = 5f,
                     traffic_load = 0.24f,
                     connected_building_ids = new[] { "detached-garden", "corner-shops" },
@@ -66,8 +66,8 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.03f, 0.455f), (0.22f, 0.455f), (0.42f, 0.455f), (0.61f, 0.455f), (0.78f, 0.455f), (0.97f, 0.455f)),
-                    width_units = 0.8f,
+                    points_norm = Points((0.03f, 0.485f), (0.15f, 0.485f), (0.28f, 0.435f), (0.41f, 0.465f), (0.53f, 0.515f), (0.66f, 0.475f), (0.80f, 0.425f), (0.97f, 0.435f)),
+                    width_units = 0.28f,
                     step_free_accessible = true,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
                     connected_link_ids = new[] { "pedestrian-garden-branch" },
@@ -78,8 +78,8 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.46f, 0.455f), (0.46f, 0.67f), (0.46f, 0.785f), (0.94f, 0.785f)),
-                    width_units = 0.7f,
+                    points_norm = Points((0.10f, 0.145f), (0.38f, 0.145f), (0.38f, 0.295f), (0.65f, 0.295f), (0.65f, 0.145f), (0.935f, 0.145f), (0.935f, 0.555f), (0.785f, 0.555f), (0.785f, 0.825f), (0.165f, 0.825f), (0.165f, 0.555f)),
+                    width_units = 0.22f,
                     step_free_accessible = true,
                     connected_building_ids = new[] { "detached-garden", "corner-shops" },
                     connected_link_ids = new[] { "pedestrian-park-spine" },
@@ -90,16 +90,22 @@ namespace UrbanWildlife.Prototype
             List<CityPedestrianLink> links = new List<CityPedestrianLink>(mainLinks);
             foreach (CityBuilding building in buildings)
             {
-                string roadNetwork = building.position_norm[1] > 0.62f
+                bool outerStreet = building.position_norm[1] < 0.25f ||
+                                   building.position_norm[1] > 0.62f;
+                string roadNetwork = outerStreet
                     ? "vehicle-neighbourhood-lane"
                     : "vehicle-main-street";
-                string linkNetwork = building.position_norm[1] > 0.62f
+                string linkNetwork = outerStreet
                     ? "pedestrian-garden-branch"
                     : "pedestrian-park-spine";
                 string roadId = $"road-access-{building.id}";
                 string linkId = $"walk-access-{building.id}";
-                float roadY = roadNetwork == "vehicle-main-street" ? 0.50f : 0.83f;
-                float linkY = linkNetwork == "pedestrian-park-spine" ? 0.455f : 0.785f;
+                float roadY = roadNetwork == "vehicle-main-street"
+                    ? 0.50f
+                    : building.position_norm[1] < 0.25f ? 0.18f : 0.79f;
+                float linkY = linkNetwork == "pedestrian-park-spine"
+                    ? 0.465f
+                    : building.position_norm[1] < 0.25f ? 0.145f : 0.825f;
                 roads.Add(new CityVehicleRoad
                 {
                     id = roadId,
@@ -110,7 +116,7 @@ namespace UrbanWildlife.Prototype
                     points_norm = Points(
                         (building.position_norm[0], building.position_norm[1]),
                         (building.position_norm[0], roadY)),
-                    width_units = 1.2f,
+                    width_units = 0.45f,
                     speed_units_per_second = 4.5f,
                     traffic_load = building.vehicle_demand * 0.5f,
                     connected_building_ids = new[] { building.id },
@@ -125,7 +131,7 @@ namespace UrbanWildlife.Prototype
                     points_norm = Points(
                         (building.position_norm[0], building.position_norm[1]),
                         (building.position_norm[0], linkY)),
-                    width_units = 0.55f,
+                    width_units = 0.16f,
                     step_free_accessible = true,
                     connected_building_ids = new[] { building.id },
                     connected_link_ids = new[] { linkNetwork },
@@ -305,15 +311,15 @@ namespace UrbanWildlife.Prototype
             {
                 return CityLandCover.Woodland;
             }
-            if (row == 3 && col == 2)
+            if (row == 3 && col == 4)
             {
                 return CityLandCover.PublicGreen;
             }
-            if (row == 2 && col == 4)
+            if (row == 2 && col == 5)
             {
                 return CityLandCover.CivicPlaza;
             }
-            if (row == 3 && col == 4)
+            if (row == 2 && col == 3)
             {
                 return CityLandCover.Water;
             }

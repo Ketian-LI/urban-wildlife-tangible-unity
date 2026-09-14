@@ -24,7 +24,7 @@ namespace UrbanWildlife.Prototype
         private const float BoardViewMargin = 0.55f;
         private const float RuntimeSpeed = 2f;
         private const string CityBoardUnderlayResourcePath =
-            "UrbanWildlife/Environment/city-board-organic-underlay-v01";
+            "UrbanWildlife/Environment/city-board-neighbourhood-base-v02";
         private const string CityPlazaResourcePath =
             "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string CityPondResourcePath =
@@ -45,6 +45,12 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Buildings/corner-shops-citybuilder-v02";
         private const string CityCommunityCentreResourcePath =
             "UrbanWildlife/Buildings/community-centre-citybuilder-v01";
+        private const string PigeonWildlifeResourcePath =
+            "UrbanWildlife/Animals/pigeon-side-walk-a-v01";
+        private const string SquirrelWildlifeResourcePath =
+            "UrbanWildlife/Animals/squirrel-side-walk-a-v01";
+        private const string FoxWildlifeResourcePath =
+            "UrbanWildlife/Animals/fox-side-walk-a-v01";
         private static readonly string[] CityTreeResourcePaths =
         {
             "UrbanWildlife/Environment/tree-citybuilder-pear-v02",
@@ -95,10 +101,12 @@ namespace UrbanWildlife.Prototype
         private readonly Dictionary<string, GameObject> wildlifeViews =
             new Dictionary<string, GameObject>();
         private GameObject generatedRoot;
+        private GameObject vehicleRoadRoot;
         private GameObject pedestrianRoot;
         private GameObject planningPreviewRoot;
         private bool paused;
-        private bool showPedestrianNetwork = true;
+        private bool showVehicleNetwork;
+        private bool showPedestrianNetwork;
         private CityTraceDisplayMode traceDisplayMode = CityTraceDisplayMode.CombinedTrace;
         private string cityScanInputMessage =
             "Camera scans remain pending until you load and confirm them.";
@@ -356,6 +364,7 @@ namespace UrbanWildlife.Prototype
 
             SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
             renderer.sprite = underlay;
+            renderer.color = new Color(0.96f, 0.98f, 0.94f, 1f);
             renderer.sortingOrder = -50;
         }
 
@@ -397,7 +406,7 @@ namespace UrbanWildlife.Prototype
                 }
             }
 
-            Color boundaryColour = new Color(0.34f, 0.48f, 0.52f, 0.11f);
+            Color boundaryColour = new Color(0.48f, 0.58f, 0.58f, 0.035f);
             for (int col = 0; col <= grid.cols; col += 1)
             {
                 float[][] points = Enumerable.Range(0, grid.rows + 1)
@@ -405,7 +414,7 @@ namespace UrbanWildlife.Prototype
                     .ToArray();
                 CreateLine(boundariesRoot.transform, "Column " + col,
                     points,
-                    0.004f, boundaryColour, 0.025f, -30, true);
+                    0.002f, boundaryColour, 0.025f, -30, true);
             }
             for (int row = 0; row <= grid.rows; row += 1)
             {
@@ -414,7 +423,7 @@ namespace UrbanWildlife.Prototype
                     .ToArray();
                 CreateLine(boundariesRoot.transform, "Row " + row,
                     points,
-                    0.004f, boundaryColour, 0.025f, -30, true);
+                    0.002f, boundaryColour, 0.025f, -30, true);
             }
         }
 
@@ -574,23 +583,23 @@ namespace UrbanWildlife.Prototype
             switch (cover)
             {
                 case CityLandCover.Woodland:
-                    return new Color(0.49f, 0.68f, 0.38f, 0.09f);
+                    return new Color(0.49f, 0.68f, 0.38f, 0.012f);
                 case CityLandCover.PublicGreen:
-                    return new Color(0.59f, 0.76f, 0.43f, 0.08f);
+                    return new Color(0.59f, 0.76f, 0.43f, 0.012f);
                 case CityLandCover.CivicPlaza:
-                    return new Color(0.80f, 0.65f, 0.40f, 0.06f);
+                    return new Color(0.80f, 0.65f, 0.40f, 0.010f);
                 case CityLandCover.Water:
-                    return new Color(0.30f, 0.68f, 0.80f, 0.06f);
+                    return new Color(0.30f, 0.68f, 0.80f, 0.010f);
                 case CityLandCover.Building:
-                    return new Color(0.74f, 0.69f, 0.57f, 0.035f);
+                    return new Color(0.74f, 0.69f, 0.57f, 0.006f);
                 case CityLandCover.ShrubGarden:
-                    return new Color(0.47f, 0.69f, 0.36f, 0.09f);
+                    return new Color(0.47f, 0.69f, 0.36f, 0.012f);
                 case CityLandCover.Disturbed:
-                    return new Color(0.72f, 0.53f, 0.35f, 0.16f);
+                    return new Color(0.72f, 0.53f, 0.35f, 0.045f);
                 case CityLandCover.Recovering:
-                    return new Color(0.56f, 0.72f, 0.39f, 0.08f);
+                    return new Color(0.56f, 0.72f, 0.39f, 0.012f);
                 default:
-                    return new Color(0.75f, 0.81f, 0.55f, 0.025f);
+                    return new Color(0.75f, 0.81f, 0.55f, 0.003f);
             }
         }
 
@@ -663,29 +672,32 @@ namespace UrbanWildlife.Prototype
 
         private void BuildNetworks()
         {
-            GameObject roadRoot = ChildRoot("Vehicle road network");
+            vehicleRoadRoot = ChildRoot("Vehicle road network");
             CityVehicleRoad[] activeRoads = city.vehicle_roads.Where(item =>
                 item.construction_state == CityConstructionState.Existing).ToArray();
             foreach (CityVehicleRoad road in activeRoads)
             {
                 float width = road.width_units / city.bounds.width_units * MapWidth;
                 CreateLine(
-                    roadRoot.transform,
+                    vehicleRoadRoot.transform,
                     road.id + " kerb",
                     road.points_norm,
-                    width + 0.10f,
-                    new Color(0.91f, 0.90f, 0.84f, 1f),
+                    width + 0.035f,
+                    new Color(0.96f, 0.95f, 0.90f, 0.94f),
                     0.045f,
                     -8);
                 CreateLine(
-                    roadRoot.transform,
+                    vehicleRoadRoot.transform,
                     road.id + " asphalt",
                     road.points_norm,
                     width,
-                    new Color(0.72f, 0.76f, 0.77f, 1f),
+                    road.role == CityVehicleRoadRole.BuildingAccess
+                        ? new Color(0.86f, 0.88f, 0.86f, 0.92f)
+                        : new Color(0.82f, 0.85f, 0.84f, 0.96f),
                     0.055f,
                     -7);
             }
+            vehicleRoadRoot.SetActive(showVehicleNetwork);
 
             pedestrianRoot = ChildRoot("Pedestrian link network");
             CityPedestrianLink[] activeLinks = city.pedestrian_links.Where(item =>
@@ -697,11 +709,12 @@ namespace UrbanWildlife.Prototype
                     pedestrianRoot.transform,
                     link.id,
                     link.points_norm,
-                    Mathf.Max(0.07f, width),
-                    new Color(0.96f, 0.90f, 0.76f, 1f),
+                    Mathf.Max(0.035f, width),
+                    new Color(0.96f, 0.93f, 0.84f, 0.88f),
                     0.075f,
                     -4);
             }
+            pedestrianRoot.SetActive(showPedestrianNetwork);
             GeneratedVehicleRoadCount = activeRoads.Length;
             GeneratedPedestrianLinkCount = activeLinks.Length;
         }
@@ -722,7 +735,7 @@ namespace UrbanWildlife.Prototype
                         CityResidentialLotAResourcePath,
                         width,
                         depth,
-                        0.90f))
+                        0.68f))
                 {
                     continue;
                 }
@@ -735,7 +748,7 @@ namespace UrbanWildlife.Prototype
                             : CityResidentialLotCResourcePath,
                         width,
                         depth,
-                        0.88f))
+                        0.49f))
                 {
                     continue;
                 }
@@ -748,7 +761,7 @@ namespace UrbanWildlife.Prototype
                             : CityCornerShopsResourcePath,
                         width,
                         depth,
-                        0.90f))
+                        0.30f))
                 {
                     continue;
                 }
@@ -759,7 +772,7 @@ namespace UrbanWildlife.Prototype
                         CityCommunityCentreResourcePath,
                         width,
                         depth,
-                        0.92f))
+                        0.30f))
                 {
                     continue;
                 }
@@ -860,23 +873,7 @@ namespace UrbanWildlife.Prototype
 
         private static Vector3 BuildingArtworkOffset(string buildingId)
         {
-            switch (buildingId)
-            {
-                case "apartment-west":
-                    return new Vector3(0.08f, 0f, 0.12f);
-                case "apartment-court":
-                    return new Vector3(-0.05f, 0f, 0.12f);
-                case "market-hall":
-                    return new Vector3(-0.10f, 0f, 0.12f);
-                case "community-centre":
-                    return new Vector3(-0.10f, 0f, 0.02f);
-                case "detached-garden":
-                    return new Vector3(0.03f, 0f, -0.12f);
-                case "corner-shops":
-                    return new Vector3(-0.10f, 0f, -0.12f);
-                default:
-                    return Vector3.zero;
-            }
+            return Vector3.zero;
         }
 
         private void BuildPlanningOverlay()
@@ -1094,20 +1091,78 @@ namespace UrbanWildlife.Prototype
             GameObject root = ChildRoot("City wildlife agents");
             foreach (CityWildlifeAgent agent in wildlife.Snapshot.agents)
             {
-                GameObject token = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                GameObject token = CreateWildlifeToken(root.transform, agent);
                 token.name = agent.id;
-                token.transform.SetParent(root.transform, false);
-                token.transform.localScale = new Vector3(0.16f, 0.035f, 0.16f);
-                RemoveCollider(token);
-                SetMaterial(token, WildlifeColour(agent.species));
-                CreateLabel(
-                    token.transform,
-                    WildlifeLabel(agent.species),
-                    new Vector3(0f, 0.7f, 0f),
-                    0.11f);
                 wildlifeViews.Add(agent.id, token);
             }
             UpdateWildlife();
+        }
+
+        private GameObject CreateWildlifeToken(Transform parent, CityWildlifeAgent agent)
+        {
+            GameObject token = new GameObject(agent.id);
+            token.transform.SetParent(parent, false);
+            string resourcePath = WildlifeResourcePath(agent.species);
+            Sprite sprite = string.IsNullOrWhiteSpace(resourcePath)
+                ? null
+                : Resources.Load<Sprite>(resourcePath);
+            if (sprite != null)
+            {
+                GameObject artwork = new GameObject("Wildlife artwork");
+                artwork.transform.SetParent(token.transform, false);
+                artwork.transform.localPosition = Vector3.zero;
+                artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                float targetWidth = WildlifeArtworkWidth(agent.species);
+                float scale = targetWidth / Mathf.Max(0.001f, sprite.bounds.size.x);
+                artwork.transform.localScale = Vector3.one * scale;
+                SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+                renderer.sprite = sprite;
+                renderer.sortingOrder = 46;
+                return token;
+            }
+
+            GameObject fallback = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            fallback.name = "Fallback wildlife marker";
+            fallback.transform.SetParent(token.transform, false);
+            fallback.transform.localScale = new Vector3(0.13f, 0.025f, 0.13f);
+            RemoveCollider(fallback);
+            SetMaterial(fallback, WildlifeColour(agent.species));
+            CreateLabel(
+                fallback.transform,
+                WildlifeLabel(agent.species),
+                new Vector3(0f, 0.7f, 0f),
+                0.10f);
+            return token;
+        }
+
+        private static string WildlifeResourcePath(CityWildlifeSpecies species)
+        {
+            switch (species)
+            {
+                case CityWildlifeSpecies.Pigeon:
+                    return PigeonWildlifeResourcePath;
+                case CityWildlifeSpecies.GreySquirrel:
+                    return SquirrelWildlifeResourcePath;
+                case CityWildlifeSpecies.Fox:
+                    return FoxWildlifeResourcePath;
+                default:
+                    return null;
+            }
+        }
+
+        private static float WildlifeArtworkWidth(CityWildlifeSpecies species)
+        {
+            switch (species)
+            {
+                case CityWildlifeSpecies.Pigeon:
+                    return 0.24f;
+                case CityWildlifeSpecies.GreySquirrel:
+                    return 0.32f;
+                case CityWildlifeSpecies.Fox:
+                    return 0.46f;
+                default:
+                    return 0.24f;
+            }
         }
 
         private void UpdateWildlife()
@@ -1191,7 +1246,7 @@ namespace UrbanWildlife.Prototype
             GameObject vehicle = GameObject.CreatePrimitive(PrimitiveType.Cube);
             vehicle.name = $"Trip vehicle {index + 1:00}";
             vehicle.transform.SetParent(parent, false);
-            vehicle.transform.localScale = new Vector3(0.52f, 0.14f, 0.28f);
+            vehicle.transform.localScale = new Vector3(0.24f, 0.08f, 0.13f);
             RemoveCollider(vehicle);
             Color[] colours =
             {
@@ -1336,6 +1391,14 @@ namespace UrbanWildlife.Prototype
             if (GUILayout.Button("Restart trips", buttonStyle))
             {
                 InitializePrototype(false);
+            }
+            if (GUILayout.Button(showVehicleNetwork ? "Hide road routes" : "Show road routes", buttonStyle))
+            {
+                showVehicleNetwork = !showVehicleNetwork;
+                if (vehicleRoadRoot != null)
+                {
+                    vehicleRoadRoot.SetActive(showVehicleNetwork);
+                }
             }
             if (GUILayout.Button(showPedestrianNetwork ? "Hide footpaths" : "Show footpaths", buttonStyle))
             {
@@ -1945,6 +2008,7 @@ namespace UrbanWildlife.Prototype
 
             SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
+            renderer.color = new Color(0.94f, 0.97f, 0.92f, 0.96f);
             renderer.sortingOrder = 14 + Mathf.RoundToInt(normalized[1] * 4f);
         }
 

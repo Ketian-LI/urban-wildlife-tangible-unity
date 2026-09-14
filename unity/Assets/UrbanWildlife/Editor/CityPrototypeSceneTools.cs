@@ -149,6 +149,7 @@ namespace UrbanWildlife.EditorTools
             VerifyPlanningGridVisuals(prototype);
             VerifyResidentialBuildingVisuals(prototype);
             VerifyCommercialBuildingVisuals(prototype);
+            VerifyCompactNeighbourhoodPresentation(prototype);
             VerifyResponsiveCameraFit();
             VerifyCameraScanFileSource();
             VerifyPlanningWorkflow();
@@ -248,7 +249,7 @@ namespace UrbanWildlife.EditorTools
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 1 ||
                 boundaries.GetComponentsInChildren<LineRenderer>().Length != 17 ||
                 underlayRenderer?.sprite == null ||
-                underlayRenderer.sprite.name != "city-board-organic-underlay-v01" ||
+                underlayRenderer.sprite.name != "city-board-neighbourhood-base-v02" ||
                 underlayRenderer.sortingOrder != -50 ||
                 regularFont == null || boldFont == null ||
                 prototype.GetComponentsInChildren<Transform>().Any(item => item.name == "East canal"))
@@ -342,7 +343,37 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException($"Expected {expectedGroves} cell-aligned woodland groves, found {actualGroves}.");
             }
-            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=9x6 cells=54 available=36 woodland_groves={actualGroves} dynamic_trees=5-per-cell/5-shapes organic_underlay=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False detailed_pond_plaza=True static_nunito=Regular/Bold public_green=True no_east_canal=True");
+            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=9x6 cells=54 available=36 woodland_groves={actualGroves} dynamic_trees=5-per-cell/5-shapes neighbourhood_underlay=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False detailed_pond_plaza=True static_nunito=Regular/Bold public_green=True no_ocean=True");
+        }
+
+        private static void VerifyCompactNeighbourhoodPresentation(CityPrototypeDemo prototype)
+        {
+            Transform roads = prototype.transform.Find("Generated City Prototype/Vehicle road network");
+            Transform footpaths = prototype.transform.Find("Generated City Prototype/Pedestrian link network");
+            Transform wildlife = prototype.transform.Find("Generated City Prototype/City wildlife agents");
+            SpriteRenderer[] wildlifeSprites = wildlife == null
+                ? Array.Empty<SpriteRenderer>()
+                : wildlife.GetComponentsInChildren<SpriteRenderer>(true);
+            string[] expectedWildlifeSprites =
+            {
+                "pigeon-side-walk-a-v01",
+                "squirrel-side-walk-a-v01",
+                "fox-side-walk-a-v01",
+            };
+            if (roads == null || roads.gameObject.activeSelf ||
+                footpaths == null || footpaths.gameObject.activeSelf ||
+                wildlife == null || wildlife.childCount != 15 ||
+                wildlifeSprites.Length != 14 ||
+                wildlifeSprites.Any(renderer => renderer.sprite == null ||
+                                                  !expectedWildlifeSprites.Contains(renderer.sprite.name)))
+            {
+                throw new InvalidOperationException(
+                    "The compact-neighbourhood view must hide route overlays by default and use artwork for pigeons, squirrels and foxes.");
+            }
+            Debug.Log(
+                "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
+                "road_routes_default_hidden=True footpaths_default_hidden=True " +
+                "wildlife_artwork=14 hedgehog_fallback=1 compact_buildings=True");
         }
 
         private static void VerifyResponsiveCameraFit()

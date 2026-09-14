@@ -56,7 +56,7 @@
 
 ### 城市可视化集成壳
 
-`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的6建筑演示状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧77%的地图视口，右侧23%由固定城市信息栏占用，两者不遮挡。场景采用明亮、低饱和、可分类的城市规划桌游语言，但继续保持正俯视，以便屏幕坐标与实体板坐标一致；当前仍是程序化集成原型，不代表最终插画资产。
+`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的6建筑演示状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧77%的地图视口，右侧23%由固定城市信息栏占用，两者不遮挡。地图使用暖白色紧凑街区底板表达连续道路留白与许多小型建设地块，建筑、林木、池塘和广场仍由Unity动态生成；逻辑网格、机动车路线与步行路线常态隐藏，只在规划或检查时显示。场景维持可校准的正俯视坐标，同时让各Sprite自身保留柔和2.5D体积感；当前仍是程序化集成原型，不代表最终插画资产。
 
 `CityEnvironmentSimulation` 是Building与动物之间的环境中介层：它同步建筑垃圾输出和Bin容量，按持续超载时间生成Litter Hotspot，并分别公开Natural/Anthropogenic Food。局部Green Patch压力聚合建筑、Bench、道路交通与垃圾影响，避免动物直接读取视觉对象。
 

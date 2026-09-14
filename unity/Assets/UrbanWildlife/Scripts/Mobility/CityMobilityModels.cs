@@ -10,6 +10,7 @@ namespace UrbanWildlife.Mobility
     {
         Leisure,
         Consumption,
+        ExternalJourney,
         ReturnHome,
     }
 

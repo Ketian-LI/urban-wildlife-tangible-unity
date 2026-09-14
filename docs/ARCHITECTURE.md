@@ -1,6 +1,6 @@
 # Technical Architecture V0.1
 
-更新日期：2026-09-13
+更新日期：2026-09-14
 
 ## 软件基线
 
@@ -52,7 +52,7 @@
 
 `CityTripPlanner` 只读取 `Existing` Building。住宅的 Housing Capacity 与 Human Origin Rate 决定代表性居民数量，默认最多24个且公开每个代理代表的人数；Commercial 与 Community Facility 作为目的地。目的地效用由 Destination Weight、归一化距离、稳定微扰和预计 Crowd Penalty 组成，Capacity 以代表人口而非屏幕代理数量计算。
 
-`CityNetworkRouteBuilder` 通过建筑接入线的 `connected_road_ids` 或 `connected_link_ids` 拼接主网络：Walk只查询PedestrianLink，Drive只查询VehicleRoad。`CityTripAgent` 使用同一路线完成Outbound、目的地Dwelling和反向Returning。`CityMobilitySimulation` 按1.5秒间隔生成代理；Drive状态才公开对应Vehicle Agent，因此车辆数量可追溯到具体Trip，不存在随机背景交通。当前公式和速度是确定性玩法V0.1，不是人口或交通预测模型。
+`CityNetworkRouteBuilder` 通过建筑接入线的 `connected_road_ids` 或 `connected_link_ids` 拼接主网络：Walk只查询PedestrianLink，Drive只查询VehicleRoad。高机动车需求住宅的首个代表性Drive Trip会沿道路连接寻找地图边缘出口，并在路线末端加入边界外网关；当城市尚无内部目的地时，住宅行程也可以全部通过该网关出城。`CityTripAgent` 使用同一路线完成Outbound、边界外Dwelling和完整逆序Returning，因此车辆会真实驶出画面再从同一入口返回。`CityMobilitySimulation` 按1.5秒间隔生成代理；Drive状态才公开对应Vehicle Agent，因此车辆数量可追溯到具体Trip，不存在随机背景交通。当前公式和速度是确定性玩法V0.1，不是人口或交通预测模型。
 
 ### 城市可视化集成壳
 

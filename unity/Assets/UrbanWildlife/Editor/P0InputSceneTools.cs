@@ -1167,19 +1167,31 @@ namespace UrbanWildlife.EditorTools
                 trip.route_points_norm.Length >= 2 &&
                 trip.route_distance_units > 0f);
             bool destinationsSpread = mobilityPlan.trips
+                .Where(trip => trip.purpose != CityTripPurpose.ExternalJourney)
                 .Select(trip => trip.destination_building_id)
                 .Distinct()
                 .Count() >= 2;
+            CityRepresentativeTrip[] externalTrips = mobilityPlan.trips
+                .Where(trip => trip.purpose == CityTripPurpose.ExternalJourney)
+                .ToArray();
+            bool externalRoutesLeaveMap = externalTrips.Length == 2 &&
+                externalTrips.All(trip =>
+                    trip.mode == CityTravelMode.Drive &&
+                    trip.destination_building_id == CityTripPlanner.ExternalGatewayDestinationId &&
+                    trip.route_points_norm.Any(point =>
+                        point[0] < 0f || point[0] > 1f || point[1] < 0f || point[1] > 1f));
             int assignedPopulation = mobilityPlan.destination_loads.Sum(load =>
                 load.assigned_people);
+            int externalPopulation = externalTrips.Sum(trip => trip.represented_people);
             if (mobilityPlan.RepresentativeAgentCount != 6 ||
                 mobilityPlan.RepresentedPopulation != 72 ||
-                assignedPopulation != 72 ||
+                assignedPopulation + externalPopulation != 72 ||
                 mobilityPlan.WalkTripCount == 0 || mobilityPlan.DriveTripCount == 0 ||
-                !mobilityPlan.HasCrowding || !destinationsSpread || !routesComplete)
+                !mobilityPlan.HasCrowding || !destinationsSpread || !routesComplete ||
+                !externalRoutesLeaveMap)
             {
                 throw new InvalidOperationException(
-                    "Representative trips, route modes or destination crowding are invalid.");
+                    "Representative trips, external vehicle routes or destination crowding are invalid.");
             }
 
             CityMobilitySimulation mobilitySimulation = new CityMobilitySimulation(
@@ -1213,6 +1225,7 @@ namespace UrbanWildlife.EditorTools
                 "UNITY_CITY_MOBILITY_SMOKE_OK origins=2 representative_agents=6 " +
                 "represented_population=72 walk_and_drive=True destinations_spread=True " +
                 "crowd_penalty=True gradual_spawn=True drive_creates_vehicle=True " +
+                "external_vehicle_trips=2 leaves_map=True returns_by_same_road=True " +
                 "outbound_dwell_return=True random_background_vehicles=False");
 
             LayoutToken repairedFood10 = Array.Find(baselinePacket.tokens, token => token.id == 10);
@@ -2189,6 +2202,62 @@ namespace UrbanWildlife.EditorTools
                 "trace_modes=3 park_notice_style=True split_screen=True map_unobscured=True " +
                 "typography=hierarchical_display/interface information_cards=True round_progress=3 " +
                 "confirm_memory=compact");
+        }
+
+        public static void BatchVerifyExternalVehicleTrips()
+        {
+            CityState city = CityPrototypeStateFactory.Create();
+            CityMobilityPlan plan = CityTripPlanner.CreatePlan(city);
+            CityRepresentativeTrip[] externalTrips = plan.trips
+                .Where(trip => trip.purpose == CityTripPurpose.ExternalJourney)
+                .ToArray();
+            if (externalTrips.Length != 2)
+            {
+                throw new InvalidOperationException(
+                    $"Expected two external vehicle journeys, found {externalTrips.Length}.");
+            }
+
+            foreach (CityRepresentativeTrip trip in externalTrips)
+            {
+                bool leavesMap = trip.mode == CityTravelMode.Drive &&
+                    trip.destination_building_id == CityTripPlanner.ExternalGatewayDestinationId &&
+                    trip.route_points_norm.Any(point =>
+                        point[0] < 0f || point[0] > 1f || point[1] < 0f || point[1] > 1f);
+                if (!leavesMap)
+                {
+                    throw new InvalidOperationException(
+                        $"External vehicle journey {trip.id} does not leave the map.");
+                }
+
+                CityTripAgent agent = new CityTripAgent(trip, city.bounds);
+                agent.Start();
+                bool sawOutsideMap = false;
+                bool sawReturning = false;
+                for (int step = 0; step < 2400 &&
+                     agent.State != CityTripMotionState.Complete; step += 1)
+                {
+                    agent.Tick(0.25f);
+                    sawOutsideMap |= agent.PositionNorm[0] < 0f ||
+                                     agent.PositionNorm[0] > 1f ||
+                                     agent.PositionNorm[1] < 0f ||
+                                     agent.PositionNorm[1] > 1f;
+                    sawReturning |= agent.State == CityTripMotionState.Returning;
+                }
+
+                float[] origin = trip.route_points_norm[0];
+                bool returnedHome = Math.Abs(agent.PositionNorm[0] - origin[0]) <= 0.0001f &&
+                                    Math.Abs(agent.PositionNorm[1] - origin[1]) <= 0.0001f;
+                if (!sawOutsideMap || !sawReturning ||
+                    agent.State != CityTripMotionState.Complete || !returnedHome)
+                {
+                    throw new InvalidOperationException(
+                        $"External vehicle journey {trip.id} did not leave and return by its route.");
+                }
+            }
+
+            Debug.Log(
+                "UNITY_EXTERNAL_VEHICLE_SMOKE_OK journeys=2 leaves_map=True " +
+                "outside_dwell=True same_road_return=True completes_at_home=True");
         }
 
         private static bool SegmentCrossesCellInterior(

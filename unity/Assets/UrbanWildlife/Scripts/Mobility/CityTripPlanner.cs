@@ -9,6 +9,7 @@ namespace UrbanWildlife.Mobility
     {
         public const int DefaultMaximumRepresentativeAgents = 24;
         public const float DefaultDepartureIntervalSeconds = 1.5f;
+        public const string ExternalGatewayDestinationId = "outside-city";
 
         public static CityMobilityPlan CreatePlan(
             CityState city,
@@ -43,7 +44,7 @@ namespace UrbanWildlife.Mobility
                     building.human_destination_weight > 0f &&
                     building.comfortable_capacity > 0)
                 .ToArray();
-            if (origins.Length == 0 || destinations.Length == 0)
+            if (origins.Length == 0)
             {
                 return new CityMobilityPlan
                 {
@@ -73,6 +74,38 @@ namespace UrbanWildlife.Mobility
                     int representedPopulation = Math.Max(
                         1,
                         (int)Math.Ceiling(origin.housing_capacity / (double)desired));
+                    bool externalJourney = destinations.Length == 0 ||
+                                           (localIndex == 0 && origin.vehicle_demand > 0.5f);
+                    if (externalJourney)
+                    {
+                        float[][] externalRoute = CityNetworkRouteBuilder.BuildExternalDrive(
+                            city,
+                            origin);
+                        float routeDistance = CityNetworkRouteBuilder.Length(
+                            externalRoute,
+                            city.bounds);
+                        trips.Add(new CityRepresentativeTrip
+                        {
+                            id = $"trip-{sequence + 1:000}",
+                            agent_id = agentId,
+                            origin_building_id = origin.id,
+                            destination_building_id = ExternalGatewayDestinationId,
+                            purpose = CityTripPurpose.ExternalJourney,
+                            mode = CityTravelMode.Drive,
+                            route_points_norm = externalRoute,
+                            direct_distance_units = Distance(
+                                origin.position_norm,
+                                externalRoute[externalRoute.Length - 1],
+                                city.bounds),
+                            route_distance_units = routeDistance,
+                            departure_seconds = sequence * DefaultDepartureIntervalSeconds,
+                            dwell_seconds = 6f,
+                            represented_people = representedPopulation,
+                        });
+                        sequence += 1;
+                        continue;
+                    }
+
                     CityBuilding destination = SelectDestination(
                         origin,
                         destinations,

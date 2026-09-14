@@ -66,6 +66,58 @@ namespace UrbanWildlife.Mobility
             return result;
         }
 
+        public static float[][] BuildExternalDrive(
+            CityState city,
+            CityBuilding origin,
+            float outsideMarginNorm = 0.06f)
+        {
+            if (city?.bounds == null || origin == null)
+            {
+                throw new ArgumentException("A city and origin are required.");
+            }
+            if (outsideMarginNorm <= 0f || outsideMarginNorm > 0.25f)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(outsideMarginNorm),
+                    "The outside gateway margin must stay between 0 and 0.25.");
+            }
+
+            Dictionary<string, NetworkLine> network = VehicleNetwork(city);
+            NetworkLine current = FirstReferenced(
+                network,
+                origin.vehicle_road_ids,
+                origin.id,
+                CityTravelMode.Drive);
+            List<float[]> route = new List<float[]> { ClonePoint(origin.position_norm) };
+            AppendOriented(route, current.Points, city.bounds);
+
+            HashSet<string> visited = new HashSet<string> { current.Id };
+            for (int depth = 0; depth < network.Count && !TouchesMapEdge(current.Points); depth += 1)
+            {
+                NetworkLine next = current.ConnectedLineIds
+                    .Where(id => !visited.Contains(id) && network.ContainsKey(id))
+                    .Select(id => network[id])
+                    .OrderBy(line => BoundaryDistance(line.Points))
+                    .ThenBy(line => DistanceToNearestEndpoint(
+                        route[route.Count - 1],
+                        line.Points,
+                        city.bounds))
+                    .FirstOrDefault();
+                if (next == null)
+                {
+                    break;
+                }
+                AppendOriented(route, next.Points, city.bounds);
+                current = next;
+                visited.Add(current.Id);
+            }
+
+            AppendDistinct(
+                route,
+                OutsideGatewayFrom(route[route.Count - 1], outsideMarginNorm));
+            return route.ToArray();
+        }
+
         public static float Length(float[][] points, CityBounds bounds)
         {
             if (points == null || points.Length < 2 || bounds == null)
@@ -153,6 +205,54 @@ namespace UrbanWildlife.Mobility
                 }
             }
             route.Add(ClonePoint(point));
+        }
+
+        private static bool TouchesMapEdge(float[][] points)
+        {
+            return BoundaryDistance(points) <= 0.055f;
+        }
+
+        private static float BoundaryDistance(float[][] points)
+        {
+            return points
+                .Where(point => point != null && point.Length >= 2)
+                .Select(point => Math.Min(
+                    Math.Min(point[0], 1f - point[0]),
+                    Math.Min(point[1], 1f - point[1])))
+                .DefaultIfEmpty(float.PositiveInfinity)
+                .Min();
+        }
+
+        private static float DistanceToNearestEndpoint(
+            float[] point,
+            float[][] line,
+            CityBounds bounds)
+        {
+            return Math.Min(
+                Distance(point, line[0], bounds),
+                Distance(point, line[line.Length - 1], bounds));
+        }
+
+        private static float[] OutsideGatewayFrom(float[] point, float margin)
+        {
+            float left = point[0];
+            float right = 1f - point[0];
+            float top = point[1];
+            float bottom = 1f - point[1];
+            float closest = Math.Min(Math.Min(left, right), Math.Min(top, bottom));
+            if (closest == left)
+            {
+                return new[] { -margin, point[1] };
+            }
+            if (closest == right)
+            {
+                return new[] { 1f + margin, point[1] };
+            }
+            if (closest == top)
+            {
+                return new[] { point[0], -margin };
+            }
+            return new[] { point[0], 1f + margin };
         }
 
         private static float Distance(float[] first, float[] second, CityBounds bounds)

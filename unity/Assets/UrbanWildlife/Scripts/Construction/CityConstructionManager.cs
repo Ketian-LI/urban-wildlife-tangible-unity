@@ -112,7 +112,7 @@ namespace UrbanWildlife.Construction
                         else
                         {
                             CityGridCell[] footprintCells =
-                                CityGridResolver.GetBuildingFootprintCells(
+                                CityGridResolver.GetBuildingFootprintCellsAtPosition(
                                     candidateGrid,
                                     CurrentState.bounds,
                                     building,
@@ -124,7 +124,7 @@ namespace UrbanWildlife.Construction
                                     .Where(id => !string.IsNullOrWhiteSpace(id))
                                     .Distinct(StringComparer.Ordinal)
                                     .ToArray();
-                                if (!CityGridResolver.TryOccupyWithBuilding(
+                                if (!CityGridResolver.TryOccupyWithBuildingAtPosition(
                                         candidateGrid,
                                         CurrentState.bounds,
                                         building,
@@ -142,7 +142,8 @@ namespace UrbanWildlife.Construction
                             building,
                             CurrentState.bounds,
                             CurrentState.buildings,
-                            proposedBuildings);
+                            proposedBuildings,
+                            CurrentState.vehicle_roads);
                     }
                     ApplyPlacementIssue(change, issue);
                     if (string.IsNullOrEmpty(issue))
@@ -331,6 +332,10 @@ namespace UrbanWildlife.Construction
 
             foreach (CityTokenState token in snapped)
             {
+                if (token.type != CityPhysicalTokenType.GreenIntervention)
+                {
+                    continue;
+                }
                 float[] position = { token.x_norm, token.y_norm };
                 if (!CityGridResolver.TryResolveNearestCell(
                         grid,

@@ -137,40 +137,49 @@ namespace UrbanWildlife.City
             {
                 return false;
             }
-            CityGridCell unavailable = footprintCells.FirstOrDefault(candidate =>
-                !candidate.buildable || candidate.fixed_feature);
-            if (unavailable != null)
-            {
-                error = $"Grid cell {unavailable.id} does not allow building placement.";
-                return false;
-            }
-            CityGridCell occupied = footprintCells.FirstOrDefault(candidate =>
-                !string.IsNullOrWhiteSpace(candidate.occupant_id) &&
-                candidate.occupant_id != building.id);
-            if (occupied != null)
-            {
-                error = $"Grid cell {occupied.id} is already occupied by {occupied.occupant_id}.";
-                return false;
-            }
+            return OccupyBuildingCells(
+                building,
+                cell,
+                footprintCells,
+                revision,
+                true,
+                out error);
+        }
 
-            foreach (CityGridCell footprintCell in footprintCells)
+        public static bool TryOccupyWithBuildingAtPosition(
+            CityPlanningGrid grid,
+            CityBounds bounds,
+            CityBuilding building,
+            int revision,
+            out string error)
+        {
+            CityGridCell[] footprintCells = GetBuildingFootprintCellsAtPosition(
+                grid,
+                bounds,
+                building,
+                out error);
+            if (footprintCells.Length == 0)
             {
-                footprintCell.was_woodland = footprintCell.was_woodland ||
-                                              footprintCell.baseline_cover == CityLandCover.Woodland ||
-                                              footprintCell.current_cover == CityLandCover.Woodland;
-                footprintCell.current_cover = CityLandCover.Building;
-                footprintCell.occupant_id = building.id;
-                footprintCell.habitat_patch_id = null;
-                footprintCell.last_changed_revision = revision;
+                return false;
             }
-            building.planning_cell_id = cell.id;
-            building.planning_cell_ids = footprintCells.Select(candidate => candidate.id).ToArray();
-            building.position_norm = new[]
+            CityGridCell anchor = footprintCells.FirstOrDefault(candidate =>
+                PointInsideCell(building.position_norm, candidate));
+            if (anchor == null && !TryResolveNearestCell(
+                    grid,
+                    bounds,
+                    building.position_norm,
+                    out anchor))
             {
-                footprintCells.Average(candidate => candidate.center_norm[0]),
-                footprintCells.Average(candidate => candidate.center_norm[1]),
-            };
-            return true;
+                error = "Building centre is outside the planning surface.";
+                return false;
+            }
+            return OccupyBuildingCells(
+                building,
+                anchor,
+                footprintCells,
+                revision,
+                false,
+                out error);
         }
 
         public static CityGridCell[] GetBuildingFootprintCells(
@@ -196,6 +205,100 @@ namespace UrbanWildlife.City
                 return Array.Empty<CityGridCell>();
             }
             return BuildingFootprintCells(grid, bounds, building, anchor, out error);
+        }
+
+        public static CityGridCell[] GetBuildingFootprintCellsAtPosition(
+            CityPlanningGrid grid,
+            CityBounds bounds,
+            CityBuilding building,
+            out string error)
+        {
+            error = string.Empty;
+            if (grid?.cells == null || bounds == null ||
+                !PositiveFinite(bounds.width_units) || !PositiveFinite(bounds.height_units) ||
+                building == null || !IsUnitPoint(building.position_norm) ||
+                building.footprint_units == null || building.footprint_units.Length != 2 ||
+                !PositiveFinite(building.footprint_units[0]) ||
+                !PositiveFinite(building.footprint_units[1]))
+            {
+                error = "Building footprint or planning surface is incomplete.";
+                return Array.Empty<CityGridCell>();
+            }
+
+            float centreX = building.position_norm[0] * bounds.width_units;
+            float centreY = building.position_norm[1] * bounds.height_units;
+            float radians = building.rotation_deg * (float)Math.PI / 180f;
+            float cosine = (float)Math.Cos(radians);
+            float sine = (float)Math.Sin(radians);
+            float halfWidth = building.footprint_units[0] * 0.5f;
+            float halfHeight = building.footprint_units[1] * 0.5f;
+            float envelopeHalfX = Math.Abs(cosine) * halfWidth + Math.Abs(sine) * halfHeight;
+            float envelopeHalfY = Math.Abs(sine) * halfWidth + Math.Abs(cosine) * halfHeight;
+            if (centreX - envelopeHalfX < -GeometryTolerance ||
+                centreX + envelopeHalfX > bounds.width_units + GeometryTolerance ||
+                centreY - envelopeHalfY < -GeometryTolerance ||
+                centreY + envelopeHalfY > bounds.height_units + GeometryTolerance)
+            {
+                error = "Building footprint extends beyond the planning surface.";
+                return Array.Empty<CityGridCell>();
+            }
+
+            CityGridCell[] cells = grid.cells
+                .Where(cell => cell != null && IsUnitPoint(cell.center_norm) &&
+                               IsUnitSize(cell.size_norm) &&
+                               RotatedFootprintOverlapsCell(
+                                   centreX,
+                                   centreY,
+                                   halfWidth,
+                                   halfHeight,
+                                   cosine,
+                                   sine,
+                                   cell,
+                                   bounds))
+                .OrderBy(cell => cell.row)
+                .ThenBy(cell => cell.col)
+                .ToArray();
+            if (cells.Length == 0)
+            {
+                error = "Building footprint does not overlap the planning surface.";
+            }
+            return cells;
+        }
+
+        public static string[] ClearWoodlandAlongRoads(
+            CityPlanningGrid grid,
+            CityBounds bounds,
+            IEnumerable<CityVehicleRoad> roads,
+            int revision)
+        {
+            if (grid?.cells == null || bounds == null ||
+                !PositiveFinite(bounds.width_units) || !PositiveFinite(bounds.height_units))
+            {
+                return Array.Empty<string>();
+            }
+
+            CityVehicleRoad[] activeRoads = (roads ?? Array.Empty<CityVehicleRoad>())
+                .Where(road => road?.points_norm != null && road.points_norm.Length >= 2)
+                .ToArray();
+            HashSet<string> removedPatchIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (CityGridCell cell in grid.cells.Where(candidate =>
+                         candidate != null &&
+                         candidate.current_cover == CityLandCover.Woodland))
+            {
+                if (!activeRoads.Any(road => RoadOverlapsCell(road, cell, bounds)))
+                {
+                    continue;
+                }
+                if (!string.IsNullOrWhiteSpace(cell.habitat_patch_id))
+                {
+                    removedPatchIds.Add(cell.habitat_patch_id);
+                }
+                cell.was_woodland = true;
+                cell.current_cover = CityLandCover.OpenLand;
+                cell.habitat_patch_id = null;
+                cell.last_changed_revision = revision;
+            }
+            return removedPatchIds.OrderBy(id => id, StringComparer.Ordinal).ToArray();
         }
 
         public static bool TryOccupyWithGreenPatch(
@@ -367,6 +470,184 @@ namespace UrbanWildlife.City
                    cover == CityLandCover.PublicGreen ||
                    cover == CityLandCover.ShrubGarden ||
                    cover == CityLandCover.Recovering;
+        }
+
+        private static bool OccupyBuildingCells(
+            CityBuilding building,
+            CityGridCell anchor,
+            CityGridCell[] footprintCells,
+            int revision,
+            bool snapPositionToCells,
+            out string error)
+        {
+            error = string.Empty;
+            CityGridCell unavailable = footprintCells.FirstOrDefault(candidate =>
+                !candidate.buildable || candidate.fixed_feature);
+            if (unavailable != null)
+            {
+                error = $"Grid cell {unavailable.id} does not allow building placement.";
+                return false;
+            }
+            CityGridCell occupied = footprintCells.FirstOrDefault(candidate =>
+                !string.IsNullOrWhiteSpace(candidate.occupant_id) &&
+                candidate.occupant_id != building.id);
+            if (occupied != null)
+            {
+                error = $"Grid cell {occupied.id} is already occupied by {occupied.occupant_id}.";
+                return false;
+            }
+
+            foreach (CityGridCell footprintCell in footprintCells)
+            {
+                footprintCell.was_woodland = footprintCell.was_woodland ||
+                                              footprintCell.baseline_cover == CityLandCover.Woodland ||
+                                              footprintCell.current_cover == CityLandCover.Woodland;
+                footprintCell.current_cover = CityLandCover.Building;
+                footprintCell.occupant_id = building.id;
+                footprintCell.habitat_patch_id = null;
+                footprintCell.last_changed_revision = revision;
+            }
+            building.planning_cell_id = anchor.id;
+            building.planning_cell_ids = footprintCells.Select(candidate => candidate.id).ToArray();
+            if (snapPositionToCells)
+            {
+                building.position_norm = new[]
+                {
+                    footprintCells.Average(candidate => candidate.center_norm[0]),
+                    footprintCells.Average(candidate => candidate.center_norm[1]),
+                };
+            }
+            return true;
+        }
+
+        private static bool PointInsideCell(float[] point, CityGridCell cell)
+        {
+            return IsUnitPoint(point) && cell != null &&
+                   Math.Abs(point[0] - cell.center_norm[0]) <=
+                   cell.size_norm[0] * 0.5f + GeometryTolerance &&
+                   Math.Abs(point[1] - cell.center_norm[1]) <=
+                   cell.size_norm[1] * 0.5f + GeometryTolerance;
+        }
+
+        private static bool RotatedFootprintOverlapsCell(
+            float centreX,
+            float centreY,
+            float halfWidth,
+            float halfHeight,
+            float cosine,
+            float sine,
+            CityGridCell cell,
+            CityBounds bounds)
+        {
+            float cellCentreX = cell.center_norm[0] * bounds.width_units;
+            float cellCentreY = cell.center_norm[1] * bounds.height_units;
+            float cellHalfWidth = cell.size_norm[0] * bounds.width_units * 0.5f;
+            float cellHalfHeight = cell.size_norm[1] * bounds.height_units * 0.5f;
+            float deltaX = cellCentreX - centreX;
+            float deltaY = cellCentreY - centreY;
+            float localX = deltaX * cosine + deltaY * sine;
+            float localY = -deltaX * sine + deltaY * cosine;
+
+            float cellRadiusOnBuildingX = cellHalfWidth * Math.Abs(cosine) +
+                                          cellHalfHeight * Math.Abs(sine);
+            if (Math.Abs(localX) >= halfWidth + cellRadiusOnBuildingX - GeometryTolerance)
+            {
+                return false;
+            }
+            float cellRadiusOnBuildingY = cellHalfWidth * Math.Abs(sine) +
+                                          cellHalfHeight * Math.Abs(cosine);
+            if (Math.Abs(localY) >= halfHeight + cellRadiusOnBuildingY - GeometryTolerance)
+            {
+                return false;
+            }
+
+            float buildingRadiusOnWorldX = halfWidth * Math.Abs(cosine) +
+                                           halfHeight * Math.Abs(sine);
+            if (Math.Abs(deltaX) >= cellHalfWidth + buildingRadiusOnWorldX - GeometryTolerance)
+            {
+                return false;
+            }
+            float buildingRadiusOnWorldY = halfWidth * Math.Abs(sine) +
+                                           halfHeight * Math.Abs(cosine);
+            return Math.Abs(deltaY) < cellHalfHeight + buildingRadiusOnWorldY - GeometryTolerance;
+        }
+
+        private static bool RoadOverlapsCell(
+            CityVehicleRoad road,
+            CityGridCell cell,
+            CityBounds bounds)
+        {
+            float padding = Math.Max(0f, road.width_units * 0.5f);
+            float halfWidth = cell.size_norm[0] * bounds.width_units * 0.5f + padding;
+            float halfHeight = cell.size_norm[1] * bounds.height_units * 0.5f + padding;
+            float centreX = cell.center_norm[0] * bounds.width_units;
+            float centreY = cell.center_norm[1] * bounds.height_units;
+            float minX = centreX - halfWidth;
+            float maxX = centreX + halfWidth;
+            float minY = centreY - halfHeight;
+            float maxY = centreY + halfHeight;
+            for (int index = 1; index < road.points_norm.Length; index += 1)
+            {
+                float[] first = road.points_norm[index - 1];
+                float[] second = road.points_norm[index];
+                if (!IsUnitPoint(first) || !IsUnitPoint(second))
+                {
+                    continue;
+                }
+                if (SegmentIntersectsRectangle(
+                        first[0] * bounds.width_units,
+                        first[1] * bounds.height_units,
+                        second[0] * bounds.width_units,
+                        second[1] * bounds.height_units,
+                        minX,
+                        maxX,
+                        minY,
+                        maxY))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool SegmentIntersectsRectangle(
+            float firstX,
+            float firstY,
+            float secondX,
+            float secondY,
+            float minX,
+            float maxX,
+            float minY,
+            float maxY)
+        {
+            float deltaX = secondX - firstX;
+            float deltaY = secondY - firstY;
+            float enter = 0f;
+            float exit = 1f;
+            return Clip(-deltaX, firstX - minX, ref enter, ref exit) &&
+                   Clip(deltaX, maxX - firstX, ref enter, ref exit) &&
+                   Clip(-deltaY, firstY - minY, ref enter, ref exit) &&
+                   Clip(deltaY, maxY - firstY, ref enter, ref exit);
+        }
+
+        private static bool Clip(float direction, float distance, ref float enter, ref float exit)
+        {
+            if (Math.Abs(direction) <= GeometryTolerance)
+            {
+                return distance >= 0f;
+            }
+            float ratio = distance / direction;
+            if (direction < 0f)
+            {
+                if (ratio > exit) return false;
+                if (ratio > enter) enter = ratio;
+            }
+            else
+            {
+                if (ratio < enter) return false;
+                if (ratio < exit) exit = ratio;
+            }
+            return true;
         }
 
         private static CityGridCell[] BuildingFootprintCells(

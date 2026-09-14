@@ -12,29 +12,28 @@ namespace UrbanWildlife.Networks
         public static CityRoadChoiceSet Generate(CityState city, CityBuilding building)
         {
             ValidateInputs(city, building);
+            CityVehicleRoad[] connectionRoads = ConnectionRoads(city.vehicle_roads);
             NetworkConnection closest = ClosestConnection(
                 building.position_norm,
-                city.vehicle_roads,
+                connectionRoads,
                 city.bounds,
                 false);
             NetworkConnection endpoint = ClosestConnection(
                 building.position_norm,
-                city.vehicle_roads,
+                connectionRoads,
                 city.bounds,
                 true);
 
-            float[][] directPoints =
-            {
-                ClonePoint(building.position_norm),
-                ClonePoint(closest.Point),
-            };
-            float[][] existingNetworkPoints =
-            {
-                ClonePoint(building.position_norm),
-                ClonePoint(endpoint.Point),
-            };
+            float[][] directPoints = SmoothAccessRoute(
+                building,
+                closest.Point,
+                city.bounds);
+            float[][] existingNetworkPoints = SmoothAccessRoute(
+                building,
+                endpoint.Point,
+                city.bounds);
             float[][] lowImpactPoints = LowImpactRoute(
-                building.position_norm,
+                BuildingAccessPoint(building, closest.Point, city.bounds),
                 closest.Point,
                 city.green_patches,
                 city.bounds);
@@ -69,6 +68,136 @@ namespace UrbanWildlife.Networks
                 building_id = building.id,
                 candidates = new[] { direct, existingNetwork, lowImpact },
             };
+        }
+
+        private static CityVehicleRoad[] ConnectionRoads(
+            IEnumerable<CityVehicleRoad> roads)
+        {
+            CityVehicleRoad[] active = (roads ?? Array.Empty<CityVehicleRoad>())
+                .Where(road => road?.points_norm != null && road.points_norm.Length >= 2 &&
+                               road.construction_state != CityConstructionState.Demolishing)
+                .ToArray();
+            CityVehicleRoad[] main = active
+                .Where(road => road.role == CityVehicleRoadRole.Main)
+                .ToArray();
+            if (main.Length > 0)
+            {
+                return main;
+            }
+            CityVehicleRoad[] established = active
+                .Where(road => road.role != CityVehicleRoadRole.BuildingAccess)
+                .ToArray();
+            return established.Length > 0 ? established : active;
+        }
+
+        private static float[][] SmoothAccessRoute(
+            CityBuilding building,
+            float[] end,
+            CityBounds bounds)
+        {
+            float[] start = BuildingAccessPoint(building, end, bounds);
+            float startX = start[0] * bounds.width_units;
+            float startY = start[1] * bounds.height_units;
+            float endX = end[0] * bounds.width_units;
+            float endY = end[1] * bounds.height_units;
+            float deltaX = endX - startX;
+            float deltaY = endY - startY;
+            float distance = (float)Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (distance <= 0.001f)
+            {
+                return new[] { start, ClonePoint(end) };
+            }
+
+            float directionX = deltaX / distance;
+            float directionY = deltaY / distance;
+            float perpendicularX = -directionY;
+            float perpendicularY = directionX;
+            float handle = Math.Min(7f, distance * 0.32f);
+            float bendSign = StableHash(building.id) % 2 == 0 ? 1f : -1f;
+            float bend = Math.Min(2.4f, distance * 0.10f) * bendSign;
+            float controlOneX = startX + directionX * handle + perpendicularX * bend;
+            float controlOneY = startY + directionY * handle + perpendicularY * bend;
+            float controlTwoX = endX - directionX * handle + perpendicularX * bend * 0.55f;
+            float controlTwoY = endY - directionY * handle + perpendicularY * bend * 0.55f;
+
+            const int segmentCount = 10;
+            return Enumerable.Range(0, segmentCount + 1)
+                .Select(index =>
+                {
+                    float t = index / (float)segmentCount;
+                    float inverse = 1f - t;
+                    float x = inverse * inverse * inverse * startX +
+                              3f * inverse * inverse * t * controlOneX +
+                              3f * inverse * t * t * controlTwoX +
+                              t * t * t * endX;
+                    float y = inverse * inverse * inverse * startY +
+                              3f * inverse * inverse * t * controlOneY +
+                              3f * inverse * t * t * controlTwoY +
+                              t * t * t * endY;
+                    return new[]
+                    {
+                        Clamp(x / bounds.width_units, 0f, 1f),
+                        Clamp(y / bounds.height_units, 0f, 1f),
+                    };
+                })
+                .ToArray();
+        }
+
+        private static float[] BuildingAccessPoint(
+            CityBuilding building,
+            float[] target,
+            CityBounds bounds)
+        {
+            if (building.footprint_units == null || building.footprint_units.Length != 2)
+            {
+                return ClonePoint(building.position_norm);
+            }
+            float centreX = building.position_norm[0] * bounds.width_units;
+            float centreY = building.position_norm[1] * bounds.height_units;
+            float targetX = target[0] * bounds.width_units;
+            float targetY = target[1] * bounds.height_units;
+            float deltaX = targetX - centreX;
+            float deltaY = targetY - centreY;
+            float length = (float)Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (length <= 0.001f)
+            {
+                return ClonePoint(building.position_norm);
+            }
+
+            float directionX = deltaX / length;
+            float directionY = deltaY / length;
+            double radians = building.rotation_deg * Math.PI / 180d;
+            float cosine = (float)Math.Cos(radians);
+            float sine = (float)Math.Sin(radians);
+            float localX = directionX * cosine + directionY * sine;
+            float localY = -directionX * sine + directionY * cosine;
+            float halfWidth = building.footprint_units[0] * 0.5f;
+            float halfHeight = building.footprint_units[1] * 0.5f;
+            float widthDistance = Math.Abs(localX) <= 0.0001f
+                ? float.MaxValue
+                : halfWidth / Math.Abs(localX);
+            float heightDistance = Math.Abs(localY) <= 0.0001f
+                ? float.MaxValue
+                : halfHeight / Math.Abs(localY);
+            float edgeDistance = Math.Min(widthDistance, heightDistance);
+            return new[]
+            {
+                Clamp((centreX + directionX * edgeDistance) / bounds.width_units, 0f, 1f),
+                Clamp((centreY + directionY * edgeDistance) / bounds.height_units, 0f, 1f),
+            };
+        }
+
+        private static int StableHash(string value)
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (char character in value ?? string.Empty)
+                {
+                    hash = hash * 31 + character;
+                }
+                return hash & int.MaxValue;
+            }
         }
 
         public static CityPedestrianLink CreateBasicPedestrianAccess(

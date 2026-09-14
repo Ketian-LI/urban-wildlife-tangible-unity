@@ -31,10 +31,15 @@ namespace UrbanWildlife.Prototype
 
         private static float[] TokenAnchorPosition(CityState city, CityBuilding building)
         {
+            if (building?.position_norm != null && building.position_norm.Length >= 2)
+            {
+                return new[] { building.position_norm[0], building.position_norm[1] };
+            }
+
             CityGridCell anchor = CityGridResolver.GetCell(
                 city?.planning_grid,
                 building?.planning_cell_id);
-            return anchor?.center_norm ?? building?.position_norm ?? new[] { 0f, 0f };
+            return anchor?.center_norm ?? new[] { 0f, 0f };
         }
 
         public static CityTokenScanPacket CreateElectronicSample(CityState city, long timestampMs)
@@ -51,11 +56,13 @@ namespace UrbanWildlife.Prototype
             int nextCellIndex = 0;
             AddElectronicSampleIfAvailable(
                 tokens,
-                102,
-                CityPhysicalTokenType.Apartment,
+                111,
+                CityPhysicalTokenType.DetachedHouse,
                 availableCells,
                 grid,
                 city?.bounds,
+                city?.buildings,
+                city?.vehicle_roads,
                 ref nextCellIndex,
                 0.25f,
                 0.125f);
@@ -66,6 +73,8 @@ namespace UrbanWildlife.Prototype
                 availableCells,
                 grid,
                 city?.bounds,
+                city?.buildings,
+                city?.vehicle_roads,
                 ref nextCellIndex,
                 0.25f,
                 0.375f);
@@ -111,6 +120,8 @@ namespace UrbanWildlife.Prototype
             CityGridCell[] availableCells,
             CityPlanningGrid grid,
             CityBounds bounds,
+            IEnumerable<CityBuilding> existingBuildings,
+            IEnumerable<CityVehicleRoad> roads,
             ref int nextCellIndex,
             float fallbackX,
             float fallbackY)
@@ -130,7 +141,14 @@ namespace UrbanWildlife.Prototype
                     CityGridCell candidate = availableCells[nextCellIndex];
                     nextCellIndex += 1;
                     if (type == CityPhysicalTokenType.GreenIntervention ||
-                        CanFitBuilding(type, id, candidate, grid, bounds))
+                        CanFitBuilding(
+                            type,
+                            id,
+                            candidate,
+                            grid,
+                            bounds,
+                            existingBuildings,
+                            roads))
                     {
                         cell = candidate;
                     }
@@ -159,7 +177,9 @@ namespace UrbanWildlife.Prototype
             int id,
             CityGridCell anchor,
             CityPlanningGrid grid,
-            CityBounds bounds)
+            CityBounds bounds,
+            IEnumerable<CityBuilding> existingBuildings,
+            IEnumerable<CityVehicleRoad> roads)
         {
             if (anchor == null || grid == null || bounds == null)
             {
@@ -177,15 +197,20 @@ namespace UrbanWildlife.Prototype
             CityBuilding building = CityConstructionFactory.CreateBuilding(
                 token,
                 CityConstructionState.Proposed);
-            building.planning_cell_id = anchor.id;
-            CityGridCell[] footprint = CityGridResolver.GetBuildingFootprintCells(
+            CityGridCell[] footprint = CityGridResolver.GetBuildingFootprintCellsAtPosition(
                 grid,
                 bounds,
                 building,
                 out string error);
             return string.IsNullOrEmpty(error) && footprint.Length > 0 &&
                    footprint.All(cell => cell.buildable && !cell.fixed_feature &&
-                                          string.IsNullOrWhiteSpace(cell.occupant_id));
+                                          string.IsNullOrWhiteSpace(cell.occupant_id)) &&
+                   string.IsNullOrEmpty(CityConstructionPlacementRules.ValidateBuilding(
+                       building,
+                       bounds,
+                       existingBuildings,
+                       Array.Empty<CityBuilding>(),
+                       roads));
         }
 
         private static bool IsAvailablePlanningCell(CityGridCell cell)

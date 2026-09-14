@@ -338,6 +338,27 @@ namespace UrbanWildlife.Networks
                 }
             }
 
+            CityPlanningGrid planningGrid = CityGridResolver.DeepClone(current.planning_grid);
+            HashSet<string> clearedWoodlandPatchIds = new HashSet<string>(
+                CityGridResolver.ClearWoodlandAlongRoads(
+                    planningGrid,
+                    current.bounds,
+                    selectedRoads,
+                    current.revision + 1),
+                StringComparer.Ordinal);
+            CityGreenPatch[] greenPatches = (current.green_patches ??
+                                             Array.Empty<CityGreenPatch>())
+                .Where(patch => patch != null &&
+                                !clearedWoodlandPatchIds.Contains(patch.id))
+                .Select(CloneGreenPatch)
+                .ToArray();
+            foreach (CityGreenPatch patch in greenPatches)
+            {
+                patch.connected_patch_ids = (patch.connected_patch_ids ?? Array.Empty<string>())
+                    .Where(id => !clearedWoodlandPatchIds.Contains(id))
+                    .ToArray();
+            }
+
             return new CityState
             {
                 schema_version = current.schema_version,
@@ -345,9 +366,9 @@ namespace UrbanWildlife.Networks
                 revision = current.revision + 1,
                 source_contract = SourceContract,
                 bounds = current.bounds,
-                planning_grid = CityGridResolver.DeepClone(current.planning_grid),
+                planning_grid = planningGrid,
                 buildings = buildings,
-                green_patches = current.green_patches ?? Array.Empty<CityGreenPatch>(),
+                green_patches = greenPatches,
                 vehicle_roads = (current.vehicle_roads ?? Array.Empty<CityVehicleRoad>())
                     .Concat(selectedRoads)
                     .ToArray(),
@@ -445,6 +466,25 @@ namespace UrbanWildlife.Networks
                 requires_pedestrian_access = building.requires_pedestrian_access,
                 vehicle_road_ids = (building.vehicle_road_ids ?? Array.Empty<string>()).ToArray(),
                 pedestrian_link_ids = (building.pedestrian_link_ids ?? Array.Empty<string>()).ToArray(),
+            };
+        }
+
+        private static CityGreenPatch CloneGreenPatch(CityGreenPatch patch)
+        {
+            return new CityGreenPatch
+            {
+                id = patch.id,
+                source_token_id = patch.source_token_id,
+                planning_cell_id = patch.planning_cell_id,
+                type = patch.type,
+                construction_state = patch.construction_state,
+                public_park = patch.public_park,
+                polygon_norm = ClonePoints(patch.polygon_norm),
+                shelter_value = patch.shelter_value,
+                natural_food_value = patch.natural_food_value,
+                human_disturbance = patch.human_disturbance,
+                patch_size_units = patch.patch_size_units,
+                connected_patch_ids = (patch.connected_patch_ids ?? Array.Empty<string>()).ToArray(),
             };
         }
     }

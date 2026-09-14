@@ -101,10 +101,32 @@ namespace UrbanWildlife.Planning
             CityNetworkPlanPreview preview = networks.BeginRouteSelection();
             if (preview.HasNetworkChanges)
             {
-                Phase = CityPlanningWorkflowPhase.RouteSelection;
-                LastMessage = preview.RequiredRoadChoiceCount > 0
-                    ? "Construction Preview confirmed. Choose one road route for each new building."
-                    : "Construction Preview confirmed. Review the automatic walking links.";
+                foreach (CityRoadChoiceSet choice in preview.road_choices)
+                {
+                    CityRoadCandidate automatic = choice.candidates.FirstOrDefault(candidate =>
+                        candidate.route_option == CityRoadRouteOption.Direct) ??
+                        choice.candidates.FirstOrDefault();
+                    if (automatic == null || !networks.SelectRoadOption(
+                            choice.building_id,
+                            automatic.route_option,
+                            out error))
+                    {
+                        SetMessage(string.IsNullOrEmpty(error)
+                            ? $"Could not create automatic access for {choice.building_id}."
+                            : error);
+                        return false;
+                    }
+                }
+                if (!networks.ConfirmNetworkPlan(out error))
+                {
+                    SetMessage(error);
+                    return false;
+                }
+                currentState = networks.CurrentState;
+                PrepareConstruction();
+                LastMessage =
+                    $"Placement confirmed. Added {preview.RequiredRoadChoiceCount} smooth automatic " +
+                    "road connection(s) to the main road.";
             }
             else
             {

@@ -372,7 +372,7 @@ namespace UrbanWildlife.City
                 {
                     errors.Add($"Building {building.id} repeats a planning cell in its footprint.");
                 }
-                CityGridCell[] expectedFootprint = CityGridResolver.GetBuildingFootprintCells(
+                CityGridCell[] expectedFootprint = CityGridResolver.GetBuildingFootprintCellsAtPosition(
                     grid,
                     state.bounds,
                     building,

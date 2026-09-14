@@ -397,6 +397,19 @@ namespace UrbanWildlife.Prototype
                     PlanningCellColour(cell.current_cover),
                     -40,
                     true);
+                if (cell.was_woodland &&
+                    (cell.current_cover == CityLandCover.Building ||
+                     cell.current_cover == CityLandCover.OpenLand))
+                {
+                    CreatePolygon(
+                        cellObject.transform,
+                        "Cleared white ground",
+                        visualPolygon,
+                        0.018f,
+                        new Color(0.97f, 0.965f, 0.925f, 0.98f),
+                        -27,
+                        true);
+                }
                 BuildNaturalCellFeature(cellObject.transform, cell);
                 GeneratedPlanningCellCount += 1;
                 if (cell.buildable && !cell.fixed_feature &&
@@ -912,7 +925,7 @@ namespace UrbanWildlife.Prototype
                         CityBuilding building = CityConstructionFactory.CreateBuilding(
                             change.scanned_state,
                             CityConstructionState.Proposed);
-                        CityGridResolver.TryOccupyWithBuilding(
+                        CityGridResolver.TryOccupyWithBuildingAtPosition(
                             previewGrid,
                             city.bounds,
                             building,

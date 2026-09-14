@@ -1,7 +1,8 @@
 # Residential building review set v02
 
-These four review-only candidates were generated with built-in ImageGen. They
-have transparent RGBA backgrounds and are not wired into Unity yet.
+These four candidates were generated with built-in ImageGen and exported with
+transparent RGBA backgrounds. Candidate A and candidate C are the selected
+production set and are now wired into the Unity prototype.
 
 ## Reference decisions
 
@@ -41,6 +42,13 @@ corner and two restrained recessed balconies.
 Prompt focus: one connected shallow L-shaped apartment with buff and muted red
 brick, flat parapets, a shared entrance, paired vertical windows and deep
 loggia-style balconies.
+
+## Selected Unity application
+
+- Detached house: A, red-brick bay house.
+- Apartment: C, three-storey corner apartment.
+- The house is rendered at 1.24 map scale and the apartment at 1.34 map scale
+  so their silhouettes remain readable without covering neighbouring cells.
 
 ## Shared production constraints
 

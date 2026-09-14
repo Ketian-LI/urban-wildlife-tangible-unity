@@ -34,9 +34,9 @@ namespace UrbanWildlife.Prototype
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
         private const string CityDetachedHouseResourcePath =
-            "UrbanWildlife/Buildings/house-detached-citybuilder-v01";
+            "UrbanWildlife/Buildings/house-detached-red-brick-bay-v02";
         private const string CityApartmentResourcePath =
-            "UrbanWildlife/Buildings/apartment-lowrise-citybuilder-v01";
+            "UrbanWildlife/Buildings/apartment-lowrise-corner-v02";
         private static readonly string[] CityTreeResourcePaths =
         {
             "UrbanWildlife/Environment/tree-citybuilder-pear-v02",
@@ -737,7 +737,7 @@ namespace UrbanWildlife.Prototype
                         CityDetachedHouseResourcePath,
                         width,
                         depth,
-                        1.20f))
+                        1.24f))
                 {
                     continue;
                 }
@@ -748,7 +748,7 @@ namespace UrbanWildlife.Prototype
                         CityApartmentResourcePath,
                         width,
                         depth,
-                        1.28f))
+                        1.34f))
                 {
                     continue;
                 }

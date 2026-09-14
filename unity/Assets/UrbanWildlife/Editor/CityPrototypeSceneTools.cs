@@ -174,10 +174,10 @@ namespace UrbanWildlife.EditorTools
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
             int detachedHouseCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "house-detached-citybuilder-v01");
+                renderer.sprite.name == "house-detached-red-brick-bay-v02");
             int apartmentCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "apartment-lowrise-citybuilder-v01");
+                renderer.sprite.name == "apartment-lowrise-corner-v02");
             if (detachedHouseCount != 1 || apartmentCount != 2)
             {
                 throw new InvalidOperationException(
@@ -187,7 +187,7 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK detached_house=1 lowrise_apartments=2 " +
-                "citybuilder_sprites=True placeholder_blocks=False");
+                "selected_visuals=A+C citybuilder_sprites=True placeholder_blocks=False");
         }
 
         private static void VerifyPlanningGridVisuals(CityPrototypeDemo prototype)

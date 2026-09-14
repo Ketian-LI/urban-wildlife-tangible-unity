@@ -103,7 +103,7 @@
 | D095 | 城市Play Mode只通过单一规划状态机推进Scan、Preview、Confirm、Route Selection、DP Commit与Construction；电子测试帧必须标注为替代输入，新对象在完工前只显示占地/线路预览，不得显示为既有建筑 | 已实现并通过两Time Block事务测试；实体摄像头源待到货验证 |
 | D096 | 城市轨迹以语义足迹而非连续色带呈现：人类鞋印、车辆双轮迹、鸽子鸟爪、松鼠小爪、狐狸大爪、刺猬点印；屏幕只滚动保留最新900个标记，完整数据保留在Observation与日志中 | 已实现People/Wildlife/All切换、City Feed与阶段快照原型 |
 | D097 | 正式城市扫描使用独立`DICT_4X4_1000`字典：四角为0–3，五类实体Token为100–142；Python只在稳定、已校准且无未知/重复/越界ID时原子更新收件箱，Unity显式读取后二次验证并只进入Preview | 软件桥已实现；实物尺寸、相机高度与曝光待到货后验收 |
-| D098 | 正式城市地图采用6 × 4、共24个15 × 15 cm逻辑单元；基线含6个既有建筑、8格Open Land、7格Woodland（5格核心＋2格碎片）、1格Public Green、1格Civic Plaza和1格Water，Open Land与Woodland共15个规划候选。11枚建筑Token作为备选库存、3枚Green Intervention，玩家建筑同时上限9个。摄像头保留连续坐标，由Unity以5 cm半径吸附到单元中心，同格位置抖动不算Moved。Woodland建设保留`was_woodland`，拆除后先变Disturbed；Water、Civic Plaza和Public Green固定，动物初始优先使用Woodland | 已确定；数据契约与运行时网格首版接入中，替代D083的位置移动阈值 |
+| D098 | 正式城市地图采用6 × 4、共24个15 × 15 cm逻辑单元；基线含6个既有建筑、8格Open Land、7格Woodland（5格核心＋2格碎片）、1格Public Green、1格Civic Plaza和1格Water，Open Land与Woodland共15个规划候选。11枚建筑Token作为备选库存、3枚Green Intervention，玩家建筑同时上限9个。摄像头保留连续坐标，由Unity以5 cm半径吸附到单元中心，同格位置抖动不算Moved。Woodland建设保留`was_woodland`，拆除后先变Disturbed；Water、Civic Plaza和Public Green固定，动物初始优先使用Woodland | 已实现首版并通过网格、建设事务和动物跨障碍烟雾测试；四邻接寻路与单元容量待下一阶段，替代D083的位置移动阈值 |
 
 ## 待确定顺序
 

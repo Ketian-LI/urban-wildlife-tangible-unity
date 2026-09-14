@@ -28,9 +28,9 @@
 
 正式城市地图在 90 × 60 cm 板面上使用 6 列 × 4 行、共 24 个逻辑单元，每格对应 15 × 15 cm。界面仍显示连续的柔和城市地图，不绘制醒目的棋盘线；Plan 与 Preview 阶段只用轻微描边、悬停和状态色提示单元边界。摄像头仍输出连续归一化坐标，Unity 才把 Token 中心吸附到最近单元中心；默认吸附半径为 5 cm，一格只允许一个占用对象，水体、广场或公共绿地等固定单元拒绝建设。
 
-初始地图基线由 6 个既有建筑单元、7 个 Woodland 单元（5格相邻核心林地＋2格碎片林地）、1 个 Water 单元、1 个 Civic Plaza 单元、1 个 Public Green 单元和 8 个 Open Land 单元组成；Open Land 与 Woodland 合计 15 个规划候选。玩家有 11 枚建筑 Token 作为备选库存和 3 枚 Green Intervention，但玩家建筑同时上限为 9 个，每个规划周期仍受变更预算约束，避免把 24 格一次填满。上下左右四邻接是路径与生态连通的基础，不能穿过水体、建筑或从障碍物角落斜切。
+初始地图基线由 6 个既有建筑单元、7 个 Woodland 单元（5格相邻核心林地＋2格碎片林地）、1 个 Water 单元、1 个 Civic Plaza 单元、1 个 Public Green 单元和 8 个 Open Land 单元组成；Open Land 与 Woodland 合计 15 个规划候选。玩家有 11 枚建筑 Token 作为备选库存和 3 枚 Green Intervention，但玩家建筑同时上限为 9 个，每个规划周期仍受变更预算约束，避免把 24 格一次填满。当前地面动物会对整段移动轨迹检查 Water 与 Building，避免大步穿越障碍；上下左右四邻接寻路与单元容量是下一阶段的精细化规则。
 
-`CityPlanningGrid` 与 `CityGridCell` 保存行列、归一化中心与尺寸、基线/当前土地覆盖、建设许可、固定状态、建筑或栖息地引用以及最后变更 revision。建筑放入 Woodland 时，单元切换为 Building 并永久保留 `was_woodland = true`；建筑拆除后先进入 Disturbed，而不是立即恢复林地，后续 Green Intervention 才能推进 Recovering。该状态随 `CityState` revision 跨周期保留。初始动物优先从 Woodland 生成并按相邻栖息地容量活动；鸽子可使用开放地和广场资源，但地面物种不会把水体或建筑当作可通行表面。
+`CityPlanningGrid` 与 `CityGridCell` 保存行列、归一化中心与尺寸、基线/当前土地覆盖、建设许可、固定状态、建筑或栖息地引用以及最后变更 revision。建筑放入 Woodland 时，单元切换为 Building 并永久保留 `was_woodland = true`；建筑拆除后先进入 Disturbed，而不是立即恢复林地，后续 Green Intervention 才能推进 Recovering。该状态随 `CityState` revision 跨周期保留。松鼠、狐狸与刺猬初始优先从 Woodland 生成；鸽子可从 Public Green、Civic Plaza 与 Open Land 起飞或落脚，也可飞越障碍。地面物种不会穿越水体或建筑；相邻栖息地容量尚未接入。
 
 ### 城市 Token 扫描与建设事务
 
@@ -58,7 +58,7 @@
 
 `CityEnvironmentSimulation` 是Building与动物之间的环境中介层：它同步建筑垃圾输出和Bin容量，按持续超载时间生成Litter Hotspot，并分别公开Natural/Anthropogenic Food。局部Green Patch压力聚合建筑、Bench、道路交通与垃圾影响，避免动物直接读取视觉对象。
 
-`CityWildlifeSimulation`为鸽子、灰松鼠、狐狸和刺猬提供独立权重Profile。每次决策从食物、庇护、正负记忆、人类干扰、交通、旅行成本计算Patch Utility；代理只在现有Green Patch间决策，基础移动会避开现有建筑占地和地图边缘。地面物种Roadkill必须匹配具体Vehicle Agent碰撞，迁入、迁出与死亡进入不可逆Outcome列表；设施拆除不持有或清除动物记忆。
+`CityWildlifeSimulation`为鸽子、灰松鼠、狐狸和刺猬提供独立权重Profile。每次决策从食物、庇护、正负记忆、人类干扰、交通、旅行成本计算Patch Utility；觅食与庇护目标仍来自现有Green Patch，鸽子另可从开放地、广场和公共绿地生成或落脚。基础移动会避开地图边缘；地面物种的整段移动轨迹不能穿过Water或Existing Building，鸽子可飞越但不会落在障碍上。地面物种Roadkill必须匹配具体Vehicle Agent碰撞，迁入、迁出与死亡进入不可逆Outcome列表；设施拆除不持有或清除动物记忆。
 
 `CityStrategySimulation`管理DP、施工/拆除项目、四个日内Time Block和五个Development Phase。项目开始后转为UnderConstruction/Demolishing，经过规定Time Block才完成；City Balance五维等权计算，最后一个Natural Food Patch受到硬约束保护。暂停与运行速度只允许0、1、2倍。
 

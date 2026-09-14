@@ -267,6 +267,53 @@ namespace UrbanWildlife.EditorTools
                 agent.species == CityWildlifeSpecies.Pigeon);
             CityWildlifeAgent hedgehog = wildlife.Snapshot.agents.First(agent =>
                 agent.species == CityWildlifeSpecies.Hedgehog);
+            bool groundSpawnedInWoodland = true;
+            bool pigeonUsedOpenLand = false;
+            bool pigeonUsedPublicGreen = false;
+            bool pigeonUsedCivicPlaza = false;
+            foreach (CityWildlifeAgent agent in wildlife.Snapshot.agents)
+            {
+                if (!CityGridResolver.TryGetContainingCell(
+                        environmentCity.planning_grid,
+                        agent.position_norm,
+                        out CityGridCell spawnCell))
+                {
+                    throw new InvalidOperationException(
+                        $"Wildlife agent {agent.id} did not spawn inside a planning cell.");
+                }
+                if (agent.species == CityWildlifeSpecies.Pigeon)
+                {
+                    pigeonUsedOpenLand |= spawnCell.current_cover == CityLandCover.OpenLand;
+                    pigeonUsedPublicGreen |= spawnCell.current_cover == CityLandCover.PublicGreen;
+                    pigeonUsedCivicPlaza |= spawnCell.current_cover == CityLandCover.CivicPlaza;
+                    if (spawnCell.current_cover != CityLandCover.OpenLand &&
+                        spawnCell.current_cover != CityLandCover.PublicGreen &&
+                        spawnCell.current_cover != CityLandCover.CivicPlaza)
+                    {
+                        throw new InvalidOperationException(
+                            $"Pigeon {agent.id} spawned on unsupported land cover {spawnCell.current_cover}.");
+                    }
+                }
+                else
+                {
+                    groundSpawnedInWoodland &= spawnCell.current_cover == CityLandCover.Woodland;
+                }
+            }
+            bool crossSpeciesSpawnOverlap = wildlife.Snapshot.agents.Any(first =>
+                wildlife.Snapshot.agents.Any(second =>
+                    first.id != second.id && first.species != second.species &&
+                    Mathf.Abs(first.position_norm[0] - second.position_norm[0]) <= 0.0001f &&
+                    Mathf.Abs(first.position_norm[1] - second.position_norm[1]) <= 0.0001f));
+            if (!groundSpawnedInWoodland || !pigeonUsedOpenLand || !pigeonUsedPublicGreen ||
+                !pigeonUsedCivicPlaza || crossSpeciesSpawnOverlap)
+            {
+                throw new InvalidOperationException(
+                    "Species-specific wildlife spawn surfaces or deterministic offsets are invalid.");
+            }
+            CityPatchPressure pigeonFeedingTarget = peakEnvironment.patch_pressures.First(pressure =>
+                pressure.patch_id == pigeon.target_patch_id);
+            pigeon.position_norm = (float[])pigeonFeedingTarget.position_norm.Clone();
+            wildlife.Tick(0f, peakEnvironment, Array.Empty<CityVehicleAgent>());
             for (int index = 0; index < 12; index += 1)
             {
                 wildlife.Remember(
@@ -326,6 +373,177 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("Pigeon flight or ground-species roadkill vulnerability is invalid.");
             }
 
+            CityState waterBarrierCity = CityPrototypeStateFactory.Create();
+            CityGridCell waterBarrier = CityGridResolver.GetCell(waterBarrierCity.planning_grid, "B3");
+            waterBarrier.baseline_cover = CityLandCover.Water;
+            waterBarrier.current_cover = CityLandCover.Water;
+            waterBarrier.buildable = false;
+            waterBarrier.fixed_feature = true;
+            CityGridCell crossingTargetCell = CityGridResolver.GetCell(
+                waterBarrierCity.planning_grid,
+                "B4");
+            CityPatchPressure crossingTarget = new CityEnvironmentSimulation(waterBarrierCity)
+                .Snapshot.patch_pressures.First(pressure =>
+                    pressure.patch_id == crossingTargetCell.habitat_patch_id);
+            CityEnvironmentSnapshot waterCrossing = new CityEnvironmentSnapshot
+            {
+                patch_pressures = new[] { crossingTarget },
+            };
+            CityWildlifeConfiguration crossingConfiguration = new CityWildlifeConfiguration
+            {
+                migration_utility_threshold = -100f,
+            };
+            CityWildlifeSimulation groundWaterCrossing = new CityWildlifeSimulation(
+                waterBarrierCity,
+                crossingConfiguration,
+                pigeonCount: 0,
+                squirrelCount: 1,
+                foxCount: 0,
+                hedgehogCount: 0);
+            CityWildlifeAgent crossingSquirrel = groundWaterCrossing.Snapshot.agents[0];
+            float[] waterCrossingStart = { 0.25f, 0.375f };
+            crossingSquirrel.position_norm = (float[])waterCrossingStart.Clone();
+            if (!SegmentCrossesCellInterior(
+                    waterCrossingStart,
+                    crossingTarget.position_norm,
+                    waterBarrier))
+            {
+                throw new InvalidOperationException("Water crossing smoke fixture no longer crosses B3.");
+            }
+            groundWaterCrossing.Tick(60f, waterCrossing, Array.Empty<CityVehicleAgent>());
+            if (SegmentCrossesCellInterior(
+                    waterCrossingStart,
+                    crossingSquirrel.position_norm,
+                    waterBarrier) ||
+                crossingSquirrel.life_state != CityWildlifeLifeState.Active)
+            {
+                throw new InvalidOperationException("Ground wildlife crossed a Water planning cell in one step.");
+            }
+
+            CityWildlifeSimulation pigeonWaterCrossing = new CityWildlifeSimulation(
+                waterBarrierCity,
+                crossingConfiguration,
+                pigeonCount: 1,
+                squirrelCount: 0,
+                foxCount: 0,
+                hedgehogCount: 0);
+            CityWildlifeAgent crossingPigeon = pigeonWaterCrossing.Snapshot.agents[0];
+            crossingPigeon.position_norm = (float[])waterCrossingStart.Clone();
+            pigeonWaterCrossing.Tick(60f, waterCrossing, Array.Empty<CityVehicleAgent>());
+            if (Mathf.Abs(crossingPigeon.position_norm[0] - crossingTarget.position_norm[0]) > 0.0001f ||
+                Mathf.Abs(crossingPigeon.position_norm[1] - crossingTarget.position_norm[1]) > 0.0001f)
+            {
+                throw new InvalidOperationException("Pigeon could not fly over a Water planning cell.");
+            }
+            CityEnvironmentSnapshot waterLanding = new CityEnvironmentSnapshot
+            {
+                patch_pressures = new[]
+                {
+                    new CityPatchPressure
+                    {
+                        patch_id = "blocked-water-landing",
+                        position_norm = (float[])waterBarrier.center_norm.Clone(),
+                        natural_food = 1f,
+                        shelter = 1f,
+                    },
+                },
+            };
+            pigeonWaterCrossing.Tick(60f, waterLanding, Array.Empty<CityVehicleAgent>());
+            if (!CityGridResolver.TryGetContainingCell(
+                    waterBarrierCity.planning_grid,
+                    crossingPigeon.position_norm,
+                    out CityGridCell pigeonLandingCell) ||
+                pigeonLandingCell.current_cover == CityLandCover.Water ||
+                pigeonLandingCell.current_cover == CityLandCover.Building)
+            {
+                throw new InvalidOperationException("Pigeon landed on a blocked planning cell.");
+            }
+
+            CityState gridlessBuildingCity = CityPrototypeStateFactory.Create();
+            CityGridCell gridlessTargetCell = CityGridResolver.GetCell(
+                gridlessBuildingCity.planning_grid,
+                "C6");
+            string gridlessTargetPatchId = gridlessTargetCell.habitat_patch_id;
+            gridlessBuildingCity.planning_grid = null;
+            CityPatchPressure gridlessTarget = new CityEnvironmentSimulation(gridlessBuildingCity)
+                .Snapshot.patch_pressures.First(pressure =>
+                    pressure.patch_id == gridlessTargetPatchId);
+            CityEnvironmentSnapshot buildingCrossing = new CityEnvironmentSnapshot
+            {
+                patch_pressures = new[] { gridlessTarget },
+            };
+            CityWildlifeSimulation gridlessBuildingCrossing = new CityWildlifeSimulation(
+                gridlessBuildingCity,
+                crossingConfiguration,
+                pigeonCount: 0,
+                squirrelCount: 1,
+                foxCount: 0,
+                hedgehogCount: 0);
+            CityWildlifeAgent gridlessSquirrel = gridlessBuildingCrossing.Snapshot.agents[0];
+            float[] buildingCrossingStart = { 0.916667f, 0.125f };
+            CityBuilding buildingBarrier = gridlessBuildingCity.buildings.First(building =>
+                building.id == "community-centre");
+            gridlessSquirrel.position_norm = (float[])buildingCrossingStart.Clone();
+            if (!SegmentCrossesBuildingInterior(
+                    buildingCrossingStart,
+                    gridlessTarget.position_norm,
+                    buildingBarrier,
+                    gridlessBuildingCity.bounds))
+            {
+                throw new InvalidOperationException("Building crossing smoke fixture no longer crosses B6.");
+            }
+            gridlessBuildingCrossing.Tick(60f, buildingCrossing, Array.Empty<CityVehicleAgent>());
+            if (SegmentCrossesBuildingInterior(
+                    buildingCrossingStart,
+                    gridlessSquirrel.position_norm,
+                    buildingBarrier,
+                    gridlessBuildingCity.bounds) ||
+                gridlessSquirrel.life_state != CityWildlifeLifeState.Active)
+            {
+                throw new InvalidOperationException(
+                    "Ground wildlife crossed an Existing Building when the planning grid was absent.");
+            }
+
+            CityWildlifeSimulation gridlessPigeonCrossing = new CityWildlifeSimulation(
+                gridlessBuildingCity,
+                crossingConfiguration,
+                pigeonCount: 1,
+                squirrelCount: 0,
+                foxCount: 0,
+                hedgehogCount: 0);
+            CityWildlifeAgent gridlessPigeon = gridlessPigeonCrossing.Snapshot.agents[0];
+            gridlessPigeon.position_norm = (float[])buildingCrossingStart.Clone();
+            gridlessPigeonCrossing.Tick(60f, buildingCrossing, Array.Empty<CityVehicleAgent>());
+            if (Mathf.Abs(gridlessPigeon.position_norm[0] - gridlessTarget.position_norm[0]) > 0.0001f ||
+                Mathf.Abs(gridlessPigeon.position_norm[1] - gridlessTarget.position_norm[1]) > 0.0001f)
+            {
+                throw new InvalidOperationException(
+                    "Pigeon could not fly over an Existing Building without a planning grid.");
+            }
+            CityEnvironmentSnapshot buildingLanding = new CityEnvironmentSnapshot
+            {
+                patch_pressures = new[]
+                {
+                    new CityPatchPressure
+                    {
+                        patch_id = "blocked-building-landing",
+                        position_norm = (float[])buildingBarrier.position_norm.Clone(),
+                        natural_food = 1f,
+                        shelter = 1f,
+                    },
+                },
+            };
+            gridlessPigeonCrossing.Tick(60f, buildingLanding, Array.Empty<CityVehicleAgent>());
+            if (SegmentCrossesBuildingInterior(
+                    gridlessPigeon.position_norm,
+                    gridlessPigeon.position_norm,
+                    buildingBarrier,
+                    gridlessBuildingCity.bounds))
+            {
+                throw new InvalidOperationException(
+                    "Pigeon landed on an Existing Building without a planning grid.");
+            }
+
             CityWildlifeSimulation migration = new CityWildlifeSimulation(
                 environmentCity,
                 new CityWildlifeConfiguration
@@ -359,7 +577,10 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_WILDLIFE_SMOKE_OK species=4 agents=15 utility=True memories=8 " +
                 "negative_decay_slower=True migration_in_out=True permanent_outcomes=True " +
-                "roadkill=vehicle_collision_only pigeon_excluded=True obstacle_detour=True");
+                "roadkill=vehicle_collision_only pigeon_excluded=True ground_segment_obstacles=True " +
+                "pigeon_flyover=True pigeon_blocked_landings=True " +
+                "pigeon_surfaces=OpenLand/PublicGreen/CivicPlaza " +
+                "ground_spawn=Woodland distinct_species_spawn_offsets=True gridless_buildings=True");
 
             CityState strategyCity = CityPrototypeStateFactory.Create();
             CityBuilding plannedBuilding = strategyCity.buildings.First();
@@ -1968,6 +2189,56 @@ namespace UrbanWildlife.EditorTools
                 "trace_modes=3 park_notice_style=True split_screen=True map_unobscured=True " +
                 "typography=hierarchical_display/interface information_cards=True round_progress=3 " +
                 "confirm_memory=compact");
+        }
+
+        private static bool SegmentCrossesCellInterior(
+            float[] start,
+            float[] end,
+            CityGridCell cell)
+        {
+            return SegmentCrossesRectangleInterior(
+                start,
+                end,
+                cell.center_norm,
+                cell.size_norm[0] * 0.5f,
+                cell.size_norm[1] * 0.5f);
+        }
+
+        private static bool SegmentCrossesBuildingInterior(
+            float[] start,
+            float[] end,
+            CityBuilding building,
+            CityBounds bounds)
+        {
+            return SegmentCrossesRectangleInterior(
+                start,
+                end,
+                building.position_norm,
+                building.footprint_units[0] / bounds.width_units * 0.5f,
+                building.footprint_units[1] / bounds.height_units * 0.5f);
+        }
+
+        private static bool SegmentCrossesRectangleInterior(
+            float[] start,
+            float[] end,
+            float[] centre,
+            float halfWidth,
+            float halfHeight)
+        {
+            const int sampleCount = 256;
+            const float interiorTolerance = 0.00001f;
+            for (int index = 0; index <= sampleCount; index += 1)
+            {
+                float amount = index / (float)sampleCount;
+                float x = Mathf.Lerp(start[0], end[0], amount);
+                float y = Mathf.Lerp(start[1], end[1], amount);
+                if (Mathf.Abs(x - centre[0]) < halfWidth - interiorTolerance &&
+                    Mathf.Abs(y - centre[1]) < halfHeight - interiorTolerance)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static float TightSpriteAspect(Sprite sprite)

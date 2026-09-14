@@ -56,7 +56,7 @@
 
 ### 城市可视化集成壳
 
-`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的6建筑演示状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧77%的地图视口，右侧23%由固定城市信息栏占用，两者不遮挡。地图使用暖白色紧凑街区底板表达连续道路留白与许多小型建设地块，建筑、林木、池塘和广场仍由Unity动态生成；逻辑网格、机动车路线与步行路线常态隐藏，只在规划或检查时显示。场景维持可校准的正俯视坐标，同时让各Sprite自身保留柔和2.5D体积感；当前仍是程序化集成原型，不代表最终插画资产。
+`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的2住宅开局状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧77%的地图视口，右侧23%由固定城市信息栏占用，两者不遮挡。开局底图是一条弯曲主路经单桥跨越单色河流的内陆林缘聚落，大片暖白空地供后续建设，初始住宅使用明亮低饱和的粉蓝/柔珊瑚配色。主路、河流、桥和边缘林地烘焙在底图；新增建筑、清林白地和自动接入支路由Unity动态生成。逻辑网格、机动车主路线与步行路线常态隐藏，只在规划或检查时显示。场景默认使用无需摄像头的Desktop点击建造模式，也可切换到Camera实体Token扫描模式，两者复用同一校验和施工核心。
 
 `CityEnvironmentSimulation` 是Building与动物之间的环境中介层：它同步建筑垃圾输出和Bin容量，按持续超载时间生成Litter Hotspot，并分别公开Natural/Anthropogenic Food。局部Green Patch压力聚合建筑、Bench、道路交通与垃圾影响，避免动物直接读取视觉对象。
 

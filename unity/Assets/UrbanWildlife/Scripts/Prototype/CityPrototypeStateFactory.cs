@@ -17,12 +17,10 @@ namespace UrbanWildlife.Prototype
             };
             CityBuilding[] buildings =
             {
-                Building("apartment-west", CityBuildingType.Apartment, 100, 0.166667f, 0.083333f, 60, 0.85f, 0.25f, 8, 0.80f),
-                Building("apartment-court", CityBuildingType.Apartment, 101, 0.50f, 0.083333f, 60, 0.85f, 0.25f, 8, 0.80f),
-                Building("detached-garden", CityBuildingType.DetachedHouse, 110, 0.277778f, 0.75f, 12, 0.35f, 0.15f, 4, 0.45f),
-                Building("market-hall", CityBuildingType.Commercial, 120, 0.166667f, 0.416667f, 0, 0.05f, 0.90f, 16, 0.70f),
-                Building("corner-shops", CityBuildingType.Commercial, 121, 0.611111f, 0.75f, 0, 0.05f, 0.82f, 12, 0.65f),
-                Building("community-centre", CityBuildingType.CommunityFacility, 130, 0.722222f, 0.416667f, 0, 0.05f, 0.72f, 24, 0.50f),
+                // The opening state is deliberately sparse. The denser reference is the
+                // player's destination, not pre-authored scenery.
+                Building("detached-garden", CityBuildingType.DetachedHouse, 110, 0.277778f, 0.25f, 12, 0.35f, 0.15f, 4, 0.45f),
+                Building("detached-river", CityBuildingType.DetachedHouse, 111, 0.50f, 0.25f, 12, 0.35f, 0.15f, 4, 0.45f),
             };
             CityPlanningGrid planningGrid = CreatePlanningGrid(buildings, bounds);
 
@@ -35,26 +33,12 @@ namespace UrbanWildlife.Prototype
                     route_option = CityRoadRouteOption.Existing,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.03f, 0.52f), (0.15f, 0.52f), (0.28f, 0.47f), (0.41f, 0.50f), (0.53f, 0.55f), (0.66f, 0.51f), (0.80f, 0.46f), (0.97f, 0.47f)),
+                    points_norm = Points((0.00f, 0.285f), (0.08f, 0.290f), (0.16f, 0.340f), (0.25f, 0.370f), (0.34f, 0.425f), (0.43f, 0.425f), (0.53f, 0.390f), (0.60f, 0.395f), (0.66f, 0.440f), (0.70f, 0.490f), (0.78f, 0.520f), (0.86f, 0.510f), (1.00f, 0.460f)),
                     width_units = 1.1f,
                     speed_units_per_second = 7f,
                     traffic_load = 0.46f,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
-                    connected_road_ids = new[] { "vehicle-neighbourhood-lane" },
-                },
-                new CityVehicleRoad
-                {
-                    id = "vehicle-neighbourhood-lane",
-                    role = CityVehicleRoadRole.Local,
-                    route_option = CityRoadRouteOption.Existing,
-                    construction_state = CityConstructionState.Existing,
-                    source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.10f, 0.18f), (0.35f, 0.18f), (0.35f, 0.33f), (0.62f, 0.33f), (0.62f, 0.18f), (0.90f, 0.18f), (0.90f, 0.52f), (0.75f, 0.52f), (0.75f, 0.79f), (0.20f, 0.79f), (0.20f, 0.52f)),
-                    width_units = 0.72f,
-                    speed_units_per_second = 5f,
-                    traffic_load = 0.24f,
-                    connected_building_ids = new[] { "detached-garden", "corner-shops" },
-                    connected_road_ids = new[] { "vehicle-main-street" },
+                    connected_road_ids = Array.Empty<string>(),
                 },
             };
 
@@ -66,23 +50,11 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.03f, 0.485f), (0.15f, 0.485f), (0.28f, 0.435f), (0.41f, 0.465f), (0.53f, 0.515f), (0.66f, 0.475f), (0.80f, 0.425f), (0.97f, 0.435f)),
+                    points_norm = Points((0.00f, 0.272f), (0.08f, 0.277f), (0.16f, 0.327f), (0.25f, 0.357f), (0.34f, 0.412f), (0.43f, 0.412f), (0.53f, 0.377f), (0.60f, 0.382f), (0.66f, 0.427f), (0.70f, 0.477f), (0.78f, 0.507f), (0.86f, 0.497f), (1.00f, 0.447f)),
                     width_units = 0.28f,
                     step_free_accessible = true,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
-                    connected_link_ids = new[] { "pedestrian-garden-branch" },
-                },
-                new CityPedestrianLink
-                {
-                    id = "pedestrian-garden-branch",
-                    type = CityPedestrianLinkType.ExistingNetwork,
-                    construction_state = CityConstructionState.Existing,
-                    source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.10f, 0.145f), (0.38f, 0.145f), (0.38f, 0.295f), (0.65f, 0.295f), (0.65f, 0.145f), (0.935f, 0.145f), (0.935f, 0.555f), (0.785f, 0.555f), (0.785f, 0.825f), (0.165f, 0.825f), (0.165f, 0.555f)),
-                    width_units = 0.22f,
-                    step_free_accessible = true,
-                    connected_building_ids = new[] { "detached-garden", "corner-shops" },
-                    connected_link_ids = new[] { "pedestrian-park-spine" },
+                    connected_link_ids = Array.Empty<string>(),
                 },
             };
 
@@ -90,22 +62,14 @@ namespace UrbanWildlife.Prototype
             List<CityPedestrianLink> links = new List<CityPedestrianLink>(mainLinks);
             foreach (CityBuilding building in buildings)
             {
-                bool outerStreet = building.position_norm[1] < 0.25f ||
-                                   building.position_norm[1] > 0.62f;
-                string roadNetwork = outerStreet
-                    ? "vehicle-neighbourhood-lane"
-                    : "vehicle-main-street";
-                string linkNetwork = outerStreet
-                    ? "pedestrian-garden-branch"
-                    : "pedestrian-park-spine";
+                string roadNetwork = "vehicle-main-street";
+                string linkNetwork = "pedestrian-park-spine";
                 string roadId = $"road-access-{building.id}";
                 string linkId = $"walk-access-{building.id}";
-                float roadY = roadNetwork == "vehicle-main-street"
-                    ? 0.50f
-                    : building.position_norm[1] < 0.25f ? 0.18f : 0.79f;
-                float linkY = linkNetwork == "pedestrian-park-spine"
-                    ? 0.465f
-                    : building.position_norm[1] < 0.25f ? 0.145f : 0.825f;
+                float roadY = building.id == "detached-garden" ? 0.368f : 0.398f;
+                float linkY = roadY - 0.013f;
+                float buildingEdgeY = building.position_norm[1] +
+                                      building.footprint_units[1] / bounds.height_units * 0.46f;
                 roads.Add(new CityVehicleRoad
                 {
                     id = roadId,
@@ -114,7 +78,8 @@ namespace UrbanWildlife.Prototype
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.AutoGenerated,
                     points_norm = Points(
-                        (building.position_norm[0], building.position_norm[1]),
+                        (building.position_norm[0], buildingEdgeY),
+                        (building.position_norm[0], (buildingEdgeY + roadY) * 0.5f),
                         (building.position_norm[0], roadY)),
                     width_units = 0.45f,
                     speed_units_per_second = 4.5f,
@@ -129,7 +94,7 @@ namespace UrbanWildlife.Prototype
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.AutoGenerated,
                     points_norm = Points(
-                        (building.position_norm[0], building.position_norm[1]),
+                        (building.position_norm[0] + 0.008f, buildingEdgeY),
                         (building.position_norm[0], linkY)),
                     width_units = 0.16f,
                     step_free_accessible = true,
@@ -142,12 +107,7 @@ namespace UrbanWildlife.Prototype
 
             CityGreenPatch[] patches = CreateGreenPatches(planningGrid, bounds);
 
-            CityAmenity[] amenities =
-            {
-                Amenity("bench-park-01", CityAmenityType.Bench, 0.583333f, 0.375f, 10f, 0.55f, 0f, 0f),
-                Amenity("bin-main-01", CityAmenityType.Bin, 0.31f, 0.50f, 15f, 0.08f, 2.35f, 0.68f),
-                Amenity("bin-east-01", CityAmenityType.Bin, 0.76f, 0.52f, 15f, 0.08f, 2.25f, 0.68f),
-            };
+            CityAmenity[] amenities = Array.Empty<CityAmenity>();
 
             CityWasteNode[] wasteNodes = buildings.Select(building => new CityWasteNode
             {
@@ -163,7 +123,7 @@ namespace UrbanWildlife.Prototype
             CityState city = new CityState
             {
                 city_id = "city-prototype-v01",
-                revision = 4,
+                revision = 5,
                 source_contract = "city-prototype-demo-0.1",
                 bounds = bounds,
                 planning_grid = planningGrid,
@@ -299,29 +259,25 @@ namespace UrbanWildlife.Prototype
 
         private static CityLandCover BaselineCover(int row, int col)
         {
-            bool westWoodland = (row <= 2 && col == 0) ||
-                                (row == 4 && col <= 1) ||
-                                (row == 5 && col <= 2);
-            bool eastWoodland = (row == 0 && col >= 7) ||
-                                (row == 1 && col == 8) ||
-                                (row == 2 && col == 8) ||
-                                (row == 4 && col == 8) ||
-                                (row == 5 && col >= 7);
-            if (westWoodland || eastWoodland)
-            {
-                return CityLandCover.Woodland;
-            }
-            if (row == 3 && col == 4)
-            {
-                return CityLandCover.PublicGreen;
-            }
-            if (row == 2 && col == 5)
-            {
-                return CityLandCover.CivicPlaza;
-            }
-            if (row == 2 && col == 3)
+            bool river = (row == 0 && col == 7) ||
+                         (row == 1 && (col == 6 || col == 7)) ||
+                         (row == 2 && col == 6) ||
+                         (row == 3 && (col == 5 || col == 6)) ||
+                         (row == 4 && col == 5) ||
+                         (row == 5 && (col == 5 || col == 6));
+            if (river)
             {
                 return CityLandCover.Water;
+            }
+
+            bool woodland = row == 0 || row == 5 ||
+                            (row == 1 && (col <= 2 || col == 4 || col >= 6)) ||
+                            (row == 2 && (col <= 1 || col == 4 || col >= 7)) ||
+                            (row == 3 && (col <= 1 || col >= 7)) ||
+                            (row == 4 && (col <= 3 || col >= 7));
+            if (woodland)
+            {
+                return CityLandCover.Woodland;
             }
             return CityLandCover.OpenLand;
         }

@@ -24,7 +24,7 @@ namespace UrbanWildlife.Prototype
         private const float BoardViewMargin = 0.55f;
         private const float RuntimeSpeed = 2f;
         private const string CityBoardUnderlayResourcePath =
-            "UrbanWildlife/Environment/city-board-neighbourhood-base-v02";
+            "UrbanWildlife/Environment/city-board-riverside-opening-v01";
         private const string CityPlazaResourcePath =
             "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string CityPondResourcePath =
@@ -33,8 +33,10 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Environment/tree-citybuilder-default-v01";
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
-        private const string CityResidentialLotAResourcePath =
-            "UrbanWildlife/Buildings/residential-lot-a-simplified-v03";
+        private const string CityResidentialLotBlueResourcePath =
+            "UrbanWildlife/Buildings/residential-lot-a-pastel-blue-v04";
+        private const string CityResidentialLotCoralResourcePath =
+            "UrbanWildlife/Buildings/residential-lot-a-pastel-coral-v04";
         private const string CityResidentialLotBResourcePath =
             "UrbanWildlife/Buildings/residential-lot-b-simplified-v03";
         private const string CityResidentialLotCResourcePath =
@@ -102,11 +104,17 @@ namespace UrbanWildlife.Prototype
             new Dictionary<string, GameObject>();
         private GameObject generatedRoot;
         private GameObject vehicleRoadRoot;
+        private GameObject buildingAccessRoadRoot;
         private GameObject pedestrianRoot;
         private GameObject planningPreviewRoot;
         private bool paused;
         private bool showVehicleNetwork;
         private bool showPedestrianNetwork;
+        [SerializeField]
+        private bool useCameraInput;
+        private CityPhysicalTokenType desktopBuildingType = CityPhysicalTokenType.DetachedHouse;
+        private string desktopInputMessage =
+            "Choose a building, then click an open part of the map.";
         private CityTraceDisplayMode traceDisplayMode = CityTraceDisplayMode.CombinedTrace;
         private string cityScanInputMessage =
             "Camera scans remain pending until you load and confirm them.";
@@ -155,6 +163,7 @@ namespace UrbanWildlife.Prototype
         public string ResolvedCityScanPath => CityTokenScanFileSource.Resolve(cityScanPath);
         public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
                                                            CityPlanningWorkflowPhase.ReadyToScan;
+        public bool DesktopPlayEnabled => !useCameraInput;
 
         private void OnEnable()
         {
@@ -179,6 +188,10 @@ namespace UrbanWildlife.Prototype
                 configuredScreenHeight != Screen.height)
             {
                 ConfigureCamera();
+            }
+            if (Application.isPlaying && !useCameraInput)
+            {
+                HandleDesktopPointerInput();
             }
             if (!Application.isPlaying || mobility == null || paused)
             {
@@ -237,7 +250,14 @@ namespace UrbanWildlife.Prototype
         public void InitializePrototype(bool advancePreview)
         {
             ClearGenerated();
-            city = planningWorkflow?.CurrentState ?? CityPrototypeStateFactory.Create();
+            CityState completedCity = planningWorkflow?.Phase == CityPlanningWorkflowPhase.Complete
+                ? planningWorkflow.CurrentState
+                : null;
+            if (completedCity != null)
+            {
+                planningWorkflow = null;
+            }
+            city = completedCity ?? planningWorkflow?.CurrentState ?? CityPrototypeStateFactory.Create();
             plan = CityTripPlanner.CreatePlan(city);
             mobility = new CityMobilitySimulation(plan, city.bounds);
             environment = new CityEnvironmentSimulation(city, new CityEnvironmentConfiguration
@@ -401,12 +421,17 @@ namespace UrbanWildlife.Prototype
                     (cell.current_cover == CityLandCover.Building ||
                      cell.current_cover == CityLandCover.OpenLand))
                 {
+                    float[][] clearingShape = OrganicCellShape(
+                        cell,
+                        20,
+                        cell.current_cover == CityLandCover.Building ? 0.43f : 0.39f,
+                        cell.current_cover == CityLandCover.Building ? 0.41f : 0.37f);
                     CreatePolygon(
                         cellObject.transform,
                         "Cleared white ground",
-                        visualPolygon,
+                        clearingShape,
                         0.018f,
-                        new Color(0.97f, 0.965f, 0.925f, 0.98f),
+                        new Color(0.975f, 0.968f, 0.935f, 0.93f),
                         -27,
                         true);
                 }
@@ -472,11 +497,9 @@ namespace UrbanWildlife.Prototype
             switch (cell.current_cover)
             {
                 case CityLandCover.Water:
-                    colour = new Color(0.47f, 0.76f, 0.84f, 0.16f);
-                    radiusX = 0.39f;
-                    radiusY = 0.34f;
-                    points = 28;
-                    break;
+                    // The opening underlay contains the single continuous river and bridge.
+                    // Grid water cells remain as collision data but do not draw pond circles.
+                    return;
                 case CityLandCover.CivicPlaza:
                     colour = new Color(0.88f, 0.79f, 0.63f, 0.20f);
                     radiusX = 0.43f;
@@ -625,10 +648,9 @@ namespace UrbanWildlife.Prototype
                 {
                     if (cell.current_cover == CityLandCover.Woodland)
                     {
-                        CreateWoodlandGrove(
-                            root.transform,
-                            cell.id,
-                            VisualCellPolygon(cell, city.planning_grid));
+                        // Forest masses and their five-shape tree language are baked into the
+                        // opening underlay. Runtime clearing still paints warm-white ground.
+                        continue;
                     }
                     else if (cell.current_cover == CityLandCover.PublicGreen ||
                              cell.current_cover == CityLandCover.ShrubGarden ||
@@ -686,13 +708,17 @@ namespace UrbanWildlife.Prototype
         private void BuildNetworks()
         {
             vehicleRoadRoot = ChildRoot("Vehicle road network");
+            buildingAccessRoadRoot = ChildRoot("Visible building access roads");
             CityVehicleRoad[] activeRoads = city.vehicle_roads.Where(item =>
                 item.construction_state == CityConstructionState.Existing).ToArray();
             foreach (CityVehicleRoad road in activeRoads)
             {
+                Transform roadParent = road.role == CityVehicleRoadRole.BuildingAccess
+                    ? buildingAccessRoadRoot.transform
+                    : vehicleRoadRoot.transform;
                 float width = road.width_units / city.bounds.width_units * MapWidth;
                 CreateLine(
-                    vehicleRoadRoot.transform,
+                    roadParent,
                     road.id + " kerb",
                     road.points_norm,
                     width + 0.035f,
@@ -700,7 +726,7 @@ namespace UrbanWildlife.Prototype
                     0.045f,
                     -8);
                 CreateLine(
-                    vehicleRoadRoot.transform,
+                    roadParent,
                     road.id + " asphalt",
                     road.points_norm,
                     width,
@@ -745,7 +771,9 @@ namespace UrbanWildlife.Prototype
                     CreateBuildingArtwork(
                         root.transform,
                         building,
-                        CityResidentialLotAResourcePath,
+                        building.source_token_id % 2 == 0
+                            ? CityResidentialLotBlueResourcePath
+                            : CityResidentialLotCoralResourcePath,
                         width,
                         depth,
                         0.68f))
@@ -1311,6 +1339,123 @@ namespace UrbanWildlife.Prototype
             }
         }
 
+        private void HandleDesktopPointerInput()
+        {
+            if (planningWorkflow?.Phase != CityPlanningWorkflowPhase.ReadyToScan ||
+                !UnityEngine.Input.GetMouseButtonDown(0))
+            {
+                return;
+            }
+            Vector3 mouse = UnityEngine.Input.mousePosition;
+            if (mouse.x < 0f || mouse.x >= Screen.width * MapViewportWidth ||
+                mouse.y < 0f || mouse.y >= Screen.height)
+            {
+                return;
+            }
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                desktopInputMessage = "The map camera is unavailable.";
+                return;
+            }
+            Ray ray = camera.ScreenPointToRay(mouse);
+            Plane boardPlane = new Plane(Vector3.up, Vector3.zero);
+            if (!boardPlane.Raycast(ray, out float distance))
+            {
+                desktopInputMessage = "That click did not reach the map.";
+                return;
+            }
+            Vector3 world = ray.GetPoint(distance);
+            float xNorm = world.x / MapWidth + 0.5f;
+            float yNorm = 0.5f - world.z / MapHeight;
+            TryPlaceDesktopBuilding(desktopBuildingType, xNorm, yNorm, out _);
+        }
+
+        public bool TryPlaceDesktopBuilding(
+            CityPhysicalTokenType type,
+            float xNorm,
+            float yNorm,
+            out string error)
+        {
+            error = string.Empty;
+            if (useCameraInput)
+            {
+                error = "Switch to Desktop Play before placing with the pointer.";
+                desktopInputMessage = error;
+                return false;
+            }
+            if (planningWorkflow?.Phase != CityPlanningWorkflowPhase.ReadyToScan)
+            {
+                error = "Finish or cancel the current preview first.";
+                desktopInputMessage = error;
+                return false;
+            }
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            if (!CityPlanningDemoScanFactory.TryCreateDesktopPlacementScan(
+                    city,
+                    type,
+                    xNorm,
+                    yNorm,
+                    timestamp,
+                    out CityTokenScanPacket scan,
+                    out error) ||
+                !planningWorkflow.TryAcceptScan(scan, out error))
+            {
+                desktopInputMessage = error;
+                return false;
+            }
+            desktopBuildingType = type;
+            desktopInputMessage = planningWorkflow.Snapshot.CanConfirmPreview
+                ? "Preview ready. Confirm to build and connect it to the main road."
+                : planningWorkflow.Snapshot.message;
+            RefreshPlanningOverlay();
+            return true;
+        }
+
+        public bool ConfirmDesktopPlacement(out string error)
+        {
+            error = string.Empty;
+            if (planningWorkflow?.Phase != CityPlanningWorkflowPhase.Preview)
+            {
+                error = "There is no desktop placement to confirm.";
+                desktopInputMessage = error;
+                return false;
+            }
+            if (!planningWorkflow.ConfirmPreview(out error) ||
+                !planningWorkflow.StartConstruction(out error))
+            {
+                desktopInputMessage = error;
+                RefreshPlanningOverlay();
+                return false;
+            }
+
+            // Desktop play is deliberately immediate: the player confirms a placement,
+            // while the full time-block construction presentation remains available to
+            // the camera/research edition.
+            for (int block = 0;
+                 block < 8 && planningWorkflow.Phase == CityPlanningWorkflowPhase.Construction;
+                 block += 1)
+            {
+                planningWorkflow.AdvanceConstructionBlock();
+            }
+            if (planningWorkflow.Phase != CityPlanningWorkflowPhase.Complete)
+            {
+                error = "Construction did not complete within the desktop build step.";
+                desktopInputMessage = error;
+                return false;
+            }
+            desktopInputMessage = "Built. Choose another building and click the map.";
+            InitializePrototype(false);
+            return true;
+        }
+
+        private void CancelDesktopPlacement()
+        {
+            planningWorkflow?.CancelPreview();
+            desktopInputMessage = "Placement cancelled. Choose another position.";
+            RefreshPlanningOverlay();
+        }
+
         private void OnGUI()
         {
             if (!Application.isPlaying || plan == null || mobility == null)
@@ -1383,7 +1528,9 @@ namespace UrbanWildlife.Prototype
             GUILayout.Label(
                 $"Planning cells  {GeneratedPlanningCellCount}  ·  Available  {AvailablePlanningCellCount}",
                 bodyStyle);
-            GUILayout.Label("Available cells include woodland.\nOpen land · Woodland · Public green\nPlaza · Water · Buildings\nRoad — Footpath", bodyStyle);
+            GUILayout.Label(
+                "Warm-white ground · Woodland · Buildings\nRiver cells block construction\nMain road — Automatic access road",
+                bodyStyle);
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
             GUILayout.Label("DESTINATION PRESSURE", headingStyle);
@@ -1438,6 +1585,27 @@ namespace UrbanWildlife.Prototype
             }
             CityPlanningWorkflowSnapshot snapshot = planningWorkflow.Snapshot;
             GUILayout.Label("CITY PLANNING", headingStyle);
+            GUILayout.BeginHorizontal();
+            bool canSwitchInput = snapshot.phase == CityPlanningWorkflowPhase.ReadyToScan;
+            bool previousEnabled = GUI.enabled;
+            GUI.enabled = previousEnabled && canSwitchInput;
+            if (GUILayout.Button(useCameraInput ? "Desktop" : "DESKTOP", buttonStyle))
+            {
+                useCameraInput = false;
+                desktopInputMessage = "Choose a building, then click an open part of the map.";
+            }
+            if (GUILayout.Button(useCameraInput ? "CAMERA" : "Camera", buttonStyle))
+            {
+                useCameraInput = true;
+            }
+            GUI.enabled = previousEnabled;
+            GUILayout.EndHorizontal();
+            AddUiSpace(CityPrototypeUiTheme.SpaceSm);
+            if (!useCameraInput)
+            {
+                DrawDesktopPlanningPanel(snapshot);
+                return;
+            }
             GUILayout.Label(WorkflowStepLabel(snapshot.phase), metricStyle);
             GUILayout.Label(snapshot.message, bodyStyle);
             AddUiSpace(CityPrototypeUiTheme.SpaceSm);
@@ -1544,6 +1712,84 @@ namespace UrbanWildlife.Prototype
                         bodyStyle);
                     GUILayout.Label("The Preview footprints are now live city geometry.", bodyStyle);
                     break;
+            }
+        }
+
+        private void DrawDesktopPlanningPanel(CityPlanningWorkflowSnapshot snapshot)
+        {
+            GUILayout.Label("PLAY DIRECTLY IN UNITY", metricStyle);
+            switch (snapshot.phase)
+            {
+                case CityPlanningWorkflowPhase.ReadyToScan:
+                    GUILayout.Label("1  CHOOSE A BUILDING", headingStyle);
+                    GUILayout.BeginHorizontal();
+                    DrawDesktopBuildingButton(CityPhysicalTokenType.DetachedHouse, "HOUSE");
+                    DrawDesktopBuildingButton(CityPhysicalTokenType.Apartment, "FLATS");
+                    GUILayout.EndHorizontal();
+                    GUILayout.BeginHorizontal();
+                    DrawDesktopBuildingButton(CityPhysicalTokenType.Commercial, "MARKET");
+                    DrawDesktopBuildingButton(CityPhysicalTokenType.CommunityFacility, "CIVIC");
+                    GUILayout.EndHorizontal();
+                    GUILayout.Label(
+                        $"Selected  ·  {DesktopBuildingLabel(desktopBuildingType)}",
+                        bodyStyle);
+                    GUILayout.Label("2  CLICK OPEN GROUND ON THE MAP", headingStyle);
+                    GUILayout.Label(
+                        "Buildings cannot overlap the main road or river. Woodland is cleared to warm-white ground, and a smooth access road is added automatically.",
+                        bodyStyle);
+                    GUILayout.Label(desktopInputMessage, captionStyle);
+                    break;
+
+                case CityPlanningWorkflowPhase.Preview:
+                    CityConstructionPreview preview = snapshot.construction_preview;
+                    GUILayout.Label("PLACEMENT PREVIEW", headingStyle);
+                    if (preview != null)
+                    {
+                        GUILayout.Label(
+                            $"New {preview.NewCount}  ·  Blocked {preview.changes.Count(item => item.blocks_confirmation)}",
+                            bodyStyle);
+                    }
+                    GUILayout.Label(desktopInputMessage, bodyStyle);
+                    bool canConfirm = snapshot.CanConfirmPreview;
+                    bool previous = GUI.enabled;
+                    GUI.enabled = previous && canConfirm;
+                    if (GUILayout.Button("BUILD + CONNECT ROAD", buttonStyle))
+                    {
+                        ConfirmDesktopPlacement(out _);
+                    }
+                    GUI.enabled = previous;
+                    if (GUILayout.Button("Choose another position", buttonStyle))
+                    {
+                        CancelDesktopPlacement();
+                    }
+                    break;
+
+                default:
+                    GUILayout.Label("BUILDING…", headingStyle);
+                    GUILayout.Label(snapshot.message, bodyStyle);
+                    break;
+            }
+        }
+
+        private void DrawDesktopBuildingButton(CityPhysicalTokenType type, string label)
+        {
+            string text = desktopBuildingType == type ? "● " + label : label;
+            if (GUILayout.Button(text, buttonStyle))
+            {
+                desktopBuildingType = type;
+                desktopInputMessage =
+                    $"{DesktopBuildingLabel(type)} selected. Click an open part of the map.";
+            }
+        }
+
+        private static string DesktopBuildingLabel(CityPhysicalTokenType type)
+        {
+            switch (type)
+            {
+                case CityPhysicalTokenType.Apartment: return "Apartment";
+                case CityPhysicalTokenType.Commercial: return "Market";
+                case CityPhysicalTokenType.CommunityFacility: return "Community building";
+                default: return "Detached house";
             }
         }
 

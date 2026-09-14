@@ -75,9 +75,13 @@ namespace UrbanWildlife.Input
                 error = "City scan frame is not stable and cannot enter Preview.";
                 return false;
             }
-            if (packet.recognition == null ||
-                (packet.recognition.marker_backend != "aruco" &&
-                 packet.recognition.marker_backend != "apriltag") ||
+            bool cameraRecognition = packet.recognition != null &&
+                                     (packet.recognition.marker_backend == "aruco" ||
+                                      packet.recognition.marker_backend == "apriltag");
+            bool desktopRecognition = packet.recognition != null &&
+                                      packet.recognition.marker_backend == "desktop_pointer" &&
+                                      packet.capture.mode == "desktop_pointer";
+            if ((!cameraRecognition && !desktopRecognition) ||
                 string.IsNullOrWhiteSpace(packet.recognition.marker_family) ||
                 string.IsNullOrWhiteSpace(packet.recognition.token_config_version))
             {

@@ -56,7 +56,7 @@ namespace UrbanWildlife.Prototype
             int nextCellIndex = 0;
             AddElectronicSampleIfAvailable(
                 tokens,
-                111,
+                112,
                 CityPhysicalTokenType.DetachedHouse,
                 availableCells,
                 grid,
@@ -111,6 +111,88 @@ namespace UrbanWildlife.Prototype
                 },
                 token_states = tokens.OrderBy(token => token.id).ToArray(),
             };
+        }
+
+        public static bool TryCreateDesktopPlacementScan(
+            CityState city,
+            CityPhysicalTokenType type,
+            float xNorm,
+            float yNorm,
+            long timestampMs,
+            out CityTokenScanPacket scan,
+            out string error)
+        {
+            scan = null;
+            error = string.Empty;
+            if (city == null)
+            {
+                error = "The current city is unavailable.";
+                return false;
+            }
+            if (type == CityPhysicalTokenType.GreenIntervention)
+            {
+                error = "Desktop building placement expects a building type.";
+                return false;
+            }
+            if (xNorm < 0f || xNorm > 1f || yNorm < 0f || yNorm > 1f)
+            {
+                error = "Choose a position inside the map.";
+                return false;
+            }
+
+            List<CityTokenState> tokens = ConfirmedTokensFrom(city).ToList();
+            HashSet<int> usedIds = new HashSet<int>(tokens.Select(token => token.id));
+            int tokenId = CityTokenInventory.IdsFor(type)
+                .FirstOrDefault(id => !usedIds.Contains(id));
+            if (tokenId == 0)
+            {
+                error = $"All {type} pieces are already in use.";
+                return false;
+            }
+
+            tokens.Add(new CityTokenState
+            {
+                id = tokenId,
+                type = type,
+                x_norm = xNorm,
+                y_norm = yNorm,
+                rotation_deg = 0f,
+                confidence = 1f,
+            });
+            DateTimeOffset time = DateTimeOffset.FromUnixTimeMilliseconds(timestampMs);
+            scan = new CityTokenScanPacket
+            {
+                schema_version = CityTokenScanContract.SchemaVersion,
+                packet_type = CityTokenScanContract.PacketType,
+                timestamp_ms = timestampMs,
+                timestamp_utc = time.UtcDateTime.ToString("O"),
+                scan_id = $"desktop-placement-{timestampMs}",
+                session_id = "unity-city-desktop",
+                development_phase = 1,
+                calibration_id = "desktop-pointer",
+                coordinate_system = new LayoutCoordinateSystem
+                {
+                    origin = "top_left",
+                    x_axis = "right",
+                    y_axis = "down",
+                    range = new[] { 0f, 1f },
+                    unity_plane_mapping = "x_norm -> Unity X; y_norm -> Unity Z",
+                },
+                capture = new LayoutCapture
+                {
+                    mode = "desktop_pointer",
+                    stable = true,
+                    note = "Mouse placement in the camera-free Unity edition.",
+                },
+                recognition = new CityTokenRecognition
+                {
+                    marker_backend = "desktop_pointer",
+                    marker_family = "none",
+                    token_config_version = "city-tokens-0.1",
+                },
+                token_states = tokens.OrderBy(token => token.id).ToArray(),
+            };
+            return true;
         }
 
         private static void AddElectronicSampleIfAvailable(

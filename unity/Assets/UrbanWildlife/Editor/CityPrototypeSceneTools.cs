@@ -82,6 +82,55 @@ namespace UrbanWildlife.EditorTools
             }
         }
 
+        public static void BatchCaptureCityOpeningPreview()
+        {
+            const int width = 1536;
+            const int height = 1024;
+            const string previewPath =
+                "docs/visual-concepts/city-grid/city-opening-unity-preview-v01.png";
+
+            CreateCityPrototypeScene();
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                throw new InvalidOperationException("City opening preview requires a main camera.");
+            }
+
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "../.."));
+            string outputPath = Path.Combine(projectRoot, previewPath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+
+            RenderTexture renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            Texture2D image = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            RenderTexture previousActive = RenderTexture.active;
+            Rect previousRect = camera.rect;
+            float previousSize = camera.orthographicSize;
+            RenderTexture previousTarget = camera.targetTexture;
+            try
+            {
+                camera.rect = new Rect(0f, 0f, 1f, 1f);
+                camera.orthographicSize = CityPrototypeDemo.OrthographicSizeForViewport(width, height, 1f);
+                camera.targetTexture = renderTexture;
+                camera.Render();
+                RenderTexture.active = renderTexture;
+                image.ReadPixels(new Rect(0f, 0f, width, height), 0, 0);
+                image.Apply();
+                File.WriteAllBytes(outputPath, image.EncodeToPNG());
+            }
+            finally
+            {
+                camera.targetTexture = previousTarget;
+                camera.rect = previousRect;
+                camera.orthographicSize = previousSize;
+                RenderTexture.active = previousActive;
+                UnityEngine.Object.DestroyImmediate(image);
+                renderTexture.Release();
+                UnityEngine.Object.DestroyImmediate(renderTexture);
+            }
+
+            Debug.Log($"UNITY_CITY_OPENING_PREVIEW_OK path={outputPath} size={width}x{height}");
+        }
+
         public static void BatchBuildAndVerifyCityPrototype()
         {
             CreateCityPrototypeScene();
@@ -90,12 +139,12 @@ namespace UrbanWildlife.EditorTools
             bool separateViewport = camera != null &&
                                     Math.Abs(camera.rect.x) < 0.001f &&
                                     Math.Abs(camera.rect.width - 0.77f) < 0.001f;
-            if (prototype == null || prototype.GeneratedBuildingCount != 6 ||
+            if (prototype == null || prototype.GeneratedBuildingCount != 2 ||
                 prototype.GeneratedPlanningCellCount != 54 ||
-                prototype.AvailablePlanningCellCount != 36 ||
-                prototype.GeneratedVehicleRoadCount != 8 ||
-                prototype.GeneratedPedestrianLinkCount != 8 ||
-                prototype.GeneratedAmenityCount != 3 ||
+                prototype.AvailablePlanningCellCount != 43 ||
+                prototype.GeneratedVehicleRoadCount != 3 ||
+                prototype.GeneratedPedestrianLinkCount != 3 ||
+                prototype.GeneratedAmenityCount != 0 ||
                 prototype.FoodSourceCount < 2 ||
                 prototype.WildlifeAgentCount != 15 ||
                 prototype.WildlifeSpeciesCount != 4 ||
@@ -107,10 +156,11 @@ namespace UrbanWildlife.EditorTools
                 prototype.CityFeedCount <= 0 ||
                 !prototype.PlanningWorkflowConnected ||
                 string.IsNullOrWhiteSpace(prototype.ResolvedCityScanPath) ||
-                prototype.RepresentativeAgentCount != 11 ||
-                prototype.RepresentedPopulation != 132 ||
-                prototype.VehicleTripCount <= 0 ||
-                prototype.VehicleTripCount >= prototype.RepresentativeAgentCount ||
+                prototype.RepresentativeAgentCount <= 0 ||
+                prototype.RepresentedPopulation != 24 ||
+                prototype.VehicleTripCount < 0 ||
+                prototype.VehicleTripCount > prototype.RepresentativeAgentCount ||
+                !prototype.DesktopPlayEnabled ||
                 !separateViewport)
             {
                 throw new InvalidOperationException(
@@ -137,6 +187,7 @@ namespace UrbanWildlife.EditorTools
                 "Generated City Prototype/Green patches",
                 "Generated City Prototype/Buildings",
                 "Generated City Prototype/Vehicle road network",
+                "Generated City Prototype/Visible building access roads",
                 "Generated City Prototype/Pedestrian link network",
                 "Generated City Prototype/Digital amenities",
                 "Generated City Prototype/City wildlife agents",
@@ -157,18 +208,20 @@ namespace UrbanWildlife.EditorTools
             VerifyPlanningWorkflow();
             VerifyGridConstructionRules();
             VerifyFreePlacementAndAutomaticAccess();
+            VerifyDesktopPlayableFlow(prototype);
             Debug.Log(
-                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True buildings=6 vehicle_roads=8 " +
-                "planning_grid=9x6 planning_cells=54 available_cells=36 multi_cell_buildings=True hidden_grid=True " +
-                "pedestrian_links=8 amenities=3 food_sources=True waste_pressure=True " +
+                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True opening_buildings=2 vehicle_roads=3 " +
+                "planning_grid=9x6 planning_cells=54 available_cells=43 multi_cell_buildings=True hidden_grid=True " +
+                "pedestrian_links=3 amenities=0 food_sources=True waste_pressure=True " +
                 "wildlife_agents=15 species=4 utility_targets=True " +
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
-                "representative_agents=11 represented_population=132 walk_and_drive=True " +
+                "represented_population=24 external_return_routes=True " +
                 "live_vehicle_agents=True max_speed=2x no_questionnaire=True " +
                 "visible_footprint_tyre_bird_paw_tracks=True city_feed_panel=True phase_snapshot=True " +
+                "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
-                "no_premature_buildings=True");
+                "sparse_opening_map=True no_premature_buildings=True");
         }
 
         private static void VerifyResidentialBuildingVisuals(CityPrototypeDemo prototype)
@@ -177,26 +230,32 @@ namespace UrbanWildlife.EditorTools
             SpriteRenderer[] renderers = buildings == null
                 ? Array.Empty<SpriteRenderer>()
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
-            int residentialLotACount = renderers.Count(renderer =>
+            int residentialBlueCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "residential-lot-a-simplified-v03");
+                renderer.sprite.name == "residential-lot-a-pastel-blue-v04");
+            int residentialCoralCount = renderers.Count(renderer =>
+                renderer.sprite != null &&
+                renderer.sprite.name == "residential-lot-a-pastel-coral-v04");
             int residentialLotBCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
                 renderer.sprite.name == "residential-lot-b-simplified-v03");
             int residentialLotCCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
                 renderer.sprite.name == "residential-lot-c-sand-v03");
-            if (residentialLotACount != 1 || residentialLotBCount != 1 ||
-                residentialLotCCount != 1)
+            if (residentialBlueCount != 1 || residentialCoralCount != 1 ||
+                residentialLotBCount != 0 ||
+                residentialLotCCount != 0 ||
+                Resources.Load<Sprite>("UrbanWildlife/Buildings/residential-lot-b-simplified-v03") == null ||
+                Resources.Load<Sprite>("UrbanWildlife/Buildings/residential-lot-c-sand-v03") == null)
             {
                 throw new InvalidOperationException(
-                    "Residential buildings must use the selected A, B and C sprite set; " +
-                    $"lotA={residentialLotACount}, lotB={residentialLotBCount}, " +
+                    "The sparse opening must contain two matching detached houses while retaining later residential assets; " +
+                    $"blue={residentialBlueCount}, coral={residentialCoralCount}, lotB={residentialLotBCount}, " +
                     $"lotC={residentialLotCCount}.");
             }
             Debug.Log(
-                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK lot_a=1 lot_b=1 lot_c=1 " +
-                "selected_visuals=A+B+C landscaped_lots=True lawn_retained=True " +
+                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK opening_blue=1 opening_coral=1 later_lot_b_c_available=True " +
+                "landscaped_lots=True lawn_retained=True " +
                 "placeholder_blocks=False");
         }
 
@@ -215,17 +274,20 @@ namespace UrbanWildlife.EditorTools
             int communityCentreCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
                 renderer.sprite.name == "community-centre-citybuilder-v01");
-            if (marketHallCount != 1 || cornerShopsCount != 1 ||
-                communityCentreCount != 1)
+            if (marketHallCount != 0 || cornerShopsCount != 0 ||
+                communityCentreCount != 0 ||
+                Resources.Load<Sprite>("UrbanWildlife/Buildings/market-hall-citybuilder-v02") == null ||
+                Resources.Load<Sprite>("UrbanWildlife/Buildings/corner-shops-citybuilder-v02") == null ||
+                Resources.Load<Sprite>("UrbanWildlife/Buildings/community-centre-citybuilder-v01") == null)
             {
                 throw new InvalidOperationException(
-                    "Public destinations must use the transparent market, shops and community sprites; " +
+                    "Later public destinations must stay available without appearing in the opening map; " +
                     $"marketHall={marketHallCount}, cornerShops={cornerShopsCount}, " +
                     $"communityCentre={communityCentreCount}.");
             }
             Debug.Log(
-                "UNITY_CITY_COMMERCIAL_VISUAL_SMOKE_OK market_hall=1 corner_shops=1 " +
-                "community_centre=1 true_alpha=True natural_offsets=True " +
+                "UNITY_CITY_COMMERCIAL_VISUAL_SMOKE_OK opening_public_buildings=0 " +
+                "later_market_shops_community_assets=True " +
                 "citybuilder_sprites=True placeholder_blocks=False");
         }
 
@@ -244,23 +306,23 @@ namespace UrbanWildlife.EditorTools
             Font boldFont = Resources.Load<Font>(
                 "UrbanWildlife/Fonts/Nunito-Bold");
             if (grid.cols != 9 || grid.rows != 6 || cells.childCount != 54 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.OpenLand) != 21 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland) != 15 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.Building) != 15 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.PublicGreen) != 1 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.CivicPlaza) != 1 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 1 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.OpenLand) != 10 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland) != 33 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.Building) != 2 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.PublicGreen) != 0 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.CivicPlaza) != 0 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 9 ||
                 boundaries.GetComponentsInChildren<LineRenderer>().Length != 17 ||
                 underlayRenderer?.sprite == null ||
-                underlayRenderer.sprite.name != "city-board-neighbourhood-base-v02" ||
+                underlayRenderer.sprite.name != "city-board-riverside-opening-v01" ||
                 underlayRenderer.sortingOrder != -50 ||
                 regularFont == null || boldFont == null ||
                 prototype.GetComponentsInChildren<Transform>().Any(item => item.name == "East canal"))
             {
                 throw new InvalidOperationException(
-                    "City planning grid must render its organic terrain underlay, 54 cells " +
-                    "(21 open, 15 woodland, 15 building, 3 fixed public features), " +
-                    "17 faint grid lines and no east canal.");
+                    "The sparse opening map must render its riverside underlay, 54 logical cells " +
+                    "(10 open, 33 woodland, 2 opening houses and 9 protected river cells), " +
+                    "17 faint grid lines and no ocean.");
             }
 
             LineRenderer[] boundaryLines = boundaries.GetComponentsInChildren<LineRenderer>();
@@ -291,24 +353,10 @@ namespace UrbanWildlife.EditorTools
                 if (cell.current_cover == CityLandCover.Woodland)
                 {
                     Transform grove = greenery.Find(cell.id + " woodland grove");
-                    SpriteRenderer[] trees = grove == null
-                        ? Array.Empty<SpriteRenderer>()
-                        : grove.GetComponentsInChildren<SpriteRenderer>();
-                    string[] expectedTreeSprites =
-                    {
-                        "tree-citybuilder-pear-v02",
-                        "tree-citybuilder-round-v02",
-                        "tree-citybuilder-three-lobe-v02",
-                        "tree-citybuilder-two-lobe-v02",
-                        "tree-citybuilder-tapered-v02",
-                    };
-                    if (trees.Length != 5 ||
-                        trees.Any(tree => tree.sprite == null ||
-                                          !expectedTreeSprites.Contains(tree.sprite.name)) ||
-                        trees.Select(tree => tree.sprite.name).Distinct().Count() != 5)
+                    if (grove != null)
                     {
                         throw new InvalidOperationException(
-                            $"Woodland cell {cell.id} must contain five spaced trees using all five approved silhouettes.");
+                            $"Woodland cell {cell.id} duplicated trees already baked into the opening underlay.");
                     }
                 }
                 else if (cell.current_cover == CityLandCover.PublicGreen)
@@ -323,11 +371,11 @@ namespace UrbanWildlife.EditorTools
                     }
                 }
                 else if (cell.current_cover == CityLandCover.Water &&
-                         (cellObject.Find("Water natural feature")?.GetComponent<MeshFilter>()?.sharedMesh == null ||
-                          cellObject.Find("Water artwork")?.GetComponent<SpriteRenderer>()?.sprite == null))
+                         (cellObject.Find("Water natural feature") != null ||
+                          cellObject.Find("Water artwork") != null))
                 {
                     throw new InvalidOperationException(
-                        $"Water cell {cell.id} must render its organic pond artwork inside its logical planning area.");
+                        $"River cell {cell.id} must remain logical collision data without drawing a pond overlay.");
                 }
                 else if (cell.current_cover == CityLandCover.CivicPlaza &&
                          (cellObject.Find("CivicPlaza natural feature")?.GetComponent<MeshFilter>()?.sharedMesh == null ||
@@ -338,20 +386,20 @@ namespace UrbanWildlife.EditorTools
                 }
             }
 
-            int expectedGroves = grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland);
             int actualGroves = greenery.GetComponentsInChildren<Transform>()
                 .Count(item => item.parent == greenery &&
                                item.name.EndsWith(" woodland grove", StringComparison.Ordinal));
-            if (actualGroves != expectedGroves)
+            if (actualGroves != 0)
             {
-                throw new InvalidOperationException($"Expected {expectedGroves} cell-aligned woodland groves, found {actualGroves}.");
+                throw new InvalidOperationException($"Expected no duplicated dynamic woodland groves, found {actualGroves}.");
             }
-            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=9x6 cells=54 available=36 woodland_groves={actualGroves} dynamic_trees=5-per-cell/5-shapes neighbourhood_underlay=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False detailed_pond_plaza=True static_nunito=Regular/Bold public_green=True no_ocean=True");
+            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=9x6 cells=54 available=43 woodland_groves={actualGroves} baked_forest=True riverside_opening_underlay=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False protected_river_cells=9 static_nunito=Regular/Bold no_ocean=True");
         }
 
         private static void VerifyCompactNeighbourhoodPresentation(CityPrototypeDemo prototype)
         {
             Transform roads = prototype.transform.Find("Generated City Prototype/Vehicle road network");
+            Transform accessRoads = prototype.transform.Find("Generated City Prototype/Visible building access roads");
             Transform footpaths = prototype.transform.Find("Generated City Prototype/Pedestrian link network");
             Transform wildlife = prototype.transform.Find("Generated City Prototype/City wildlife agents");
             SpriteRenderer[] wildlifeSprites = wildlife == null
@@ -364,6 +412,8 @@ namespace UrbanWildlife.EditorTools
                 "fox-side-walk-a-v01",
             };
             if (roads == null || roads.gameObject.activeSelf ||
+                accessRoads == null || !accessRoads.gameObject.activeSelf ||
+                accessRoads.GetComponentsInChildren<LineRenderer>().Length != 4 ||
                 footpaths == null || footpaths.gameObject.activeSelf ||
                 wildlife == null || wildlife.childCount != 15 ||
                 wildlifeSprites.Length != 14 ||
@@ -371,11 +421,11 @@ namespace UrbanWildlife.EditorTools
                                                   !expectedWildlifeSprites.Contains(renderer.sprite.name)))
             {
                 throw new InvalidOperationException(
-                    "The compact-neighbourhood view must hide route overlays by default and use artwork for pigeons, squirrels and foxes.");
+                    "The opening view must hide debug networks, keep two house driveways visible, and use wildlife artwork.");
             }
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
-                "road_routes_default_hidden=True footpaths_default_hidden=True " +
+                "road_routes_default_hidden=True two_driveways_visible=True footpaths_default_hidden=True " +
                 "wildlife_artwork=14 hedgehog_fallback=1 compact_buildings=True");
         }
 
@@ -437,8 +487,8 @@ namespace UrbanWildlife.EditorTools
             if (!workflow.TryAcceptScan(scan, out string error) ||
                 workflow.Phase != CityPlanningWorkflowPhase.Preview ||
                 workflow.ConstructionPreview.NewCount != 2 ||
-                workflow.ConstructionPreview.UnchangedCount != 6 ||
-                workflow.CurrentState.buildings.Length != 6)
+                workflow.ConstructionPreview.UnchangedCount != 2 ||
+                workflow.CurrentState.buildings.Length != 2)
             {
                 string changeSummary = workflow.ConstructionPreview == null
                     ? "no preview"
@@ -479,7 +529,7 @@ namespace UrbanWildlife.EditorTools
             }
             workflow.AdvanceConstructionBlock();
             bool allBuilt = workflow.CurrentState.buildings
-                                .Where(item => item.source_token_id == 111)
+                                .Where(item => item.source_token_id == 112)
                                 .All(item => item.construction_state == CityConstructionState.Existing) &&
                             workflow.CurrentState.green_patches
                                 .Where(item => item.source_token_id == 140)
@@ -526,7 +576,7 @@ namespace UrbanWildlife.EditorTools
                 cell.current_cover == CityLandCover.Woodland);
             CityTokenState woodlandBuildingToken = new CityTokenState
             {
-                id = 111,
+                id = 112,
                 type = CityPhysicalTokenType.DetachedHouse,
                 x_norm = woodland.center_norm[0],
                 y_norm = woodland.center_norm[1],
@@ -614,7 +664,7 @@ namespace UrbanWildlife.EditorTools
 
             CityState fixedCity = CityPrototypeStateFactory.Create();
             CityTokenState[] fixedBaseline = CityPlanningDemoScanFactory.ConfirmedTokensFrom(fixedCity);
-            CityGridCell water = fixedCity.planning_grid.cells.Single(cell =>
+            CityGridCell water = fixedCity.planning_grid.cells.First(cell =>
                 cell.current_cover == CityLandCover.Water);
             CityConstructionManager fixedConstruction =
                 new CityConstructionManager(fixedCity, fixedBaseline);
@@ -669,6 +719,7 @@ namespace UrbanWildlife.EditorTools
             }
 
             CityState capCity = CityPrototypeStateFactory.Create();
+            capCity.planning_grid.max_active_player_buildings = 4;
             CityTokenState[] capBaseline = CityPlanningDemoScanFactory.ConfirmedTokensFrom(capCity);
             CityGridCell[] openCells = FindPlaceableDetachedCells(capCity, 3);
             if (openCells.Length < 3)
@@ -676,9 +727,8 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException(
                     "The baseline city does not contain three road-safe detached-house positions.");
             }
-            CityTokenState[] threeAdditions =
+            CityTokenState[] twoAdditions =
             {
-                TokenAt(111, CityPhysicalTokenType.DetachedHouse, openCells[0]),
                 TokenAt(112, CityPhysicalTokenType.DetachedHouse, openCells[1]),
                 TokenAt(113, CityPhysicalTokenType.DetachedHouse, openCells[2]),
             };
@@ -687,13 +737,13 @@ namespace UrbanWildlife.EditorTools
             CityConstructionPreview capPreview = capConstruction.ScanCity(
                 ScanPacket(
                     "grid-cap-nine",
-                    capBaseline.Concat(threeAdditions).ToArray()));
+                    capBaseline.Concat(twoAdditions).ToArray()));
             string capError = string.Empty;
-            if (!capPreview.CanConfirmConstruction || capPreview.NewCount != 3 ||
+            if (!capPreview.CanConfirmConstruction || capPreview.NewCount != 2 ||
                 !capConstruction.ConfirmConstruction(out capError))
             {
                 throw new InvalidOperationException(
-                    $"The city could not reach its nine-building cap: {capError}");
+                    $"The cap test city could not reach its four-building limit: {capError}");
             }
             CityTokenState tenth = TokenAt(
                 102,
@@ -701,18 +751,18 @@ namespace UrbanWildlife.EditorTools
                 openCells[0]);
             CityConstructionPreview overCapPreview = capConstruction.ScanCity(
                 ScanPacket(
-                    "grid-cap-ten",
+                    "grid-over-cap",
                     capConstruction.ConfirmedTokens.Concat(new[] { tenth }).ToArray()));
             if (!overCapPreview.HasBlockingChanges || overCapPreview.CanConfirmConstruction)
             {
                 throw new InvalidOperationException(
-                    "A tenth active player building must be rejected by the planning grid.");
+                    "A building beyond the active-player-building cap must be rejected.");
             }
 
             Debug.Log(
                 "UNITY_CITY_GRID_RULES_SMOKE_OK snap_radius_cm=5 same_cell_jitter=Moved " +
                 "footprints=1x1/2x1/2x2 woodland_build=Building woodland_patches_removed=True " +
-                "multi_cell_demolition=Released fixed_water_rejected=True active_building_cap=9");
+                "multi_cell_demolition=Released fixed_river_rejected=True active_building_cap_rule=True");
         }
 
         private static void VerifyFreePlacementAndAutomaticAccess()
@@ -723,7 +773,7 @@ namespace UrbanWildlife.EditorTools
             const float placedY = 0.742f;
             CityTokenState token = new CityTokenState
             {
-                id = 111,
+                id = 112,
                 type = CityPhysicalTokenType.DetachedHouse,
                 x_norm = placedX,
                 y_norm = placedY,
@@ -760,10 +810,10 @@ namespace UrbanWildlife.EditorTools
             CityBuilding onRoad = CityConstructionFactory.CreateBuilding(
                 new CityTokenState
                 {
-                    id = 112,
+                    id = 113,
                     type = CityPhysicalTokenType.DetachedHouse,
                     x_norm = 0.41f,
-                    y_norm = 0.50f,
+                    y_norm = 0.425f,
                     rotation_deg = 0f,
                     confidence = 1f,
                 },
@@ -828,6 +878,44 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_FREE_PLACEMENT_SMOKE_OK continuous_position=True road_overlap_rejected=True " +
                 "smooth_main_road_curve=11_points woodland_to_white=True");
+        }
+
+        private static void VerifyDesktopPlayableFlow(CityPrototypeDemo prototype)
+        {
+            CityState reference = CityPrototypeStateFactory.Create();
+            CityGridCell placement = FindPlaceableDetachedCells(reference, 1).FirstOrDefault();
+            if (prototype == null || !prototype.DesktopPlayEnabled || placement == null)
+            {
+                throw new InvalidOperationException(
+                    "The camera-free desktop edition did not start with a usable placement point.");
+            }
+            if (!prototype.TryPlaceDesktopBuilding(
+                    CityPhysicalTokenType.DetachedHouse,
+                    placement.center_norm[0],
+                    placement.center_norm[1],
+                    out string placementError) ||
+                prototype.PlanningPhase != CityPlanningWorkflowPhase.Preview)
+            {
+                throw new InvalidOperationException(
+                    $"Desktop click placement did not reach Preview: {placementError}");
+            }
+            if (!prototype.ConfirmDesktopPlacement(out string buildError) ||
+                prototype.GeneratedBuildingCount != 3 ||
+                prototype.PlanningPhase != CityPlanningWorkflowPhase.ReadyToScan)
+            {
+                throw new InvalidOperationException(
+                    $"Desktop confirmation did not produce a live third building: {buildError}");
+            }
+            Transform access = prototype.transform.Find(
+                "Generated City Prototype/Visible building access roads");
+            if (access == null || access.GetComponentsInChildren<LineRenderer>().Length != 6)
+            {
+                throw new InvalidOperationException(
+                    "Desktop placement did not add its visible smooth access road.");
+            }
+            Debug.Log(
+                "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
+                "confirm_build=True camera_required=False camera_mode_retained=True");
         }
 
         private static CityTokenScanPacket ScanPacket(string id, CityTokenState[] tokens)

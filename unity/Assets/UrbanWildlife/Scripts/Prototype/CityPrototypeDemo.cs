@@ -29,12 +29,38 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string CityPondResourcePath =
             "UrbanWildlife/Environment/park-pond-citybuilder-v01";
-        private const string CityTreeResourcePath =
+        private const string LegacyCityTreeResourcePath =
             "UrbanWildlife/Environment/tree-citybuilder-default-v01";
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
-        private const string CityWoodlandResourcePath =
-            "UrbanWildlife/Environment/woodland-citybuilder-grove-v01";
+        private static readonly string[] CityTreeResourcePaths =
+        {
+            "UrbanWildlife/Environment/tree-citybuilder-pear-v02",
+            "UrbanWildlife/Environment/tree-citybuilder-round-v02",
+            "UrbanWildlife/Environment/tree-citybuilder-three-lobe-v02",
+            "UrbanWildlife/Environment/tree-citybuilder-two-lobe-v02",
+            "UrbanWildlife/Environment/tree-citybuilder-tapered-v02",
+        };
+        private static readonly Vector2[] WoodlandTreeOffsets =
+        {
+            new Vector2(-0.29f, -0.27f),
+            new Vector2(0.00f, -0.28f),
+            new Vector2(0.29f, -0.20f),
+            new Vector2(-0.23f, 0.02f),
+            new Vector2(0.16f, 0.04f),
+            new Vector2(-0.07f, 0.29f),
+            new Vector2(0.30f, 0.27f),
+        };
+        private static readonly float[] WoodlandTreeScales =
+        {
+            0.52f,
+            0.48f,
+            0.50f,
+            0.47f,
+            0.53f,
+            0.49f,
+            0.46f,
+        };
 
         [SerializeField]
         [Tooltip("Path relative to Unity Assets, or an absolute path.")]
@@ -601,7 +627,7 @@ namespace UrbanWildlife.Prototype
                         garden.transform.SetParent(root.transform, false);
                         if (cell.current_cover == CityLandCover.PublicGreen)
                         {
-                            CreateTree(garden.transform, "Park tree",
+                            CreateTree(garden.transform, "Park tree " + cell.id,
                                 CellPosition(cell, -0.27f, -0.24f), 0.61f);
                         }
                         CreateBush(garden.transform, "Park shrub 1",
@@ -1732,10 +1758,9 @@ namespace UrbanWildlife.Prototype
 
         private void CreateWoodlandGrove(Transform parent, string id, float[][] polygon)
         {
-            Sprite sprite = Resources.Load<Sprite>(CityWoodlandResourcePath);
-            if (sprite == null || polygon == null || polygon.Length == 0)
+            if (polygon == null || polygon.Length == 0)
             {
-                Debug.LogWarning($"City woodland sprite or patch geometry was not found for {id}.");
+                Debug.LogWarning($"City woodland patch geometry was not found for {id}.");
                 return;
             }
 
@@ -1748,36 +1773,54 @@ namespace UrbanWildlife.Prototype
 
             GameObject grove = new GameObject(id + " woodland grove");
             grove.transform.SetParent(parent, false);
-            grove.transform.localPosition = ToWorld(new[] { centreX, centreY }, 0.08f);
+            grove.transform.localPosition = Vector3.zero;
 
-            GameObject artwork = new GameObject("Woodland grove artwork");
-            artwork.transform.SetParent(grove.transform, false);
-            artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            artwork.transform.localPosition = Vector3.zero;
-            // Fit the entire grove within its own planning cell in both map axes.
-            float targetWidth = (maxX - minX) * MapWidth * 0.84f;
-            float targetHeight = (maxY - minY) * MapHeight * 0.80f;
-            float artworkScale = Mathf.Min(
-                targetWidth / Mathf.Max(0.001f, sprite.bounds.size.x),
-                targetHeight / Mathf.Max(0.001f, sprite.bounds.size.y));
-            float mirror = centreX > 0.5f ? -1f : 1f;
-            artwork.transform.localScale = new Vector3(artworkScale * mirror, artworkScale, artworkScale);
-
-            SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
-            renderer.sprite = sprite;
-            renderer.sortingOrder = 12;
+            float width = maxX - minX;
+            float height = maxY - minY;
+            int firstVariant = StableTextHash(id) % CityTreeResourcePaths.Length;
+            for (int index = 0; index < WoodlandTreeOffsets.Length; index += 1)
+            {
+                Vector2 offset = WoodlandTreeOffsets[index];
+                float[] position =
+                {
+                    centreX + width * offset.x,
+                    centreY + height * offset.y,
+                };
+                int variant = (firstVariant + index) % CityTreeResourcePaths.Length;
+                CreateTree(
+                    grove.transform,
+                    $"Woodland tree {index + 1}",
+                    position,
+                    WoodlandTreeScales[index],
+                    variant);
+            }
         }
 
-        private void CreateTree(Transform parent, string name, float[] normalized, float scale)
+        private void CreateTree(
+            Transform parent,
+            string name,
+            float[] normalized,
+            float scale,
+            int variantIndex = -1)
         {
             GameObject tree = new GameObject(name);
             tree.transform.SetParent(parent, false);
             tree.transform.localPosition = ToWorld(normalized, 0.095f);
 
-            Sprite sprite = Resources.Load<Sprite>(CityTreeResourcePath);
+            int resolvedVariant = variantIndex >= 0
+                ? variantIndex % CityTreeResourcePaths.Length
+                : StableTextHash(name) % CityTreeResourcePaths.Length;
+            string resourcePath = CityTreeResourcePaths[resolvedVariant];
+            Sprite sprite = Resources.Load<Sprite>(resourcePath);
             if (sprite == null)
             {
-                Debug.LogWarning($"City tree sprite was not found at Resources/{CityTreeResourcePath}.");
+                sprite = Resources.Load<Sprite>(LegacyCityTreeResourcePath);
+            }
+            if (sprite == null)
+            {
+                Debug.LogWarning(
+                    $"City tree sprite was not found at Resources/{resourcePath} " +
+                    $"or Resources/{LegacyCityTreeResourcePath}.");
                 return;
             }
 
@@ -1787,12 +1830,26 @@ namespace UrbanWildlife.Prototype
             artwork.transform.localPosition = Vector3.zero;
             float targetHeight = 1.02f * scale;
             float artworkScale = targetHeight / Mathf.Max(0.001f, sprite.bounds.size.y);
-            float mirror = name.GetHashCode() % 2 == 0 ? 1f : -1f;
+            float mirror = StableTextHash(name + resolvedVariant) % 2 == 0 ? 1f : -1f;
             artwork.transform.localScale = new Vector3(artworkScale * mirror, artworkScale, artworkScale);
 
             SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
-            renderer.sortingOrder = 14;
+            renderer.sortingOrder = 14 + Mathf.RoundToInt(normalized[1] * 4f);
+        }
+
+        private static int StableTextHash(string value)
+        {
+            unchecked
+            {
+                uint hash = 2166136261;
+                foreach (char character in value ?? string.Empty)
+                {
+                    hash ^= character;
+                    hash *= 16777619;
+                }
+                return (int)(hash & 0x7fffffff);
+            }
         }
 
         private void CreateBush(Transform parent, string name, float[] normalized, float scale)

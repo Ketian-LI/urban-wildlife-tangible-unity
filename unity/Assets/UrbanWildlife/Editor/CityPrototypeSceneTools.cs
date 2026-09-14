@@ -225,12 +225,25 @@ namespace UrbanWildlife.EditorTools
 
                 if (cell.current_cover == CityLandCover.Woodland)
                 {
-                    Transform grove = greenery.Find(cell.id + " woodland grove/Woodland grove artwork");
-                    SpriteRenderer renderer = grove == null ? null : grove.GetComponent<SpriteRenderer>();
-                    if (renderer?.sprite == null ||
-                        renderer.sprite.name != "woodland-citybuilder-grove-v01")
+                    Transform grove = greenery.Find(cell.id + " woodland grove");
+                    SpriteRenderer[] trees = grove == null
+                        ? Array.Empty<SpriteRenderer>()
+                        : grove.GetComponentsInChildren<SpriteRenderer>();
+                    string[] expectedTreeSprites =
                     {
-                        throw new InvalidOperationException($"Woodland cell {cell.id} is missing its existing grove artwork.");
+                        "tree-citybuilder-pear-v02",
+                        "tree-citybuilder-round-v02",
+                        "tree-citybuilder-three-lobe-v02",
+                        "tree-citybuilder-two-lobe-v02",
+                        "tree-citybuilder-tapered-v02",
+                    };
+                    if (trees.Length != 7 ||
+                        trees.Any(tree => tree.sprite == null ||
+                                          !expectedTreeSprites.Contains(tree.sprite.name)) ||
+                        trees.Select(tree => tree.sprite.name).Distinct().Count() != 5)
+                    {
+                        throw new InvalidOperationException(
+                            $"Woodland cell {cell.id} must contain seven spaced trees using all five approved silhouettes.");
                     }
                 }
                 else if (cell.current_cover == CityLandCover.PublicGreen)
@@ -262,12 +275,13 @@ namespace UrbanWildlife.EditorTools
 
             int expectedGroves = grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland);
             int actualGroves = greenery.GetComponentsInChildren<Transform>()
-                .Count(item => item.name == "Woodland grove artwork");
+                .Count(item => item.parent == greenery &&
+                               item.name.EndsWith(" woodland grove", StringComparison.Ordinal));
             if (actualGroves != expectedGroves)
             {
                 throw new InvalidOperationException($"Expected {expectedGroves} cell-aligned woodland groves, found {actualGroves}.");
             }
-            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=6x4 cells=24 available=15 woodland_groves={actualGroves} organic_underlay=True transparent_land_cover=True natural_boundaries=True detailed_pond_plaza=True static_nunito=Regular/Bold public_green=True no_east_canal=True");
+            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=6x4 cells=24 available=15 woodland_groves={actualGroves} dynamic_trees=7x5-shapes organic_underlay=True transparent_land_cover=True natural_boundaries=True detailed_pond_plaza=True static_nunito=Regular/Bold public_green=True no_east_canal=True");
         }
 
         private static void VerifyResponsiveCameraFit()

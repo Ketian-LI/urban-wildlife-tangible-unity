@@ -40,9 +40,11 @@ namespace UrbanWildlife.Prototype
         private const string CityApartmentCornerResourcePath =
             "UrbanWildlife/Buildings/apartment-lowrise-corner-v02";
         private const string CityMarketHallResourcePath =
-            "UrbanWildlife/Buildings/market-hall-citybuilder-v01";
+            "UrbanWildlife/Buildings/market-hall-citybuilder-v02";
         private const string CityCornerShopsResourcePath =
-            "UrbanWildlife/Buildings/corner-shops-citybuilder-v01";
+            "UrbanWildlife/Buildings/corner-shops-citybuilder-v02";
+        private const string CityCommunityCentreResourcePath =
+            "UrbanWildlife/Buildings/community-centre-citybuilder-v01";
         private static readonly string[] CityTreeResourcePaths =
         {
             "UrbanWildlife/Environment/tree-citybuilder-pear-v02",
@@ -769,7 +771,18 @@ namespace UrbanWildlife.Prototype
                             : CityCornerShopsResourcePath,
                         width,
                         depth,
-                        building.id == "market-hall" ? 1.36f : 1.42f))
+                        building.id == "market-hall" ? 1.32f : 1.34f))
+                {
+                    continue;
+                }
+                if (building.type == CityBuildingType.CommunityFacility &&
+                    CreateBuildingArtwork(
+                        root.transform,
+                        building,
+                        CityCommunityCentreResourcePath,
+                        width,
+                        depth,
+                        1.36f))
                 {
                     continue;
                 }
@@ -850,7 +863,8 @@ namespace UrbanWildlife.Prototype
 
             GameObject buildingRoot = new GameObject(building.id);
             buildingRoot.transform.SetParent(parent, false);
-            buildingRoot.transform.localPosition = ToWorld(building.position_norm, 0.105f);
+            buildingRoot.transform.localPosition =
+                ToWorld(building.position_norm, 0.105f) + BuildingArtworkOffset(building.id);
 
             GameObject artwork = new GameObject("Building artwork");
             artwork.transform.SetParent(buildingRoot.transform, false);
@@ -865,6 +879,27 @@ namespace UrbanWildlife.Prototype
             renderer.sprite = sprite;
             renderer.sortingOrder = 24 + Mathf.RoundToInt(building.position_norm[1] * 3f);
             return true;
+        }
+
+        private static Vector3 BuildingArtworkOffset(string buildingId)
+        {
+            switch (buildingId)
+            {
+                case "apartment-west":
+                    return new Vector3(0.08f, 0f, 0.12f);
+                case "apartment-court":
+                    return new Vector3(-0.05f, 0f, 0.12f);
+                case "market-hall":
+                    return new Vector3(-0.10f, 0f, 0.12f);
+                case "community-centre":
+                    return new Vector3(-0.10f, 0f, 0.02f);
+                case "detached-garden":
+                    return new Vector3(0.03f, 0f, -0.12f);
+                case "corner-shops":
+                    return new Vector3(-0.10f, 0f, -0.12f);
+                default:
+                    return Vector3.zero;
+            }
         }
 
         private void BuildPlanningOverlay()

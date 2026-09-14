@@ -204,18 +204,24 @@ namespace UrbanWildlife.EditorTools
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
             int marketHallCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "market-hall-citybuilder-v01");
+                renderer.sprite.name == "market-hall-citybuilder-v02");
             int cornerShopsCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "corner-shops-citybuilder-v01");
-            if (marketHallCount != 1 || cornerShopsCount != 1)
+                renderer.sprite.name == "corner-shops-citybuilder-v02");
+            int communityCentreCount = renderers.Count(renderer =>
+                renderer.sprite != null &&
+                renderer.sprite.name == "community-centre-citybuilder-v01");
+            if (marketHallCount != 1 || cornerShopsCount != 1 ||
+                communityCentreCount != 1)
             {
                 throw new InvalidOperationException(
-                    "Commercial buildings must use one market hall and one corner-shops sprite; " +
-                    $"marketHall={marketHallCount}, cornerShops={cornerShopsCount}.");
+                    "Public destinations must use the transparent market, shops and community sprites; " +
+                    $"marketHall={marketHallCount}, cornerShops={cornerShopsCount}, " +
+                    $"communityCentre={communityCentreCount}.");
             }
             Debug.Log(
                 "UNITY_CITY_COMMERCIAL_VISUAL_SMOKE_OK market_hall=1 corner_shops=1 " +
+                "community_centre=1 true_alpha=True natural_offsets=True " +
                 "citybuilder_sprites=True placeholder_blocks=False");
         }
 

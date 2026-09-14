@@ -384,7 +384,7 @@ namespace UrbanWildlife.Prototype
 
             SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
             renderer.sprite = underlay;
-            renderer.color = new Color(0.96f, 0.98f, 0.94f, 1f);
+            renderer.color = Color.white;
             renderer.sortingOrder = -50;
         }
 
@@ -431,7 +431,7 @@ namespace UrbanWildlife.Prototype
                         "Cleared white ground",
                         clearingShape,
                         0.018f,
-                        new Color(0.975f, 0.968f, 0.935f, 0.93f),
+                        new Color(243f / 255f, 241f / 255f, 227f / 255f, 1f),
                         -27,
                         true);
                 }

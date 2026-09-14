@@ -9,6 +9,7 @@ using UnityEngine.SceneManagement;
 using UrbanWildlife.City;
 using UrbanWildlife.Construction;
 using UrbanWildlife.Input;
+using UrbanWildlife.Mobility;
 using UrbanWildlife.Networks;
 using UrbanWildlife.Planning;
 using UrbanWildlife.Prototype;
@@ -209,6 +210,7 @@ namespace UrbanWildlife.EditorTools
             VerifyGridConstructionRules();
             VerifyFreePlacementAndAutomaticAccess();
             VerifyDesktopPlayableFlow(prototype);
+            VerifyVehicleRoutesStayOnRoad();
             Debug.Log(
                 "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True opening_buildings=2 vehicle_roads=3 " +
                 "planning_grid=9x6 planning_cells=54 available_cells=43 multi_cell_buildings=True hidden_grid=True " +
@@ -221,7 +223,7 @@ namespace UrbanWildlife.EditorTools
                 "visible_footprint_tyre_bird_paw_tracks=True city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
-                "sparse_opening_map=True no_premature_buildings=True");
+                "sparse_opening_map=True road_following=True no_premature_buildings=True");
         }
 
         private static void VerifyResidentialBuildingVisuals(CityPrototypeDemo prototype)
@@ -916,6 +918,37 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
                 "confirm_build=True camera_required=False camera_mode_retained=True");
+        }
+
+        private static void VerifyVehicleRoutesStayOnRoad()
+        {
+            CityState city = CityPrototypeStateFactory.Create();
+            CityMobilityPlan plan = CityTripPlanner.CreatePlan(city);
+            CityRepresentativeTrip[] externalTrips = plan.trips
+                .Where(trip => trip.purpose == CityTripPurpose.ExternalJourney)
+                .ToArray();
+            float longestSegment = externalTrips
+                .SelectMany(trip => trip.route_points_norm.Zip(
+                    trip.route_points_norm.Skip(1),
+                    (first, second) => RouteSegmentLength(first, second, city.bounds)))
+                .DefaultIfEmpty(0f)
+                .Max();
+            if (externalTrips.Length == 0 || longestSegment > 15f)
+            {
+                throw new InvalidOperationException(
+                    $"Vehicle route leaves the road centreline: trips={externalTrips.Length}, " +
+                    $"longestSegment={longestSegment:0.00} units.");
+            }
+            Debug.Log(
+                $"UNITY_CITY_VEHICLE_ROAD_FOLLOWING_SMOKE_OK external_trips={externalTrips.Length} " +
+                $"longest_segment_units={longestSegment:0.00} projected_main_road_join=True");
+        }
+
+        private static float RouteSegmentLength(float[] first, float[] second, CityBounds bounds)
+        {
+            float x = (first[0] - second[0]) * bounds.width_units;
+            float y = (first[1] - second[1]) * bounds.height_units;
+            return Mathf.Sqrt(x * x + y * y);
         }
 
         private static CityTokenScanPacket ScanPacket(string id, CityTokenState[] tokens)

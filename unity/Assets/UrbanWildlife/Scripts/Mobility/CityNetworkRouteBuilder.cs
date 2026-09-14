@@ -40,14 +40,31 @@ namespace UrbanWildlife.Mobility
             string originConnectorId = originLine.ConnectedLineIds.FirstOrDefault() ?? originLine.Id;
             string destinationConnectorId = destinationLine.ConnectedLineIds.FirstOrDefault() ??
                                             destinationLine.Id;
-            if (network.TryGetValue(originConnectorId, out NetworkLine originConnector))
+            if (originConnectorId == destinationConnectorId &&
+                network.TryGetValue(originConnectorId, out NetworkLine sharedConnector))
             {
-                AppendOriented(route, originConnector.Points, city.bounds);
+                float[] destinationJoin = EndpointNearestPolyline(
+                    destinationLine.Points,
+                    sharedConnector.Points,
+                    city.bounds);
+                AppendBetweenNearestProjections(
+                    route,
+                    sharedConnector.Points,
+                    route[route.Count - 1],
+                    destinationJoin,
+                    city.bounds);
             }
-            if (destinationConnectorId != originConnectorId &&
-                network.TryGetValue(destinationConnectorId, out NetworkLine destinationConnector))
+            else
             {
-                AppendOriented(route, destinationConnector.Points, city.bounds);
+                if (network.TryGetValue(originConnectorId, out NetworkLine originConnector))
+                {
+                    AppendOriented(route, originConnector.Points, city.bounds);
+                }
+                if (destinationConnectorId != originConnectorId &&
+                    network.TryGetValue(destinationConnectorId, out NetworkLine destinationConnector))
+                {
+                    AppendOriented(route, destinationConnector.Points, city.bounds);
+                }
             }
 
             bool destinationLineAlreadyAdded = destinationLine.Id == originLine.Id ||
@@ -107,7 +124,14 @@ namespace UrbanWildlife.Mobility
                 {
                     break;
                 }
-                AppendOriented(route, next.Points, city.bounds);
+                if (TouchesMapEdge(next.Points))
+                {
+                    AppendFromNearestProjectionToBoundary(route, next.Points, city.bounds);
+                }
+                else
+                {
+                    AppendOriented(route, next.Points, city.bounds);
+                }
                 current = next;
                 visited.Add(current.Id);
             }
@@ -207,9 +231,164 @@ namespace UrbanWildlife.Mobility
             route.Add(ClonePoint(point));
         }
 
+        private static void AppendFromNearestProjectionToBoundary(
+            List<float[]> route,
+            float[][] points,
+            CityBounds bounds)
+        {
+            float[] current = route[route.Count - 1];
+            PolylineProjection projection = ProjectPointOntoPolyline(current, points, bounds);
+            AppendDistinct(route, projection.Point);
+
+            float distanceToStart = DistanceAlongPolylineToStart(
+                points,
+                projection.SegmentIndex,
+                projection.Point,
+                bounds);
+            float distanceToEnd = DistanceAlongPolylineToEnd(
+                points,
+                projection.SegmentIndex,
+                projection.Point,
+                bounds);
+            bool startTouchesBoundary = PointTouchesMapEdge(points[0]);
+            bool endTouchesBoundary = PointTouchesMapEdge(points[points.Length - 1]);
+            bool towardStart = startTouchesBoundary &&
+                               (!endTouchesBoundary || distanceToStart <= distanceToEnd);
+            if (towardStart)
+            {
+                for (int index = projection.SegmentIndex; index >= 0; index -= 1)
+                {
+                    AppendDistinct(route, points[index]);
+                }
+                return;
+            }
+            for (int index = projection.SegmentIndex + 1; index < points.Length; index += 1)
+            {
+                AppendDistinct(route, points[index]);
+            }
+        }
+
+        private static void AppendBetweenNearestProjections(
+            List<float[]> route,
+            float[][] points,
+            float[] startReference,
+            float[] endReference,
+            CityBounds bounds)
+        {
+            PolylineProjection start = ProjectPointOntoPolyline(startReference, points, bounds);
+            PolylineProjection end = ProjectPointOntoPolyline(endReference, points, bounds);
+            AppendDistinct(route, start.Point);
+            float startPosition = start.SegmentIndex + start.SegmentT;
+            float endPosition = end.SegmentIndex + end.SegmentT;
+            if (startPosition <= endPosition)
+            {
+                for (int index = start.SegmentIndex + 1; index <= end.SegmentIndex; index += 1)
+                {
+                    AppendDistinct(route, points[index]);
+                }
+            }
+            else
+            {
+                for (int index = start.SegmentIndex; index > end.SegmentIndex; index -= 1)
+                {
+                    AppendDistinct(route, points[index]);
+                }
+            }
+            AppendDistinct(route, end.Point);
+        }
+
+        private static float[] EndpointNearestPolyline(
+            float[][] candidateLine,
+            float[][] targetPolyline,
+            CityBounds bounds)
+        {
+            float[] first = candidateLine[0];
+            float[] last = candidateLine[candidateLine.Length - 1];
+            return ProjectPointOntoPolyline(first, targetPolyline, bounds).Distance <=
+                   ProjectPointOntoPolyline(last, targetPolyline, bounds).Distance
+                ? first
+                : last;
+        }
+
+        private static PolylineProjection ProjectPointOntoPolyline(
+            float[] point,
+            float[][] polyline,
+            CityBounds bounds)
+        {
+            PolylineProjection closest = new PolylineProjection
+            {
+                SegmentIndex = 0,
+                SegmentT = 0f,
+                Point = ClonePoint(polyline[0]),
+                Distance = float.PositiveInfinity,
+            };
+            for (int index = 0; index < polyline.Length - 1; index += 1)
+            {
+                float[] start = polyline[index];
+                float[] end = polyline[index + 1];
+                float dx = (end[0] - start[0]) * bounds.width_units;
+                float dy = (end[1] - start[1]) * bounds.height_units;
+                float px = (point[0] - start[0]) * bounds.width_units;
+                float py = (point[1] - start[1]) * bounds.height_units;
+                float denominator = dx * dx + dy * dy;
+                float t = denominator <= 0.000001f
+                    ? 0f
+                    : Math.Max(0f, Math.Min(1f, (px * dx + py * dy) / denominator));
+                float[] projected =
+                {
+                    start[0] + (end[0] - start[0]) * t,
+                    start[1] + (end[1] - start[1]) * t,
+                };
+                float distance = Distance(point, projected, bounds);
+                if (distance < closest.Distance)
+                {
+                    closest.SegmentIndex = index;
+                    closest.SegmentT = t;
+                    closest.Point = projected;
+                    closest.Distance = distance;
+                }
+            }
+            return closest;
+        }
+
+        private static float DistanceAlongPolylineToStart(
+            float[][] points,
+            int segmentIndex,
+            float[] projection,
+            CityBounds bounds)
+        {
+            float distance = Distance(projection, points[segmentIndex], bounds);
+            for (int index = segmentIndex; index > 0; index -= 1)
+            {
+                distance += Distance(points[index], points[index - 1], bounds);
+            }
+            return distance;
+        }
+
+        private static float DistanceAlongPolylineToEnd(
+            float[][] points,
+            int segmentIndex,
+            float[] projection,
+            CityBounds bounds)
+        {
+            float distance = Distance(projection, points[segmentIndex + 1], bounds);
+            for (int index = segmentIndex + 1; index < points.Length - 1; index += 1)
+            {
+                distance += Distance(points[index], points[index + 1], bounds);
+            }
+            return distance;
+        }
+
         private static bool TouchesMapEdge(float[][] points)
         {
             return BoundaryDistance(points) <= 0.055f;
+        }
+
+        private static bool PointTouchesMapEdge(float[] point)
+        {
+            return Math.Min(
+                Math.Min(point[0], 1f - point[0]),
+                Math.Min(point[1], 1f - point[1])) <= 0.055f;
         }
 
         private static float BoundaryDistance(float[][] points)
@@ -279,6 +458,14 @@ namespace UrbanWildlife.Mobility
             public string Id { get; }
             public float[][] Points { get; }
             public string[] ConnectedLineIds { get; }
+        }
+
+        private struct PolylineProjection
+        {
+            public int SegmentIndex;
+            public float SegmentT;
+            public float[] Point;
+            public float Distance;
         }
     }
 }

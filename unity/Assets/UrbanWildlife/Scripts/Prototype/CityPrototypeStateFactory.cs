@@ -25,6 +25,21 @@ namespace UrbanWildlife.Prototype
             };
             CityPlanningGrid planningGrid = CreatePlanningGrid(buildings, bounds);
 
+            float[][] mainRoadPoints = SmoothPoints(
+                (0.00f, 0.285f),
+                (0.08f, 0.290f),
+                (0.16f, 0.340f),
+                (0.25f, 0.370f),
+                (0.34f, 0.425f),
+                (0.43f, 0.425f),
+                (0.53f, 0.390f),
+                (0.60f, 0.395f),
+                (0.66f, 0.440f),
+                (0.70f, 0.490f),
+                (0.78f, 0.520f),
+                (0.86f, 0.510f),
+                (1.00f, 0.460f));
+
             CityVehicleRoad[] mainRoads =
             {
                 new CityVehicleRoad
@@ -34,7 +49,7 @@ namespace UrbanWildlife.Prototype
                     route_option = CityRoadRouteOption.Existing,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.00f, 0.285f), (0.08f, 0.290f), (0.16f, 0.340f), (0.25f, 0.370f), (0.34f, 0.425f), (0.43f, 0.425f), (0.53f, 0.390f), (0.60f, 0.395f), (0.66f, 0.440f), (0.70f, 0.490f), (0.78f, 0.520f), (0.86f, 0.510f), (1.00f, 0.460f)),
+                    points_norm = mainRoadPoints,
                     width_units = 1.1f,
                     speed_units_per_second = 7f,
                     traffic_load = 0.46f,
@@ -51,7 +66,7 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.00f, 0.250f), (0.08f, 0.255f), (0.16f, 0.305f), (0.25f, 0.335f), (0.34f, 0.390f), (0.43f, 0.390f), (0.53f, 0.355f), (0.60f, 0.360f), (0.66f, 0.405f), (0.70f, 0.455f), (0.78f, 0.485f), (0.86f, 0.475f), (1.00f, 0.425f)),
+                    points_norm = OffsetY(mainRoadPoints, -0.018f),
                     width_units = 0.75f,
                     step_free_accessible = true,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
@@ -67,8 +82,8 @@ namespace UrbanWildlife.Prototype
                 string linkNetwork = "pedestrian-park-spine";
                 string roadId = $"road-access-{building.id}";
                 string linkId = $"walk-access-{building.id}";
-                float roadY = building.id == "detached-garden" ? 0.368f : 0.398f;
-                float linkY = roadY - 0.035f;
+                float roadY = InterpolateYAtX(mainRoadPoints, building.position_norm[0]);
+                float linkY = roadY - 0.018f;
                 float buildingEdgeY = building.position_norm[1] +
                                       building.footprint_units[1] / bounds.height_units * 0.46f;
                 roads.Add(new CityVehicleRoad
@@ -344,6 +359,59 @@ namespace UrbanWildlife.Prototype
         private static float[][] Points(params (float x, float y)[] points)
         {
             return points.Select(point => new[] { point.x, point.y }).ToArray();
+        }
+
+        private static float[][] SmoothPoints(params (float x, float y)[] controlPoints)
+        {
+            const int SamplesPerSegment = 4;
+            List<float[]> points = new List<float[]>();
+            for (int index = 0; index < controlPoints.Length - 1; index += 1)
+            {
+                (float x, float y) p0 = controlPoints[Math.Max(0, index - 1)];
+                (float x, float y) p1 = controlPoints[index];
+                (float x, float y) p2 = controlPoints[index + 1];
+                (float x, float y) p3 = controlPoints[Math.Min(controlPoints.Length - 1, index + 2)];
+                for (int sample = 0; sample < SamplesPerSegment; sample += 1)
+                {
+                    float t = sample / (float)SamplesPerSegment;
+                    float t2 = t * t;
+                    float t3 = t2 * t;
+                    points.Add(new[]
+                    {
+                        0.5f * ((2f * p1.x) + (-p0.x + p2.x) * t +
+                                (2f * p0.x - 5f * p1.x + 4f * p2.x - p3.x) * t2 +
+                                (-p0.x + 3f * p1.x - 3f * p2.x + p3.x) * t3),
+                        0.5f * ((2f * p1.y) + (-p0.y + p2.y) * t +
+                                (2f * p0.y - 5f * p1.y + 4f * p2.y - p3.y) * t2 +
+                                (-p0.y + 3f * p1.y - 3f * p2.y + p3.y) * t3),
+                    });
+                }
+            }
+            (float x, float y) last = controlPoints[controlPoints.Length - 1];
+            points.Add(new[] { last.x, last.y });
+            return points.ToArray();
+        }
+
+        private static float[][] OffsetY(float[][] points, float offset)
+        {
+            return points.Select(point => new[] { point[0], point[1] + offset }).ToArray();
+        }
+
+        private static float InterpolateYAtX(float[][] points, float x)
+        {
+            for (int index = 0; index < points.Length - 1; index += 1)
+            {
+                float[] start = points[index];
+                float[] end = points[index + 1];
+                if (x < start[0] || x > end[0])
+                {
+                    continue;
+                }
+                float span = Math.Max(0.0001f, end[0] - start[0]);
+                float t = (x - start[0]) / span;
+                return start[1] + (end[1] - start[1]) * t;
+            }
+            return points[points.Length - 1][1];
         }
     }
 }

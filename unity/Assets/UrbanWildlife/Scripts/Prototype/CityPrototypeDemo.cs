@@ -26,7 +26,7 @@ namespace UrbanWildlife.Prototype
         private const float BoardViewMargin = 0.55f;
         private const float RuntimeSpeed = 2f;
         private const string CityBoardUnderlayResourcePath =
-            "UrbanWildlife/Environment/city-board-woodland-opening-v02";
+            "UrbanWildlife/Environment/city-board-woodland-terrain-only-v04";
         private const string CityPlazaResourcePath =
             "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string CityPondResourcePath =
@@ -120,7 +120,7 @@ namespace UrbanWildlife.Prototype
         private GameObject pedestrianRoot;
         private GameObject planningPreviewRoot;
         private bool paused;
-        private bool showVehicleNetwork;
+        private bool showVehicleNetwork = true;
         private bool showPedestrianNetwork = true;
         private bool showHeatmap;
         [SerializeField]
@@ -515,7 +515,9 @@ namespace UrbanWildlife.Prototype
 
             BuildCompactDevelopmentClearings(root.transform, grid);
 
-            Color boundaryColour = new Color(0.48f, 0.58f, 0.58f, 0.035f);
+            // The 9 x 6 grid remains a semantic occupancy/ecology layer. Its geometry is kept
+            // for inspection and tests, but the normal player view must not read as square tiles.
+            Color boundaryColour = new Color(0.48f, 0.58f, 0.58f, 0f);
             for (int col = 0; col <= grid.cols; col += 1)
             {
                 float[][] points = Enumerable.Range(0, grid.rows + 1)
@@ -775,23 +777,23 @@ namespace UrbanWildlife.Prototype
             switch (cover)
             {
                 case CityLandCover.Woodland:
-                    return new Color(0.49f, 0.68f, 0.38f, 0.012f);
+                    return new Color(0.49f, 0.68f, 0.38f, 0f);
                 case CityLandCover.PublicGreen:
-                    return new Color(0.59f, 0.76f, 0.43f, 0.012f);
+                    return new Color(0.59f, 0.76f, 0.43f, 0f);
                 case CityLandCover.CivicPlaza:
-                    return new Color(0.80f, 0.65f, 0.40f, 0.010f);
+                    return new Color(0.80f, 0.65f, 0.40f, 0f);
                 case CityLandCover.Water:
-                    return new Color(0.30f, 0.68f, 0.80f, 0.010f);
+                    return new Color(0.30f, 0.68f, 0.80f, 0f);
                 case CityLandCover.Building:
-                    return new Color(0.74f, 0.69f, 0.57f, 0.006f);
+                    return new Color(0.74f, 0.69f, 0.57f, 0f);
                 case CityLandCover.ShrubGarden:
-                    return new Color(0.47f, 0.69f, 0.36f, 0.012f);
+                    return new Color(0.47f, 0.69f, 0.36f, 0f);
                 case CityLandCover.Disturbed:
                     return new Color(0.72f, 0.53f, 0.35f, 0.045f);
                 case CityLandCover.Recovering:
-                    return new Color(0.56f, 0.72f, 0.39f, 0.012f);
+                    return new Color(0.56f, 0.72f, 0.39f, 0f);
                 default:
-                    return new Color(0.75f, 0.81f, 0.55f, 0.003f);
+                    return new Color(0.75f, 0.81f, 0.55f, 0f);
             }
         }
 
@@ -805,7 +807,7 @@ namespace UrbanWildlife.Prototype
                     if (cell.current_cover == CityLandCover.Woodland)
                     {
                         // Forest masses and their five-shape tree language are baked into the
-                        // opening underlay. Runtime clearing still paints warm-white ground.
+                        // terrain-only underlay. Runtime clearing still paints warm-white ground.
                         continue;
                     }
                     else if (cell.current_cover == CityLandCover.PublicGreen ||
@@ -878,7 +880,7 @@ namespace UrbanWildlife.Prototype
                     road.id + " kerb",
                     road.points_norm,
                     width + 0.035f,
-                    new Color(0.96f, 0.95f, 0.90f, 0.94f),
+                    new Color(0.94f, 0.94f, 0.91f, 0.98f),
                     0.045f,
                     -8);
                 CreateLine(
@@ -887,8 +889,8 @@ namespace UrbanWildlife.Prototype
                     road.points_norm,
                     width,
                     road.role == CityVehicleRoadRole.BuildingAccess
-                        ? new Color(0.86f, 0.88f, 0.86f, 0.92f)
-                        : new Color(0.82f, 0.85f, 0.84f, 0.96f),
+                        ? new Color(0.90f, 0.90f, 0.88f, 0.96f)
+                        : new Color(0.88f, 0.88f, 0.88f, 0.98f),
                     0.055f,
                     -7);
             }

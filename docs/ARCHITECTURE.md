@@ -56,7 +56,7 @@
 
 ### 城市可视化集成壳
 
-`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的2住宅开局状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧77%的地图视口，右侧23%由固定城市信息栏占用，两者不遮挡。开局底图是一条弯曲主路经单桥跨越单色河流的内陆林缘聚落，大片暖白空地供后续建设，初始住宅使用明亮低饱和的粉蓝/柔珊瑚配色。主路、河流、桥和边缘林地烘焙在底图；新增建筑、清林白地和自动接入支路由Unity动态生成。逻辑网格、机动车主路线与步行路线常态隐藏，只在规划或检查时显示。场景默认使用无需摄像头的Desktop点击建造模式，也可切换到Camera实体Token扫描模式，两者复用同一校验和施工核心。
+`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的2住宅开局状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧72%的地图视口，右侧28%由固定城市信息栏占用，两者不遮挡。用户确认的无河密集城区参考图定义“发展完成后的目标视觉密度”，不是开局截图；开局仍只显示两栋住宅。底图只烘焙暖白空地、无接缝林地区块与树木，不含河流、网格、道路、步道、建筑或UI；机动车主路、自动支路、步行网络、建筑和清林白地均由Unity独立生成，因此玩家建设后可以真实改变路网和地表。主路、两栋住宅支路与步行道开局可见，后台逻辑网格保持弱化。场景默认使用无需摄像头的Desktop点击建造模式，也可切换到Camera实体Token扫描模式，两者复用同一校验和施工核心。
 
 `CityEnvironmentSimulation` 是Building与动物之间的环境中介层：它同步建筑垃圾输出和Bin容量，按持续超载时间生成Litter Hotspot，并分别公开Natural/Anthropogenic Food。局部Green Patch压力聚合建筑、Bench、道路交通与垃圾影响，避免动物直接读取视觉对象。
 

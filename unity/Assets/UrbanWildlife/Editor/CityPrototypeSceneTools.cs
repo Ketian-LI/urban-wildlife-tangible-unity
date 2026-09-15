@@ -553,7 +553,7 @@ namespace UrbanWildlife.EditorTools
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 0 ||
                 boundaries.GetComponentsInChildren<LineRenderer>().Length != 17 ||
                 underlayRenderer?.sprite == null ||
-                underlayRenderer.sprite.name != "city-board-woodland-opening-v02" ||
+                underlayRenderer.sprite.name != "city-board-woodland-terrain-only-v04" ||
                 underlayRenderer.sortingOrder != -50 ||
                 regularFont == null || boldFont == null ||
                 prototype.GetComponentsInChildren<Transform>().Any(item => item.name == "East canal"))
@@ -625,7 +625,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException($"Expected no duplicated dynamic woodland groves, found {actualGroves}.");
             }
-            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=9x6 cells=54 available=52 woodland_groves={actualGroves} baked_forest=True inland_woodland_underlay=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False baseline_water_cells=0 no_river=True no_ocean=True static_nunito=Regular/Bold");
+            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=9x6 cells=54 available=52 woodland_groves={actualGroves} baked_forest=True terrain_only_underlay=True dynamic_roads=True dynamic_footpaths=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False baseline_water_cells=0 no_river=True no_ocean=True static_nunito=Regular/Bold");
         }
 
         private static void VerifyCompactNeighbourhoodPresentation(CityPrototypeDemo prototype)
@@ -644,7 +644,7 @@ namespace UrbanWildlife.EditorTools
                 "fox-citybuilder-soft-v02",
                 "hedgehog-citybuilder-soft-v02",
             };
-            if (roads == null || roads.gameObject.activeSelf ||
+            if (roads == null || !roads.gameObject.activeSelf ||
                 accessRoads == null || !accessRoads.gameObject.activeSelf ||
                 accessRoads.GetComponentsInChildren<LineRenderer>().Length != 4 ||
                 footpaths == null || !footpaths.gameObject.activeSelf ||
@@ -655,11 +655,11 @@ namespace UrbanWildlife.EditorTools
                                                   !expectedWildlifeSprites.Contains(renderer.sprite.name)))
             {
                 throw new InvalidOperationException(
-                    "The opening view must hide vehicle debug routes, show two house driveways and three pedestrian paths, and use wildlife artwork.");
+                    "The opening view must show its dynamic main road, two house driveways, three pedestrian paths, and wildlife artwork.");
             }
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
-                "road_routes_default_hidden=True two_driveways_visible=True pedestrian_paths_default_visible=True " +
+                "dynamic_main_road_default_visible=True two_driveways_visible=True pedestrian_paths_default_visible=True " +
                 "wildlife_artwork=15 hedgehog_fallback=0 compact_buildings=True");
         }
 

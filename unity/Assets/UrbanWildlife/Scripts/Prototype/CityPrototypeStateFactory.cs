@@ -22,24 +22,49 @@ namespace UrbanWildlife.Prototype
                 // The opening state is deliberately sparse. The denser reference is the
                 // player's destination, not pre-authored scenery.
                 Building("detached-garden", CityBuildingType.DetachedHouse, 110, 0.277778f, 0.25f, 12, 0.35f, 0.15f, 4, 0.45f),
-                Building("detached-east", CityBuildingType.DetachedHouse, 111, 0.50f, 0.25f, 12, 0.35f, 0.15f, 4, 0.45f),
+                Building("detached-east", CityBuildingType.DetachedHouse, 111, 0.82f, 0.25f, 12, 0.35f, 0.15f, 4, 0.45f),
             };
             CityPlanningGrid planningGrid = CreatePlanningGrid(buildings, bounds);
 
             float[][] mainRoadPoints = SmoothPoints(
-                (0.00f, 0.285f),
-                (0.08f, 0.290f),
-                (0.16f, 0.340f),
-                (0.25f, 0.370f),
-                (0.34f, 0.425f),
-                (0.43f, 0.425f),
-                (0.53f, 0.390f),
-                (0.60f, 0.395f),
-                (0.66f, 0.440f),
-                (0.70f, 0.490f),
-                (0.78f, 0.520f),
-                (0.86f, 0.510f),
-                (1.00f, 0.460f));
+                (0.00f, 0.295f),
+                (0.08f, 0.300f),
+                (0.16f, 0.350f),
+                (0.23f, 0.395f),
+                (0.31f, 0.350f),
+                (0.43f, 0.405f),
+                (0.55f, 0.410f),
+                (0.66f, 0.365f),
+                (0.73f, 0.380f),
+                (0.82f, 0.395f),
+                (0.91f, 0.357f),
+                (1.00f, 0.357f));
+            float[][] westLoopPoints = SmoothPoints(
+                (0.31f, 0.350f),
+                (0.30f, 0.265f),
+                (0.27f, 0.190f),
+                (0.20f, 0.165f),
+                (0.14f, 0.230f),
+                (0.12f, 0.310f),
+                (0.17f, 0.375f),
+                (0.23f, 0.395f));
+            float[][] eastLoopPoints = SmoothPoints(
+                (0.73f, 0.380f),
+                (0.74f, 0.285f),
+                (0.77f, 0.175f),
+                (0.83f, 0.135f),
+                (0.89f, 0.185f),
+                (0.91f, 0.270f),
+                (0.87f, 0.345f),
+                (0.82f, 0.395f));
+            float[][] southArcPoints = SmoothPoints(
+                (0.43f, 0.405f),
+                (0.41f, 0.545f),
+                (0.45f, 0.665f),
+                (0.57f, 0.710f),
+                (0.68f, 0.700f),
+                (0.76f, 0.610f),
+                (0.82f, 0.395f));
 
             CityVehicleRoad[] mainRoads =
             {
@@ -54,45 +79,89 @@ namespace UrbanWildlife.Prototype
                     width_units = 1.1f,
                     speed_units_per_second = 7f,
                     traffic_load = 0.46f,
-                    connected_building_ids = buildings.Select(building => building.id).ToArray(),
-                    connected_road_ids = Array.Empty<string>(),
+                    connected_building_ids = Array.Empty<string>(),
+                    connected_road_ids = new[]
+                    {
+                        "vehicle-local-west-loop",
+                        "vehicle-local-east-loop",
+                        "vehicle-local-south-arc",
+                    },
                 },
+                ExistingLocalRoad(
+                    "vehicle-local-west-loop",
+                    westLoopPoints,
+                    "vehicle-main-street",
+                    "detached-garden"),
+                ExistingLocalRoad(
+                    "vehicle-local-east-loop",
+                    eastLoopPoints,
+                    "vehicle-main-street",
+                    "detached-east"),
+                ExistingLocalRoad(
+                    "vehicle-local-south-arc",
+                    southArcPoints,
+                    "vehicle-main-street"),
             };
 
             CityPedestrianLink[] mainLinks =
             {
-                new CityPedestrianLink
-                {
-                    id = "pedestrian-park-spine",
-                    type = CityPedestrianLinkType.ExistingNetwork,
-                    construction_state = CityConstructionState.Existing,
-                    source = CityNetworkSource.ExistingMap,
-                    points_norm = CityRoadCandidateGenerator.OffsetPolyline(
-                        mainRoadPoints,
-                        bounds,
-                        -1.05f),
-                    width_units = 0.75f,
-                    step_free_accessible = true,
-                    connected_building_ids = buildings.Select(building => building.id).ToArray(),
-                    connected_link_ids = Array.Empty<string>(),
-                },
+                ExistingSidewalk(
+                    "pedestrian-park-spine",
+                    mainRoadPoints,
+                    bounds,
+                    -1.05f,
+                    new[]
+                    {
+                        "pedestrian-local-west-loop",
+                        "pedestrian-local-east-loop",
+                        "pedestrian-local-south-arc",
+                    }),
+                ExistingSidewalk(
+                    "pedestrian-local-west-loop",
+                    westLoopPoints,
+                    bounds,
+                    -0.58f,
+                    new[] { "pedestrian-park-spine" },
+                    "detached-garden"),
+                ExistingSidewalk(
+                    "pedestrian-local-east-loop",
+                    eastLoopPoints,
+                    bounds,
+                    0.58f,
+                    new[] { "pedestrian-park-spine" },
+                    "detached-east"),
+                ExistingSidewalk(
+                    "pedestrian-local-south-arc",
+                    southArcPoints,
+                    bounds,
+                    0.58f,
+                    new[] { "pedestrian-park-spine" }),
             };
 
             List<CityVehicleRoad> roads = new List<CityVehicleRoad>(mainRoads);
             List<CityPedestrianLink> links = new List<CityPedestrianLink>(mainLinks);
             foreach (CityBuilding building in buildings)
             {
-                string roadNetwork = "vehicle-main-street";
-                string linkNetwork = "pedestrian-park-spine";
+                string roadNetwork = building.id == "detached-garden"
+                    ? "vehicle-local-west-loop"
+                    : "vehicle-local-east-loop";
+                string linkNetwork = building.id == "detached-garden"
+                    ? "pedestrian-local-west-loop"
+                    : "pedestrian-local-east-loop";
+                CityVehicleRoad targetRoad = roads.Single(road => road.id == roadNetwork);
+                CityPedestrianLink targetSidewalk = links.Single(link => link.id == linkNetwork);
                 string roadId = $"road-access-{building.id}";
                 string linkId = $"walk-access-{building.id}";
-                float roadY = InterpolateYAtX(mainRoadPoints, building.position_norm[0]);
-                float buildingEdgeY = building.position_norm[1] +
-                                      building.footprint_units[1] / bounds.height_units * 0.46f;
-                float[][] accessRoadPoints = Points(
-                    (building.position_norm[0], buildingEdgeY),
-                    (building.position_norm[0], (buildingEdgeY + roadY) * 0.5f),
-                    (building.position_norm[0], roadY));
+                float[] roadJoin = ClosestPointOnPolyline(
+                    building.position_norm,
+                    targetRoad.points_norm,
+                    bounds);
+                float[] buildingEdge = BuildingEdgeToward(building, roadJoin, bounds);
+                float[][] accessRoadPoints = SmoothPoints(
+                    (buildingEdge[0], buildingEdge[1]),
+                    ((buildingEdge[0] + roadJoin[0]) * 0.5f,
+                     (buildingEdge[1] + roadJoin[1]) * 0.5f),
+                    (roadJoin[0], roadJoin[1]));
                 roads.Add(new CityVehicleRoad
                 {
                     id = roadId,
@@ -115,7 +184,7 @@ namespace UrbanWildlife.Prototype
                     source = CityNetworkSource.AutoGenerated,
                     points_norm = OpeningAccessSidewalk(
                         accessRoadPoints,
-                        mainLinks[0].points_norm,
+                        targetSidewalk.points_norm,
                         bounds,
                         building.id),
                     width_units = 0.30f,
@@ -366,6 +435,122 @@ namespace UrbanWildlife.Prototype
             };
         }
 
+        private static CityVehicleRoad ExistingLocalRoad(
+            string id,
+            float[][] points,
+            string mainRoadId,
+            params string[] buildingIds)
+        {
+            return new CityVehicleRoad
+            {
+                id = id,
+                role = CityVehicleRoadRole.Local,
+                route_option = CityRoadRouteOption.Existing,
+                construction_state = CityConstructionState.Existing,
+                source = CityNetworkSource.ExistingMap,
+                points_norm = points,
+                width_units = 0.90f,
+                speed_units_per_second = 5f,
+                traffic_load = 0.24f,
+                connected_building_ids = buildingIds ?? Array.Empty<string>(),
+                connected_road_ids = new[] { mainRoadId },
+            };
+        }
+
+        private static CityPedestrianLink ExistingSidewalk(
+            string id,
+            float[][] roadPoints,
+            CityBounds bounds,
+            float offsetUnits,
+            string[] connectedLinkIds,
+            params string[] buildingIds)
+        {
+            return new CityPedestrianLink
+            {
+                id = id,
+                type = CityPedestrianLinkType.ExistingNetwork,
+                construction_state = CityConstructionState.Existing,
+                source = CityNetworkSource.ExistingMap,
+                points_norm = CityRoadCandidateGenerator.OffsetPolyline(
+                    roadPoints,
+                    bounds,
+                    offsetUnits),
+                width_units = 0.55f,
+                step_free_accessible = true,
+                connected_building_ids = buildingIds ?? Array.Empty<string>(),
+                connected_link_ids = connectedLinkIds ?? Array.Empty<string>(),
+            };
+        }
+
+        private static float[] BuildingEdgeToward(
+            CityBuilding building,
+            float[] target,
+            CityBounds bounds)
+        {
+            float centreX = building.position_norm[0] * bounds.width_units;
+            float centreY = building.position_norm[1] * bounds.height_units;
+            float deltaX = target[0] * bounds.width_units - centreX;
+            float deltaY = target[1] * bounds.height_units - centreY;
+            float length = (float)Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (length <= 0.0001f)
+            {
+                return (float[])building.position_norm.Clone();
+            }
+            float directionX = deltaX / length;
+            float directionY = deltaY / length;
+            float halfWidth = building.footprint_units[0] * 0.5f;
+            float halfDepth = building.footprint_units[1] * 0.5f;
+            float distanceToWidth = Math.Abs(directionX) <= 0.0001f
+                ? float.MaxValue
+                : halfWidth / Math.Abs(directionX);
+            float distanceToDepth = Math.Abs(directionY) <= 0.0001f
+                ? float.MaxValue
+                : halfDepth / Math.Abs(directionY);
+            float edgeDistance = Math.Min(distanceToWidth, distanceToDepth);
+            return new[]
+            {
+                (centreX + directionX * edgeDistance) / bounds.width_units,
+                (centreY + directionY * edgeDistance) / bounds.height_units,
+            };
+        }
+
+        private static float[] ClosestPointOnPolyline(
+            float[] point,
+            float[][] polyline,
+            CityBounds bounds)
+        {
+            float[] best = (float[])polyline[0].Clone();
+            float bestDistance = float.PositiveInfinity;
+            for (int index = 1; index < polyline.Length; index += 1)
+            {
+                float[] start = polyline[index - 1];
+                float[] end = polyline[index];
+                float segmentX = (end[0] - start[0]) * bounds.width_units;
+                float segmentY = (end[1] - start[1]) * bounds.height_units;
+                float pointX = (point[0] - start[0]) * bounds.width_units;
+                float pointY = (point[1] - start[1]) * bounds.height_units;
+                float denominator = segmentX * segmentX + segmentY * segmentY;
+                float t = denominator <= 0.000001f
+                    ? 0f
+                    : Math.Max(0f, Math.Min(1f,
+                        (pointX * segmentX + pointY * segmentY) / denominator));
+                float[] candidate =
+                {
+                    start[0] + (end[0] - start[0]) * t,
+                    start[1] + (end[1] - start[1]) * t,
+                };
+                float deltaX = (point[0] - candidate[0]) * bounds.width_units;
+                float deltaY = (point[1] - candidate[1]) * bounds.height_units;
+                float distance = deltaX * deltaX + deltaY * deltaY;
+                if (distance < bestDistance)
+                {
+                    best = candidate;
+                    bestDistance = distance;
+                }
+            }
+            return best;
+        }
+
         private static float[][] Points(params (float x, float y)[] points)
         {
             return points.Select(point => new[] { point.x, point.y }).ToArray();
@@ -404,7 +589,7 @@ namespace UrbanWildlife.Prototype
 
         private static float[][] OpeningAccessSidewalk(
             float[][] accessRoadPoints,
-            float[][] mainSidewalkPoints,
+            float[][] networkSidewalkPoints,
             CityBounds bounds,
             string buildingId)
         {
@@ -416,29 +601,8 @@ namespace UrbanWildlife.Prototype
                 bounds,
                 side);
             float[] last = points[points.Length - 1];
-            float[] join =
-            {
-                last[0],
-                InterpolateYAtX(mainSidewalkPoints, last[0]),
-            };
+            float[] join = ClosestPointOnPolyline(last, networkSidewalkPoints, bounds);
             return points.Concat(new[] { join }).ToArray();
-        }
-
-        private static float InterpolateYAtX(float[][] points, float x)
-        {
-            for (int index = 0; index < points.Length - 1; index += 1)
-            {
-                float[] start = points[index];
-                float[] end = points[index + 1];
-                if (x < start[0] || x > end[0])
-                {
-                    continue;
-                }
-                float span = Math.Max(0.0001f, end[0] - start[0]);
-                float t = (x - start[0]) / span;
-                return start[1] + (end[1] - start[1]) * t;
-            }
-            return points[points.Length - 1][1];
         }
     }
 }

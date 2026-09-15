@@ -78,15 +78,9 @@ namespace UrbanWildlife.Networks
                 .Where(road => road?.points_norm != null && road.points_norm.Length >= 2 &&
                                road.construction_state != CityConstructionState.Demolishing)
                 .ToArray();
-            CityVehicleRoad[] main = active
-                .Where(road => road.role == CityVehicleRoadRole.Main)
-                .ToArray();
-            if (main.Length > 0)
-            {
-                return main;
-            }
             CityVehicleRoad[] established = active
-                .Where(road => road.role != CityVehicleRoadRole.BuildingAccess)
+                .Where(road => road.source == CityNetworkSource.ExistingMap &&
+                               road.role != CityVehicleRoadRole.BuildingAccess)
                 .ToArray();
             return established.Length > 0 ? established : active;
         }

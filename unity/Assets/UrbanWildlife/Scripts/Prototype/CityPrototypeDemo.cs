@@ -28,7 +28,7 @@ namespace UrbanWildlife.Prototype
         private const float HumanArtworkHeight = 0.23f;
         private const float VehicleArtworkDepth = 0.24f;
         private const string CityBoardUnderlayResourcePath =
-            "UrbanWildlife/Environment/city-board-woodland-terrain-only-v04";
+            "UrbanWildlife/Environment/city-board-woodland-existing-streets-v05";
         private const string CityPlazaResourcePath =
             "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string CityPondResourcePath =
@@ -880,6 +880,13 @@ namespace UrbanWildlife.Prototype
                 item.construction_state == CityConstructionState.Existing).ToArray();
             foreach (CityVehicleRoad road in activeRoads)
             {
+                // The fixed street hierarchy is baked into the terrain artwork. Keep its
+                // network data for routing and placement, but only draw roads created by play.
+                if (road.source == CityNetworkSource.ExistingMap &&
+                    road.role != CityVehicleRoadRole.BuildingAccess)
+                {
+                    continue;
+                }
                 Transform roadParent = road.role == CityVehicleRoadRole.BuildingAccess
                     ? buildingAccessRoadRoot.transform
                     : vehicleRoadRoot.transform;
@@ -910,6 +917,13 @@ namespace UrbanWildlife.Prototype
                 item.construction_state == CityConstructionState.Existing).ToArray();
             foreach (CityPedestrianLink link in activeLinks)
             {
+                // Existing pavements are part of the same baked street artwork. Their
+                // hidden polylines still keep pedestrians on the side of each street.
+                if (link.source == CityNetworkSource.ExistingMap &&
+                    link.type == CityPedestrianLinkType.ExistingNetwork)
+                {
+                    continue;
+                }
                 float width = link.width_units / city.bounds.width_units * MapWidth;
                 CreateLine(
                     pedestrianRoot.transform,
@@ -1640,7 +1654,7 @@ namespace UrbanWildlife.Prototype
             }
             desktopBuildingType = type;
             desktopInputMessage = planningWorkflow.Snapshot.CanConfirmPreview
-                ? "Preview ready. Confirm to build and connect it to the main road."
+                ? "Preview ready. Confirm to build and connect it to the nearest existing street."
                 : planningWorkflow.Snapshot.message;
             RefreshPlanningOverlay();
             return true;
@@ -1806,8 +1820,8 @@ namespace UrbanWildlife.Prototype
                 bodyStyle);
             GUILayout.Label(
                 T(
-                    "Warm-white ground · Woodland · Buildings\nMain road — Automatic access road",
-                    "暖白空地 · 林地 · 建筑\n主干道 — 自动接入道路"),
+                    "Warm-white ground · Woodland · Buildings\nExisting streets — Automatic access road",
+                    "暖白空地 · 林地 · 建筑\n既有道路 — 自动接入道路"),
                 bodyStyle);
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
@@ -2247,8 +2261,8 @@ namespace UrbanWildlife.Prototype
                     GUILayout.Label(T("2  CLICK OPEN GROUND ON THE MAP", "2  点击地图上的可用空地"), headingStyle);
                     GUILayout.Label(
                         T(
-                            "Buildings cannot overlap the main road. Woodland is cleared to warm-white ground, and a smooth access road is added automatically.",
-                            "建筑不能覆盖主干道。占用林地时会将其改为暖白空地，并自动生成平滑的接入道路。"),
+                            "Buildings cannot overlap existing streets. Woodland is cleared to warm-white ground, and a short smooth connection is added to the nearest street.",
+                            "建筑不能覆盖既有道路。占用林地时会将其改为暖白空地，并自动用短而平滑的支路接入最近道路。"),
                         bodyStyle);
                     GUILayout.Label(LocaliseRuntimeMessage(desktopInputMessage), captionStyle);
                     break;
@@ -2579,8 +2593,8 @@ namespace UrbanWildlife.Prototype
                     return "地图摄像机当前不可用。";
                 case "That click did not reach the map.":
                     return "这次点击没有落在地图范围内。";
-                case "Preview ready. Confirm to build and connect it to the main road.":
-                    return "预览已就绪。确认后将建造建筑并连接主干道。";
+                case "Preview ready. Confirm to build and connect it to the nearest existing street.":
+                    return "预览已就绪。确认后将建造建筑并接入最近的既有道路。";
                 case "Built. Choose another building and click the map.":
                     return "建造完成。请选择下一栋建筑并点击地图。";
                 case "Placement cancelled. Choose another position.":
@@ -2609,7 +2623,7 @@ namespace UrbanWildlife.Prototype
             }
             if (message.StartsWith("Placement confirmed. Added ", StringComparison.Ordinal))
             {
-                return "放置已确认，并已自动生成连接主干道的平滑道路。";
+                return "放置已确认，并已自动生成连接最近既有道路的平滑支路。";
             }
             if (message.StartsWith("Plan ready.", StringComparison.Ordinal))
             {

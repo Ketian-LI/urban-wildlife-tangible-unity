@@ -34,45 +34,32 @@ namespace UrbanWildlife.Mobility
                 destination.id,
                 mode);
 
+            List<NetworkLine> linePath = FindLinePath(
+                network,
+                originLine.Id,
+                destinationLine.Id);
             List<float[]> route = new List<float[]> { ClonePoint(origin.position_norm) };
-            AppendOriented(route, originLine.Points, city.bounds);
-
-            string originConnectorId = originLine.ConnectedLineIds.FirstOrDefault() ?? originLine.Id;
-            string destinationConnectorId = destinationLine.ConnectedLineIds.FirstOrDefault() ??
-                                            destinationLine.Id;
-            if (originConnectorId == destinationConnectorId &&
-                network.TryGetValue(originConnectorId, out NetworkLine sharedConnector))
+            for (int index = 0; index < linePath.Count; index += 1)
             {
-                float[] destinationJoin = EndpointNearestPolyline(
-                    destinationLine.Points,
-                    sharedConnector.Points,
-                    city.bounds);
+                NetworkLine line = linePath[index];
+                float[] entryReference = index == 0
+                    ? origin.position_norm
+                    : EndpointNearestPolyline(
+                        linePath[index - 1].Points,
+                        line.Points,
+                        city.bounds);
+                float[] exitReference = index == linePath.Count - 1
+                    ? destination.position_norm
+                    : EndpointNearestPolyline(
+                        linePath[index + 1].Points,
+                        line.Points,
+                        city.bounds);
                 AppendBetweenNearestProjections(
                     route,
-                    sharedConnector.Points,
-                    route[route.Count - 1],
-                    destinationJoin,
+                    line.Points,
+                    entryReference,
+                    exitReference,
                     city.bounds);
-            }
-            else
-            {
-                if (network.TryGetValue(originConnectorId, out NetworkLine originConnector))
-                {
-                    AppendOriented(route, originConnector.Points, city.bounds);
-                }
-                if (destinationConnectorId != originConnectorId &&
-                    network.TryGetValue(destinationConnectorId, out NetworkLine destinationConnector))
-                {
-                    AppendOriented(route, destinationConnector.Points, city.bounds);
-                }
-            }
-
-            bool destinationLineAlreadyAdded = destinationLine.Id == originLine.Id ||
-                                               destinationLine.Id == originConnectorId ||
-                                               destinationLine.Id == destinationConnectorId;
-            if (!destinationLineAlreadyAdded)
-            {
-                AppendOriented(route, destinationLine.Points, city.bounds);
             }
             AppendDistinct(route, destination.position_norm);
             float[][] result = route.ToArray();
@@ -80,6 +67,55 @@ namespace UrbanWildlife.Mobility
             {
                 throw new InvalidOperationException("Network route contains fewer than two points.");
             }
+            return result;
+        }
+
+        private static List<NetworkLine> FindLinePath(
+            IReadOnlyDictionary<string, NetworkLine> network,
+            string originId,
+            string destinationId)
+        {
+            Dictionary<string, HashSet<string>> neighbours = network.Keys.ToDictionary(
+                id => id,
+                _ => new HashSet<string>());
+            foreach (NetworkLine line in network.Values)
+            {
+                foreach (string connectedId in line.ConnectedLineIds.Where(network.ContainsKey))
+                {
+                    neighbours[line.Id].Add(connectedId);
+                    neighbours[connectedId].Add(line.Id);
+                }
+            }
+
+            Queue<string> pending = new Queue<string>();
+            Dictionary<string, string> previous = new Dictionary<string, string>();
+            pending.Enqueue(originId);
+            previous[originId] = null;
+            while (pending.Count > 0 && !previous.ContainsKey(destinationId))
+            {
+                string current = pending.Dequeue();
+                foreach (string next in neighbours[current].OrderBy(id => id))
+                {
+                    if (previous.ContainsKey(next))
+                    {
+                        continue;
+                    }
+                    previous[next] = current;
+                    pending.Enqueue(next);
+                }
+            }
+            if (!previous.ContainsKey(destinationId))
+            {
+                throw new InvalidOperationException(
+                    $"No connected network route exists between {originId} and {destinationId}.");
+            }
+
+            List<NetworkLine> result = new List<NetworkLine>();
+            for (string id = destinationId; id != null; id = previous[id])
+            {
+                result.Add(network[id]);
+            }
+            result.Reverse();
             return result;
         }
 

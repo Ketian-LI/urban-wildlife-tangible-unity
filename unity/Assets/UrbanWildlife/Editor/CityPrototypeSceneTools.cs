@@ -257,8 +257,8 @@ namespace UrbanWildlife.EditorTools
             if (prototype == null || prototype.GeneratedBuildingCount != 2 ||
                 prototype.GeneratedPlanningCellCount != 216 ||
                 prototype.AvailablePlanningCellCount != 214 ||
-                prototype.GeneratedVehicleRoadCount != 3 ||
-                prototype.GeneratedPedestrianLinkCount != 3 ||
+                prototype.GeneratedVehicleRoadCount != 6 ||
+                prototype.GeneratedPedestrianLinkCount != 6 ||
                 prototype.GeneratedAmenityCount != 0 ||
                 prototype.FoodSourceCount < 2 ||
                 prototype.WildlifeAgentCount != 15 ||
@@ -333,9 +333,9 @@ namespace UrbanWildlife.EditorTools
             VerifyDesktopPlayableFlow(prototype);
             VerifyVehicleRoutesStayOnRoad();
             Debug.Log(
-                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True sidebar_width=28_percent full_frame_clear=True bright_city_style=True opening_buildings=2 vehicle_roads=3 " +
+                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True sidebar_width=28_percent full_frame_clear=True bright_city_style=True opening_buildings=2 vehicle_roads=6 " +
                 "planning_grid=18x12 planning_cells=216 available_cells=214 reference_scaled_footprints=True hidden_grid=True " +
-                "pedestrian_links=3 amenities=0 food_sources=True waste_pressure=True " +
+                "pedestrian_links=6 amenities=0 food_sources=True waste_pressure=True " +
                 "wildlife_agents=15 species=4 utility_targets=True " +
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
@@ -483,6 +483,19 @@ namespace UrbanWildlife.EditorTools
                 road.id == "vehicle-main-street");
             CityPedestrianLink mainSidewalk = streetCity.pedestrian_links.Single(link =>
                 link.id == "pedestrian-park-spine");
+            CityVehicleRoad[] localRoads = streetCity.vehicle_roads
+                .Where(road => road.role == CityVehicleRoadRole.Local)
+                .ToArray();
+            CityPedestrianLink[] localSidewalks = streetCity.pedestrian_links
+                .Where(link => link.type == CityPedestrianLinkType.ExistingNetwork &&
+                               link.id != "pedestrian-park-spine")
+                .ToArray();
+            bool openingHomesUseLocalStreets = streetCity.buildings.All(building =>
+                building.vehicle_road_ids
+                    .Select(id => streetCity.vehicle_roads.Single(road => road.id == id))
+                    .All(road => road.role == CityVehicleRoadRole.BuildingAccess &&
+                                 road.connected_road_ids.All(connectionId =>
+                                     localRoads.Any(local => local.id == connectionId))));
             bool sidewalkFollowsRoad = mainRoad.points_norm.Length == mainSidewalk.points_norm.Length &&
                 mainRoad.points_norm.Select((point, index) => new { point, index })
                     .Skip(1)
@@ -524,9 +537,11 @@ namespace UrbanWildlife.EditorTools
                     SpriteDisplaySize(renderer, true) >= 0.14f &&
                     SpriteDisplaySize(renderer, true) <= 0.29f);
             if (!resourcesLoad || humanArtworkCount != 6 || vehicleArtworkCount != 2 ||
-                visiblePathLayers != 6 || !prototype.PedestrianNetworkVisible ||
+                visiblePathLayers != 4 || !prototype.PedestrianNetworkVisible ||
                 prototype.WalkTripCount != 4 || !sidewalkFollowsRoad ||
-                !accessSidewalksFollowRoads || !walkersUseSidewalk || !compactActorScale)
+                localRoads.Length != 3 || localSidewalks.Length != 3 ||
+                !openingHomesUseLocalStreets || !accessSidewalksFollowRoads ||
+                !walkersUseSidewalk || !compactActorScale)
             {
                 throw new InvalidOperationException(
                     $"Street-life presentation is incomplete: humans={humanArtworkCount}, " +
@@ -536,7 +551,8 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_STREET_LIFE_SMOKE_OK humans=6 walking=4 vehicles=2 " +
-                "vehicle_sprites=3 pedestrian_links=3 outlined_paths=6 visible_by_default=True " +
+                "vehicle_sprites=3 pedestrian_links=6 dynamic_outlined_paths=4 visible_by_default=True " +
+                "existing_local_streets=3 opening_homes_use_local_streets=True " +
                 "shared_road_corridor=True pedestrians_on_sidewalk=True road_centre_separated=True " +
                 "human_height=0.23 vehicle_depth=0.24 wildlife_width=0.15_to_0.28 compact_actor_scale=True");
         }
@@ -647,13 +663,13 @@ namespace UrbanWildlife.EditorTools
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 0 ||
                 boundaries.GetComponentsInChildren<LineRenderer>().Length != 32 ||
                 underlayRenderer?.sprite == null ||
-                underlayRenderer.sprite.name != "city-board-woodland-terrain-only-v04" ||
+                underlayRenderer.sprite.name != "city-board-woodland-existing-streets-v05" ||
                 underlayRenderer.sortingOrder != -50 ||
                 regularFont == null || boldFont == null ||
                 prototype.GetComponentsInChildren<Transform>().Any(item => item.name == "East canal"))
             {
                 throw new InvalidOperationException(
-                    "The sparse opening map must render its inland woodland underlay, 216 logical cells " +
+                    "The sparse opening map must render its woodland and existing-street underlay, 216 logical cells " +
                     "(56 open, 158 woodland, 2 opening houses and no water cells), " +
                     "32 fully transparent grid lines, no river and no ocean.");
             }
@@ -719,7 +735,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException($"Expected no duplicated dynamic woodland groves, found {actualGroves}.");
             }
-            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=18x12 cells=216 available=214 woodland=158 open=56 woodland_groves={actualGroves} baked_forest=True terrain_only_underlay=True dynamic_roads=True dynamic_footpaths=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False baseline_water_cells=0 no_river=True no_ocean=True static_nunito=Regular/Bold");
+            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=18x12 cells=216 available=214 woodland=158 open=56 woodland_groves={actualGroves} baked_forest=True existing_streets_baked=True duplicate_street_layers=False dynamic_access_roads=True dynamic_access_footpaths=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False baseline_water_cells=0 no_river=True no_ocean=True static_nunito=Regular/Bold");
         }
 
         private static void VerifyCompactNeighbourhoodPresentation(CityPrototypeDemo prototype)
@@ -750,7 +766,7 @@ namespace UrbanWildlife.EditorTools
                 accessRoads == null || !accessRoads.gameObject.activeSelf ||
                 accessRoads.GetComponentsInChildren<LineRenderer>().Length != 4 ||
                 footpaths == null || !footpaths.gameObject.activeSelf ||
-                footpaths.GetComponentsInChildren<LineRenderer>().Length != 6 ||
+                footpaths.GetComponentsInChildren<LineRenderer>().Length != 4 ||
                 wildlife == null || wildlife.childCount != 15 ||
                 wildlifeSprites.Length != 15 ||
                 wildlifeHorizontalSpan < 5f || wildlifeVerticalSpan < 3f ||
@@ -762,7 +778,7 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
-                "dynamic_main_road_default_visible=True two_driveways_visible=True pedestrian_paths_default_visible=True " +
+                "existing_street_hierarchy_visible=True two_driveways_visible=True pedestrian_paths_default_visible=True " +
                 $"wildlife_artwork=15 wildlife_span={wildlifeHorizontalSpan:0.0}x{wildlifeVerticalSpan:0.0} " +
                 "hedgehog_fallback=0 compact_buildings=True");
         }
@@ -1187,6 +1203,23 @@ namespace UrbanWildlife.EditorTools
             CityRoadChoiceSet access = CityRoadCandidateGenerator.Generate(placedCity, placed);
             CityRoadCandidate automatic = access.candidates.Single(candidate =>
                 candidate.route_option == CityRoadRouteOption.Direct);
+            CityBuilding localStreetBuilding = CityConstructionFactory.CreateBuilding(
+                new CityTokenState
+                {
+                    id = 113,
+                    type = CityPhysicalTokenType.DetachedHouse,
+                    x_norm = 0.65f,
+                    y_norm = 0.60f,
+                    rotation_deg = 0f,
+                    confidence = 1f,
+                },
+                CityConstructionState.Proposed);
+            CityRoadCandidate localStreetAccess = CityRoadCandidateGenerator
+                .Generate(city, localStreetBuilding)
+                .candidates.Single(candidate =>
+                    candidate.route_option == CityRoadRouteOption.Direct);
+            CityVehicleRoad automaticConnection = placedCity.vehicle_roads.Single(road =>
+                road.id == automatic.connection_road_id);
             CityPedestrianLink automaticSidewalk =
                 CityRoadCandidateGenerator.CreateBasicPedestrianAccess(
                     placedCity,
@@ -1199,14 +1232,16 @@ namespace UrbanWildlife.EditorTools
                     placedCity.bounds))
                 .All(distance => distance >= 0.90f && distance <= 1.06f);
             if (automatic.points_norm.Length != 11 ||
-                automatic.connection_road_id != "vehicle-main-street" ||
+                automaticConnection.source != CityNetworkSource.ExistingMap ||
+                automaticConnection.role == CityVehicleRoadRole.BuildingAccess ||
+                localStreetAccess.connection_road_id != "vehicle-local-south-arc" ||
                 automatic.points_norm.Skip(1).Take(automatic.points_norm.Length - 2)
                     .All(point => Math.Abs(point[0] - automatic.points_norm[0][0]) < 0.0001f) ||
                 automaticSidewalk.points_norm.Length < automatic.points_norm.Length ||
                 !sidewalkTracksAutomaticRoad)
             {
                 throw new InvalidOperationException(
-                    "Automatic access did not create a smooth multi-point curve to the main road.");
+                    "Automatic access did not create a smooth curve to the nearest existing street.");
             }
 
             CityNetworkPlanningManager networkPlanner =
@@ -1278,7 +1313,8 @@ namespace UrbanWildlife.EditorTools
 
             Debug.Log(
                 "UNITY_CITY_FREE_PLACEMENT_SMOKE_OK continuous_position=True road_overlap_rejected=True " +
-                "smooth_main_road_curve=11_points parallel_sidewalk=True sidewalk_tracks_route_choice=True " +
+                "smooth_access_curve=11_points nearest_existing_local_street=True " +
+                "parallel_sidewalk=True sidewalk_tracks_route_choice=True " +
                 "woodland_to_white=True");
         }
 
@@ -1349,15 +1385,41 @@ namespace UrbanWildlife.EditorTools
                     (first, second) => RouteSegmentLength(first, second, city.bounds)))
                 .DefaultIfEmpty(0f)
                 .Max();
-            if (externalTrips.Length == 0 || longestSegment > 15f)
+            CityVehicleRoad mainRoad = city.vehicle_roads.Single(road =>
+                road.id == "vehicle-main-street");
+            bool routesUseLocalThenMain = externalTrips.All(trip =>
+            {
+                CityBuilding origin = city.buildings.Single(building =>
+                    building.id == trip.origin_building_id);
+                CityVehicleRoad access = city.vehicle_roads.Single(road =>
+                    road.id == origin.vehicle_road_ids[0]);
+                CityVehicleRoad local = city.vehicle_roads.Single(road =>
+                    road.id == access.connected_road_ids[0]);
+                return local.role == CityVehicleRoadRole.Local &&
+                       RouteTouchesRoad(trip.route_points_norm, local, city.bounds) &&
+                       RouteTouchesRoad(trip.route_points_norm, mainRoad, city.bounds);
+            });
+            if (externalTrips.Length == 0 || longestSegment > 15f ||
+                !routesUseLocalThenMain)
             {
                 throw new InvalidOperationException(
                     $"Vehicle route leaves the road centreline: trips={externalTrips.Length}, " +
-                    $"longestSegment={longestSegment:0.00} units.");
+                    $"longestSegment={longestSegment:0.00} units, " +
+                    $"localThenMain={routesUseLocalThenMain}.");
             }
             Debug.Log(
                 $"UNITY_CITY_VEHICLE_ROAD_FOLLOWING_SMOKE_OK external_trips={externalTrips.Length} " +
-                $"longest_segment_units={longestSegment:0.00} projected_main_road_join=True");
+                $"longest_segment_units={longestSegment:0.00} local_then_main=True " +
+                "projected_road_joins=True");
+        }
+
+        private static bool RouteTouchesRoad(
+            float[][] route,
+            CityVehicleRoad road,
+            CityBounds bounds)
+        {
+            return route.Any(routePoint => road.points_norm.Any(roadPoint =>
+                WorldDistance(routePoint, roadPoint, bounds) <= 0.01f));
         }
 
         private static float RouteSegmentLength(float[] first, float[] second, CityBounds bounds)

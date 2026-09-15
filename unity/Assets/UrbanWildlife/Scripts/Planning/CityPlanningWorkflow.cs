@@ -126,7 +126,7 @@ namespace UrbanWildlife.Planning
                 PrepareConstruction();
                 LastMessage =
                     $"Placement confirmed. Added {preview.RequiredRoadChoiceCount} smooth automatic " +
-                    "road connection(s) to the main road.";
+                    "road connection(s) to the nearest existing street.";
             }
             else
             {

@@ -26,9 +26,9 @@
 
 ### 18 × 12 城市建设网格
 
-正式城市地图在 90 × 60 cm 板面上使用 18 列 × 12 行、共 216 个后台逻辑单元，每格对应 5 × 5 cm。界面仍是一张连续的柔和地图，正常游玩时格线和单元覆盖完全透明；只有 Plan 与 Preview 显示即将改变的真实建筑占地。摄像头与桌面输入继续输出归一化连续坐标，建筑保留自由坐标而不吸附格心；后台细网格只记录占地、生态状态和跨周期历史。开局底图没有河流或水域格，机动车主干道仍拒绝建筑覆盖；`Water` 土地类型继续作为以后加入小池塘等固定设施时的通用规则。
+正式城市地图在 90 × 60 cm 板面上使用 18 列 × 12 行、共 216 个后台逻辑单元，每格对应 5 × 5 cm。界面仍是一张连续的柔和地图，正常游玩时格线和单元覆盖完全透明；只有 Plan 与 Preview 显示即将改变的真实建筑占地。摄像头与桌面输入继续输出归一化连续坐标，建筑保留自由坐标而不吸附格心；后台细网格只记录占地、生态状态和跨周期历史。开局底图没有河流或水域格，所有既有机动车道路都拒绝建筑覆盖；`Water` 土地类型继续作为以后加入小池塘等固定设施时的通用规则。
 
-建筑使用按参考图标定的连续占地：Detached House 为 5 × 5、Apartment 为 7 × 7、Commercial 为 7.5 × 5、Community Facility 为 9 × 6 地图单位；旋转会同步改变占地包围盒。确认前检查完整占地是否越界、与主干道或既有建筑相交，确认后 `planning_cell_ids` 保存被覆盖的后台单元；拆除会整体释放，而不是只清除中心所在单元。
+建筑使用按参考图标定的连续占地：Detached House 为 5 × 5、Apartment 为 7 × 7、Commercial 为 7.5 × 5、Community Facility 为 9 × 6 地图单位；旋转会同步改变占地包围盒。确认前检查完整占地是否越界、与任一既有道路或建筑相交，确认后 `planning_cell_ids` 保存被覆盖的后台单元；拆除会整体释放，而不是只清除中心所在单元。
 
 稀疏开局包含 2 栋既有住宅、158 格 Woodland 与 56 格 Open Land，Water、Civic Plaza 和 Public Green 基线均为 0；因此 216 格中有 214 格未被既有建筑占用，实际能否建设仍由连续占地、道路和建筑碰撞共同决定。5 × 5独栋在对齐时占1格，任意放置跨越边界时可覆盖相邻格；7 × 7公寓通常覆盖2 × 2格，7.5 × 5商业通常覆盖2 × 1或2 × 2格，9 × 6社区设施通常覆盖2 × 2格。玩家建筑同时上限仍为9个，每周期也继续受变更预算约束。自然食物供给按每块栖息地的实际面积缩放，细分网格不会凭空增加资源总量。当前地面动物会检查Water与Building，避免跨越障碍；上下左右四邻接继续作为后台栖息地连接基础。
 
@@ -52,11 +52,11 @@
 
 `CityTripPlanner` 只读取 `Existing` Building。住宅的 Housing Capacity 与 Human Origin Rate 决定代表性居民数量，默认最多24个且公开每个代理代表的人数；Commercial 与 Community Facility 作为目的地。目的地效用由 Destination Weight、归一化距离、稳定微扰和预计 Crowd Penalty 组成，Capacity 以代表人口而非屏幕代理数量计算。
 
-`CityNetworkRouteBuilder` 通过建筑接入线的 `connected_road_ids` 或 `connected_link_ids` 拼接同一道路走廊：Drive查询VehicleRoad并沿道路中心线行驶，Walk查询由该道路派生的PedestrianLink并始终走在侧边人行道。高机动车需求住宅的首个代表性Drive Trip会沿道路连接寻找地图边缘出口，并在路线末端加入边界外网关；当城市尚无内部目的地时，住宅行程也可以全部通过该网关出城。`CityTripAgent` 使用同一路线完成Outbound、边界外Dwelling和完整逆序Returning，因此车辆会真实驶出画面再从同一入口返回。`CityMobilitySimulation` 按1.5秒间隔生成代理；Drive状态才公开对应Vehicle Agent，因此车辆数量可追溯到具体Trip，不存在随机背景交通。当前公式和速度是确定性玩法V0.1，不是人口或交通预测模型。
+`CityNetworkRouteBuilder` 将 `connected_road_ids` 与 `connected_link_ids` 视为可多跳遍历的路网图：Drive沿建筑接入路、既有支路和主干道中心线连续行驶，Walk沿由同一组道路派生的侧边人行网络移动。高机动车需求住宅的首个代表性Drive Trip会沿“接入路 → 支路 → 主干道”寻找地图边缘出口，并在路线末端加入边界外网关；当城市尚无内部目的地时，住宅行程也可以全部通过该网关出城。`CityTripAgent` 使用同一路线完成Outbound、边界外Dwelling和完整逆序Returning，因此车辆会真实驶出画面再从同一入口返回。`CityMobilitySimulation` 按1.5秒间隔生成代理；Drive状态才公开对应Vehicle Agent，因此车辆数量可追溯到具体Trip，不存在随机背景交通。当前公式和速度是确定性玩法V0.1，不是人口或交通预测模型。
 
 ### 城市可视化集成壳
 
-`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的2住宅开局状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧72%的地图视口，右侧28%由固定城市信息栏占用，两者不遮挡。用户确认的无河密集城区参考图定义“发展完成后的目标视觉密度”，不是开局截图；开局仍只显示两栋住宅。底图只烘焙暖白空地、无接缝林地区块与树木，不含河流、网格、道路、步道、建筑或UI；机动车主路、自动支路、步行网络、建筑和清林白地均由Unity独立生成，因此玩家建设后可以真实改变路网和地表。主路、两栋住宅支路与步行道开局可见，18 × 12后台逻辑网格在正常画面中完全隐藏。场景默认使用无需摄像头的Desktop点击建造模式，也可切换到Camera实体Token扫描模式，两者复用同一校验和施工核心。
+`City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的2住宅开局状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧72%的地图视口，右侧28%由固定城市信息栏占用，两者不遮挡。用户确认的无河密集城区参考图定义“发展完成后的目标视觉密度”，不是开局截图；开局仍只显示两栋住宅。底图烘焙暖白空地、林地区块、树木以及一条贯穿地图的主干道和三个既有支路组团，不含河流、网格、建筑或UI；Unity保存同形的隐藏道路与侧边人行折线用于碰撞、最近道路选择和移动，但不重复绘制固定路面。玩家建设后，Unity只绘制新建筑的短接入路、对应侧边步行接入和紧凑清林白地。18 × 12后台逻辑网格在正常画面中完全隐藏。场景默认使用无需摄像头的Desktop点击建造模式，也可切换到Camera实体Token扫描模式，两者复用同一校验和施工核心。
 
 移动元素使用相对于建筑占地的独立显示标尺：约1.0 Unity单位宽的开局独栋是一级视觉，人物高度与车辆进深均约0.24单位，四种动物宽度保持在0.15–0.28单位。Sprite缩放只发生在`CityPrototypeDemo`表现层；`CityTripAgent`和`CityWildlifeSimulation`仍输出原坐标、速度和状态，因此缩小画面角色不会改变车辆沿路中心行驶、行人走侧边步道、动物热点聚合或生态结果。
 

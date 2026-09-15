@@ -22,7 +22,7 @@ namespace UrbanWildlife.Prototype
         private const string UiLanguagePreferenceKey =
             "UrbanWildlife.CityPrototype.UiLanguage";
         private const float MapHeight = 8f;
-        private const float MapViewportWidth = 0.77f;
+        private const float MapViewportWidth = 0.72f;
         private const float BoardViewMargin = 0.55f;
         private const float RuntimeSpeed = 2f;
         private const string CityBoardUnderlayResourcePath =
@@ -403,6 +403,7 @@ namespace UrbanWildlife.Prototype
             {
                 return;
             }
+            EnsureFullFrameClearCamera(camera);
             camera.rect = new Rect(0f, 0f, MapViewportWidth, 1f);
             camera.orthographic = true;
             camera.orthographicSize = OrthographicSizeForViewport(
@@ -412,6 +413,22 @@ namespace UrbanWildlife.Prototype
             camera.backgroundColor = new Color(0.82f, 0.86f, 0.80f, 1f);
             configuredScreenWidth = Screen.width;
             configuredScreenHeight = Screen.height;
+        }
+
+        private static void EnsureFullFrameClearCamera(Camera mapCamera)
+        {
+            GameObject clearObject = GameObject.Find("UI Background Camera");
+            if (clearObject == null)
+            {
+                clearObject = new GameObject("UI Background Camera");
+            }
+            Camera clearCamera = clearObject.GetComponent<Camera>() ??
+                                 clearObject.AddComponent<Camera>();
+            clearCamera.clearFlags = CameraClearFlags.SolidColor;
+            clearCamera.backgroundColor = CityPrototypeUiTheme.Panel;
+            clearCamera.cullingMask = 0;
+            clearCamera.depth = mapCamera.depth - 10f;
+            clearCamera.rect = new Rect(0f, 0f, 1f, 1f);
         }
 
         public static float OrthographicSizeForViewport(
@@ -1592,11 +1609,35 @@ namespace UrbanWildlife.Prototype
                 return;
             }
             EnsureStyles();
-            float panelX = Screen.width * 0.77f;
-            float panelWidth = Screen.width * 0.23f;
-            GUILayout.BeginArea(new Rect(panelX, 0f, panelWidth, Screen.height), panelStyle);
-            sidebarScroll = GUILayout.BeginScrollView(sidebarScroll, false, true);
-            AddUiSpace(CityPrototypeUiTheme.SpaceLg);
+            float panelX = Screen.width * MapViewportWidth;
+            float panelWidth = Screen.width * (1f - MapViewportWidth);
+            Rect panelRect = new Rect(panelX, 0f, panelWidth, Screen.height);
+            GUI.DrawTexture(
+                panelRect,
+                panelStyle.normal.background,
+                ScaleMode.StretchToFill,
+                false);
+            int horizontalPadding = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceLg,
+                uiScale);
+            int topPadding = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceMd,
+                uiScale);
+            int bottomPadding = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceLg,
+                uiScale);
+            Rect contentRect = new Rect(
+                panelX + horizontalPadding,
+                topPadding,
+                Mathf.Max(1f, panelWidth - horizontalPadding * 2f),
+                Mathf.Max(1f, Screen.height - topPadding - bottomPadding));
+            GUILayout.BeginArea(contentRect, GUIStyle.none);
+            sidebarScroll = GUILayout.BeginScrollView(
+                sidebarScroll,
+                false,
+                true,
+                GUILayout.Width(contentRect.width),
+                GUILayout.Height(contentRect.height));
             DrawLanguageSwitch();
             AddUiSpace(CityPrototypeUiTheme.SpaceSm);
             GUILayout.Label(T("RIVERSIDE WILDLIFE DISTRICT", "河畔野生动物社区"), eyebrowStyle);
@@ -1911,22 +1952,42 @@ namespace UrbanWildlife.Prototype
             {
                 case CityPlanningWorkflowPhase.ReadyToScan:
                     GUILayout.Label(T("1  CHOOSE A BUILDING", "1  选择建筑"), headingStyle);
-                    GUILayout.BeginHorizontal();
-                    DrawDesktopBuildingButton(
-                        CityPhysicalTokenType.DetachedHouse,
-                        T("HOUSE", "住宅"));
-                    DrawDesktopBuildingButton(
-                        CityPhysicalTokenType.Apartment,
-                        T("FLATS", "公寓"));
-                    GUILayout.EndHorizontal();
-                    GUILayout.BeginHorizontal();
-                    DrawDesktopBuildingButton(
-                        CityPhysicalTokenType.Commercial,
-                        T("MARKET", "市场"));
-                    DrawDesktopBuildingButton(
-                        CityPhysicalTokenType.CommunityFacility,
-                        T("CIVIC", "社区"));
-                    GUILayout.EndHorizontal();
+                    bool compactSidebar = Screen.width * (1f - MapViewportWidth) <
+                                          CityPrototypeUiTheme.ScaledPixel(430, uiScale);
+                    if (compactSidebar)
+                    {
+                        DrawDesktopBuildingButton(
+                            CityPhysicalTokenType.DetachedHouse,
+                            T("HOUSE", "住宅"));
+                        DrawDesktopBuildingButton(
+                            CityPhysicalTokenType.Apartment,
+                            T("FLATS", "公寓"));
+                        DrawDesktopBuildingButton(
+                            CityPhysicalTokenType.Commercial,
+                            T("MARKET", "市场"));
+                        DrawDesktopBuildingButton(
+                            CityPhysicalTokenType.CommunityFacility,
+                            T("CIVIC", "社区"));
+                    }
+                    else
+                    {
+                        GUILayout.BeginHorizontal();
+                        DrawDesktopBuildingButton(
+                            CityPhysicalTokenType.DetachedHouse,
+                            T("HOUSE", "住宅"));
+                        DrawDesktopBuildingButton(
+                            CityPhysicalTokenType.Apartment,
+                            T("FLATS", "公寓"));
+                        GUILayout.EndHorizontal();
+                        GUILayout.BeginHorizontal();
+                        DrawDesktopBuildingButton(
+                            CityPhysicalTokenType.Commercial,
+                            T("MARKET", "市场"));
+                        DrawDesktopBuildingButton(
+                            CityPhysicalTokenType.CommunityFacility,
+                            T("CIVIC", "社区"));
+                        GUILayout.EndHorizontal();
+                    }
                     GUILayout.Label(
                         $"{T("Selected", "已选择")}  ·  {DesktopBuildingLabel(desktopBuildingType)}",
                         bodyStyle);
@@ -2419,6 +2480,8 @@ namespace UrbanWildlife.Prototype
 
             panelStyle = new GUIStyle(GUI.skin.box)
             {
+                border = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(
                     panelHorizontal,
                     panelHorizontal,

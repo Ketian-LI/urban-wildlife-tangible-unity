@@ -31,6 +31,14 @@ namespace UrbanWildlife.EditorTools
             EnsureBuildingVariantSpriteImports();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+            GameObject clearCameraObject = new GameObject("UI Background Camera");
+            Camera clearCamera = clearCameraObject.AddComponent<Camera>();
+            clearCamera.clearFlags = CameraClearFlags.SolidColor;
+            clearCamera.backgroundColor = new Color32(0xF8, 0xF6, 0xEF, 0xFF);
+            clearCamera.cullingMask = 0;
+            clearCamera.depth = -10f;
+            clearCamera.rect = new Rect(0f, 0f, 1f, 1f);
+
             GameObject cameraObject = new GameObject("Main Camera");
             Camera camera = cameraObject.AddComponent<Camera>();
             cameraObject.tag = "MainCamera";
@@ -42,8 +50,8 @@ namespace UrbanWildlife.EditorTools
             camera.orthographicSize = CityPrototypeDemo.OrthographicSizeForViewport(
                 Screen.width,
                 Screen.height,
-                0.77f);
-            camera.rect = new Rect(0f, 0f, 0.77f, 1f);
+                0.72f);
+            camera.rect = new Rect(0f, 0f, 0.72f, 1f);
 
             GameObject lightObject = new GameObject("Directional Light");
             Light light = lightObject.AddComponent<Light>();
@@ -240,7 +248,13 @@ namespace UrbanWildlife.EditorTools
             Camera camera = Camera.main;
             bool separateViewport = camera != null &&
                                     Math.Abs(camera.rect.x) < 0.001f &&
-                                    Math.Abs(camera.rect.width - 0.77f) < 0.001f;
+                                    Math.Abs(camera.rect.width - 0.72f) < 0.001f;
+            Camera clearCamera = GameObject.Find("UI Background Camera")?.GetComponent<Camera>();
+            bool fullFrameClear = camera != null &&
+                                  clearCamera != null &&
+                                  clearCamera.cullingMask == 0 &&
+                                  clearCamera.depth < camera.depth &&
+                                  Math.Abs(clearCamera.rect.width - 1f) < 0.001f;
             if (prototype == null || prototype.GeneratedBuildingCount != 2 ||
                 prototype.GeneratedPlanningCellCount != 54 ||
                 prototype.AvailablePlanningCellCount != 43 ||
@@ -264,6 +278,7 @@ namespace UrbanWildlife.EditorTools
                 prototype.WalkTripCount != 4 ||
                 !prototype.PedestrianNetworkVisible ||
                 !prototype.DesktopPlayEnabled ||
+                !fullFrameClear ||
                 !separateViewport)
             {
                 throw new InvalidOperationException(
@@ -280,7 +295,8 @@ namespace UrbanWildlife.EditorTools
                     $"feed={prototype?.CityFeedCount}, " +
                     $"planning={prototype?.PlanningWorkflowConnected}, " +
                     $"agents={prototype?.RepresentativeAgentCount}, population={prototype?.RepresentedPopulation}, " +
-                    $"vehicles={prototype?.VehicleTripCount}, viewport={separateViewport}.");
+                    $"vehicles={prototype?.VehicleTripCount}, viewport={separateViewport}, " +
+                    $"fullFrameClear={fullFrameClear}.");
             }
             string[] requiredObjects =
             {
@@ -318,7 +334,7 @@ namespace UrbanWildlife.EditorTools
             VerifyDesktopPlayableFlow(prototype);
             VerifyVehicleRoutesStayOnRoad();
             Debug.Log(
-                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True bright_city_style=True opening_buildings=2 vehicle_roads=3 " +
+                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True sidebar_width=28_percent full_frame_clear=True bright_city_style=True opening_buildings=2 vehicle_roads=3 " +
                 "planning_grid=9x6 planning_cells=54 available_cells=43 multi_cell_buildings=True hidden_grid=True " +
                 "pedestrian_links=3 amenities=0 food_sources=True waste_pressure=True " +
                 "wildlife_agents=15 species=4 utility_targets=True " +
@@ -675,7 +691,7 @@ namespace UrbanWildlife.EditorTools
             };
             foreach ((int width, int height) in sizes)
             {
-                const float viewportWidth = 0.77f;
+                const float viewportWidth = 0.72f;
                 float size = CityPrototypeDemo.OrthographicSizeForViewport(
                     width,
                     height,

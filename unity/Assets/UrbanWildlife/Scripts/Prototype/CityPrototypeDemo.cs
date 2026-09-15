@@ -50,11 +50,13 @@ namespace UrbanWildlife.Prototype
         private const string CityCommunityCentreResourcePath =
             "UrbanWildlife/Buildings/community-centre-citybuilder-v01";
         private const string PigeonWildlifeResourcePath =
-            "UrbanWildlife/Animals/pigeon-side-walk-a-v01";
+            "UrbanWildlife/Animals/pigeon-citybuilder-soft-v02";
         private const string SquirrelWildlifeResourcePath =
-            "UrbanWildlife/Animals/squirrel-side-walk-a-v01";
+            "UrbanWildlife/Animals/squirrel-citybuilder-soft-v02";
         private const string FoxWildlifeResourcePath =
-            "UrbanWildlife/Animals/fox-side-walk-a-v01";
+            "UrbanWildlife/Animals/fox-citybuilder-soft-v02";
+        private const string HedgehogWildlifeResourcePath =
+            "UrbanWildlife/Animals/hedgehog-citybuilder-soft-v02";
         private static readonly string[] CityVehicleResourcePaths =
         {
             "UrbanWildlife/Vehicles/city-car-pastel-blue-v01",
@@ -1268,6 +1270,8 @@ namespace UrbanWildlife.Prototype
                     return SquirrelWildlifeResourcePath;
                 case CityWildlifeSpecies.Fox:
                     return FoxWildlifeResourcePath;
+                case CityWildlifeSpecies.Hedgehog:
+                    return HedgehogWildlifeResourcePath;
                 default:
                     return null;
             }
@@ -1283,6 +1287,8 @@ namespace UrbanWildlife.Prototype
                     return 0.32f;
                 case CityWildlifeSpecies.Fox:
                     return 0.46f;
+                case CityWildlifeSpecies.Hedgehog:
+                    return 0.28f;
                 default:
                     return 0.24f;
             }

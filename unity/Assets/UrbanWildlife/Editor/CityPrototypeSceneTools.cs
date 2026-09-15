@@ -27,6 +27,7 @@ namespace UrbanWildlife.EditorTools
         public static void CreateCityPrototypeScene()
         {
             EnsureVehicleSpriteImports();
+            EnsureWildlifeSpriteImports();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             GameObject cameraObject = new GameObject("Main Camera");
@@ -75,6 +76,38 @@ namespace UrbanWildlife.EditorTools
                 "Assets/Resources/UrbanWildlife/Vehicles/city-car-pastel-blue-v01.png",
                 "Assets/Resources/UrbanWildlife/Vehicles/city-car-muted-coral-v01.png",
                 "Assets/Resources/UrbanWildlife/Vehicles/city-car-warm-mustard-v01.png",
+            };
+            foreach (string assetPath in assetPaths)
+            {
+                if (AssetImporter.GetAtPath(assetPath) is not TextureImporter importer)
+                {
+                    continue;
+                }
+                bool changed = importer.textureType != TextureImporterType.Sprite ||
+                               importer.spriteImportMode != SpriteImportMode.Single ||
+                               importer.mipmapEnabled || !importer.alphaIsTransparency;
+                if (!changed)
+                {
+                    continue;
+                }
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 100f;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.textureCompression = TextureImporterCompression.Compressed;
+                importer.SaveAndReimport();
+            }
+        }
+
+        private static void EnsureWildlifeSpriteImports()
+        {
+            string[] assetPaths =
+            {
+                "Assets/Resources/UrbanWildlife/Animals/pigeon-citybuilder-soft-v02.png",
+                "Assets/Resources/UrbanWildlife/Animals/squirrel-citybuilder-soft-v02.png",
+                "Assets/Resources/UrbanWildlife/Animals/fox-citybuilder-soft-v02.png",
+                "Assets/Resources/UrbanWildlife/Animals/hedgehog-citybuilder-soft-v02.png",
             };
             foreach (string assetPath in assetPaths)
             {
@@ -569,9 +602,10 @@ namespace UrbanWildlife.EditorTools
                 : wildlife.GetComponentsInChildren<SpriteRenderer>(true);
             string[] expectedWildlifeSprites =
             {
-                "pigeon-side-walk-a-v01",
-                "squirrel-side-walk-a-v01",
-                "fox-side-walk-a-v01",
+                "pigeon-citybuilder-soft-v02",
+                "squirrel-citybuilder-soft-v02",
+                "fox-citybuilder-soft-v02",
+                "hedgehog-citybuilder-soft-v02",
             };
             if (roads == null || roads.gameObject.activeSelf ||
                 accessRoads == null || !accessRoads.gameObject.activeSelf ||
@@ -579,7 +613,7 @@ namespace UrbanWildlife.EditorTools
                 footpaths == null || !footpaths.gameObject.activeSelf ||
                 footpaths.GetComponentsInChildren<LineRenderer>().Length != 6 ||
                 wildlife == null || wildlife.childCount != 15 ||
-                wildlifeSprites.Length != 14 ||
+                wildlifeSprites.Length != 15 ||
                 wildlifeSprites.Any(renderer => renderer.sprite == null ||
                                                   !expectedWildlifeSprites.Contains(renderer.sprite.name)))
             {
@@ -589,7 +623,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
                 "road_routes_default_hidden=True two_driveways_visible=True pedestrian_paths_default_visible=True " +
-                "wildlife_artwork=14 hedgehog_fallback=1 compact_buildings=True");
+                "wildlife_artwork=15 hedgehog_fallback=0 compact_buildings=True");
         }
 
         private static void VerifyResponsiveCameraFit()

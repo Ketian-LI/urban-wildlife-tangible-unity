@@ -58,6 +58,8 @@
 
 `City_Prototype.unity` 是新版系统的独立集成场景，旧 `P0_InputSpike.unity` 继续保留作回归测试。`CityPrototypeStateFactory` 提供确定性的2住宅开局状态，`CityPrototypeDemo` 把Building、GreenPatch、VehicleRoad、PedestrianLink、Representative Trip和Vehicle Agent映射为同一实时画面。Camera只渲染左侧72%的地图视口，右侧28%由固定城市信息栏占用，两者不遮挡。用户确认的无河密集城区参考图定义“发展完成后的目标视觉密度”，不是开局截图；开局仍只显示两栋住宅。底图只烘焙暖白空地、无接缝林地区块与树木，不含河流、网格、道路、步道、建筑或UI；机动车主路、自动支路、步行网络、建筑和清林白地均由Unity独立生成，因此玩家建设后可以真实改变路网和地表。主路、两栋住宅支路与步行道开局可见，18 × 12后台逻辑网格在正常画面中完全隐藏。场景默认使用无需摄像头的Desktop点击建造模式，也可切换到Camera实体Token扫描模式，两者复用同一校验和施工核心。
 
+移动元素使用相对于建筑占地的独立显示标尺：约1.0 Unity单位宽的开局独栋是一级视觉，人物高度与车辆进深均约0.24单位，四种动物宽度保持在0.15–0.28单位。Sprite缩放只发生在`CityPrototypeDemo`表现层；`CityTripAgent`和`CityWildlifeSimulation`仍输出原坐标、速度和状态，因此缩小画面角色不会改变车辆沿路中心行驶、行人走侧边步道、动物热点聚合或生态结果。
+
 `CityEnvironmentSimulation` 是Building与动物之间的环境中介层：它同步建筑垃圾输出和Bin容量，按持续超载时间生成Litter Hotspot，并分别公开Natural/Anthropogenic Food。局部Green Patch压力聚合建筑、Bench、道路交通与垃圾影响，避免动物直接读取视觉对象。
 
 `CityWildlifeSimulation`为鸽子、灰松鼠、狐狸和刺猬提供独立权重Profile。每次决策从食物、庇护、正负记忆、人类干扰、交通、旅行成本计算Patch Utility；觅食与庇护目标仍来自现有Green Patch，鸽子另可从开放地、广场和公共绿地生成或落脚。基础移动会避开地图边缘；地面物种的整段移动轨迹不能穿过Water或Existing Building，鸽子可飞越但不会落在障碍上。地面物种Roadkill必须匹配具体Vehicle Agent碰撞，迁入、迁出与死亡进入不可逆Outcome列表；设施拆除不持有或清除动物记忆。

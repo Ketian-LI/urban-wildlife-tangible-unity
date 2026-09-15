@@ -25,6 +25,8 @@ namespace UrbanWildlife.Prototype
         private const float MapViewportWidth = 0.72f;
         private const float BoardViewMargin = 0.55f;
         private const float RuntimeSpeed = 2f;
+        private const float HumanArtworkHeight = 0.23f;
+        private const float VehicleArtworkDepth = 0.24f;
         private const string CityBoardUnderlayResourcePath =
             "UrbanWildlife/Environment/city-board-woodland-terrain-only-v04";
         private const string CityPlazaResourcePath =
@@ -1407,15 +1409,15 @@ namespace UrbanWildlife.Prototype
             switch (species)
             {
                 case CityWildlifeSpecies.Pigeon:
-                    return 0.24f;
+                    return 0.15f;
                 case CityWildlifeSpecies.GreySquirrel:
-                    return 0.32f;
+                    return 0.19f;
                 case CityWildlifeSpecies.Fox:
-                    return 0.46f;
-                case CityWildlifeSpecies.Hedgehog:
                     return 0.28f;
+                case CityWildlifeSpecies.Hedgehog:
+                    return 0.17f;
                 default:
-                    return 0.24f;
+                    return 0.15f;
             }
         }
 
@@ -1472,26 +1474,30 @@ namespace UrbanWildlife.Prototype
 
         private GameObject CreateHumanToken(Transform parent, int index, string spritePath)
         {
-            GameObject token = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            GameObject token = new GameObject();
             token.name = $"Representative human {index + 1:00}";
             token.transform.SetParent(parent, false);
-            token.transform.localScale = new Vector3(0.24f, 0.035f, 0.24f);
-            RemoveCollider(token);
-            SetMaterial(token, new Color(0.70f, 0.47f, 0.24f, 1f));
 
             Sprite sprite = Resources.Load<Sprite>(spritePath);
             if (sprite != null)
             {
                 GameObject artwork = new GameObject("Human artwork");
                 artwork.transform.SetParent(token.transform, false);
-                artwork.transform.localPosition = new Vector3(0f, 1.55f, 0f);
                 artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                float scale = 0.55f / Mathf.Max(0.001f, sprite.bounds.size.y);
-                artwork.transform.localScale = new Vector3(scale / 0.24f, scale / 0.24f, scale / 0.24f);
+                float scale = HumanArtworkHeight / Mathf.Max(0.001f, sprite.bounds.size.y);
+                artwork.transform.localScale = Vector3.one * scale;
                 SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
                 renderer.sprite = sprite;
                 renderer.sortingOrder = 40;
+                return token;
             }
+
+            GameObject fallback = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            fallback.name = "Fallback human marker";
+            fallback.transform.SetParent(token.transform, false);
+            fallback.transform.localScale = new Vector3(0.10f, 0.025f, 0.10f);
+            RemoveCollider(fallback);
+            SetMaterial(fallback, new Color(0.70f, 0.47f, 0.24f, 1f));
             return token;
         }
 
@@ -1507,7 +1513,7 @@ namespace UrbanWildlife.Prototype
                 GameObject artwork = new GameObject("Vehicle artwork");
                 artwork.transform.SetParent(vehicle.transform, false);
                 artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                float scale = 0.36f / Mathf.Max(0.001f, sprite.bounds.size.y);
+                float scale = VehicleArtworkDepth / Mathf.Max(0.001f, sprite.bounds.size.y);
                 artwork.transform.localScale = Vector3.one * scale;
                 SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
                 renderer.sprite = sprite;

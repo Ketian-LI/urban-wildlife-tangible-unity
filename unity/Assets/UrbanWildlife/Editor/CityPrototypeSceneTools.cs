@@ -450,14 +450,24 @@ namespace UrbanWildlife.EditorTools
                 "Generated City Prototype/Representative mobility agents");
             Transform pedestrianRoot = prototype.transform.Find(
                 "Generated City Prototype/Pedestrian link network");
-            int humanArtworkCount = mobilityRoot == null
-                ? 0
-                : mobilityRoot.GetComponentsInChildren<SpriteRenderer>(true)
-                    .Count(renderer => renderer.gameObject.name == "Human artwork");
-            int vehicleArtworkCount = mobilityRoot == null
-                ? 0
-                : mobilityRoot.GetComponentsInChildren<SpriteRenderer>(true)
-                    .Count(renderer => renderer.gameObject.name == "Vehicle artwork");
+            Transform wildlifeRoot = prototype.transform.Find(
+                "Generated City Prototype/City wildlife agents");
+            SpriteRenderer[] mobilityArtwork = mobilityRoot == null
+                ? Array.Empty<SpriteRenderer>()
+                : mobilityRoot.GetComponentsInChildren<SpriteRenderer>(true);
+            SpriteRenderer[] humanArtwork = mobilityArtwork
+                .Where(renderer => renderer.gameObject.name == "Human artwork")
+                .ToArray();
+            SpriteRenderer[] vehicleArtwork = mobilityArtwork
+                .Where(renderer => renderer.gameObject.name == "Vehicle artwork")
+                .ToArray();
+            SpriteRenderer[] wildlifeArtwork = wildlifeRoot == null
+                ? Array.Empty<SpriteRenderer>()
+                : wildlifeRoot.GetComponentsInChildren<SpriteRenderer>(true)
+                    .Where(renderer => renderer.gameObject.name == "Wildlife artwork")
+                    .ToArray();
+            int humanArtworkCount = humanArtwork.Length;
+            int vehicleArtworkCount = vehicleArtwork.Length;
             int visiblePathLayers = pedestrianRoot == null
                 ? 0
                 : pedestrianRoot.GetComponentsInChildren<LineRenderer>(true).Length;
@@ -502,20 +512,48 @@ namespace UrbanWildlife.EditorTools
                 .All(trip => trip.route_points_norm.Any(routePoint =>
                     mainSidewalk.points_norm.Any(sidewalkPoint =>
                         WorldDistance(routePoint, sidewalkPoint, streetCity.bounds) <= 0.01f)));
+            bool compactActorScale =
+                humanArtwork.All(renderer =>
+                    SpriteDisplaySize(renderer, false) >= 0.22f &&
+                    SpriteDisplaySize(renderer, false) <= 0.24f) &&
+                vehicleArtwork.All(renderer =>
+                    SpriteDisplaySize(renderer, false) >= 0.23f &&
+                    SpriteDisplaySize(renderer, false) <= 0.25f) &&
+                wildlifeArtwork.Length == 15 &&
+                wildlifeArtwork.All(renderer =>
+                    SpriteDisplaySize(renderer, true) >= 0.14f &&
+                    SpriteDisplaySize(renderer, true) <= 0.29f);
             if (!resourcesLoad || humanArtworkCount != 6 || vehicleArtworkCount != 2 ||
                 visiblePathLayers != 6 || !prototype.PedestrianNetworkVisible ||
                 prototype.WalkTripCount != 4 || !sidewalkFollowsRoad ||
-                !accessSidewalksFollowRoads || !walkersUseSidewalk)
+                !accessSidewalksFollowRoads || !walkersUseSidewalk || !compactActorScale)
             {
                 throw new InvalidOperationException(
                     $"Street-life presentation is incomplete: humans={humanArtworkCount}, " +
                     $"vehicles={vehicleArtworkCount}, pathLayers={visiblePathLayers}, " +
+                    $"wildlife={wildlifeArtwork.Length}, compactScale={compactActorScale}, " +
                     $"pathsVisible={prototype.PedestrianNetworkVisible}, walkTrips={prototype.WalkTripCount}.");
             }
             Debug.Log(
                 "UNITY_CITY_STREET_LIFE_SMOKE_OK humans=6 walking=4 vehicles=2 " +
                 "vehicle_sprites=3 pedestrian_links=3 outlined_paths=6 visible_by_default=True " +
-                "shared_road_corridor=True pedestrians_on_sidewalk=True road_centre_separated=True");
+                "shared_road_corridor=True pedestrians_on_sidewalk=True road_centre_separated=True " +
+                "human_height=0.23 vehicle_depth=0.24 wildlife_width=0.15_to_0.28 compact_actor_scale=True");
+        }
+
+        private static float SpriteDisplaySize(SpriteRenderer renderer, bool useWidth)
+        {
+            if (renderer == null || renderer.sprite == null)
+            {
+                return 0f;
+            }
+            float sourceSize = useWidth
+                ? renderer.sprite.bounds.size.x
+                : renderer.sprite.bounds.size.y;
+            float displayScale = useWidth
+                ? Mathf.Abs(renderer.transform.lossyScale.x)
+                : Mathf.Abs(renderer.transform.lossyScale.y);
+            return sourceSize * displayScale;
         }
 
         private static float WorldDistance(float[] first, float[] second, CityBounds bounds)

@@ -145,11 +145,11 @@ namespace UrbanWildlife.EditorTools
         {
             string[] assetPaths =
             {
-                "Assets/Resources/UrbanWildlife/Buildings/detached-house-riverside-blue-v08.png",
-                "Assets/Resources/UrbanWildlife/Buildings/detached-house-riverside-coral-v08.png",
-                "Assets/Resources/UrbanWildlife/Buildings/apartment-reference-soft-v03.png",
-                "Assets/Resources/UrbanWildlife/Buildings/commercial-shop-reference-soft-v04.png",
-                "Assets/Resources/UrbanWildlife/Buildings/community-centre-reference-soft-v03.png",
+                "Assets/Resources/UrbanWildlife/Buildings/detached-house-riverside-blue-v09.png",
+                "Assets/Resources/UrbanWildlife/Buildings/detached-house-riverside-coral-v09.png",
+                "Assets/Resources/UrbanWildlife/Buildings/apartment-riverside-v04.png",
+                "Assets/Resources/UrbanWildlife/Buildings/commercial-market-riverside-v05.png",
+                "Assets/Resources/UrbanWildlife/Buildings/community-centre-riverside-v04.png",
             };
             foreach (string assetPath in assetPaths)
             {
@@ -587,16 +587,16 @@ namespace UrbanWildlife.EditorTools
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
             int residentialBlueCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "detached-house-riverside-blue-v08");
+                renderer.sprite.name == "detached-house-riverside-blue-v09");
             int residentialCoralCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "detached-house-riverside-coral-v08");
+                renderer.sprite.name == "detached-house-riverside-coral-v09");
             int apartmentCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "apartment-reference-soft-v03");
+                renderer.sprite.name == "apartment-riverside-v04");
             if (residentialBlueCount != 1 || residentialCoralCount != 1 ||
                 apartmentCount != 0 ||
-                Resources.Load<Sprite>("UrbanWildlife/Buildings/apartment-reference-soft-v03") == null)
+                Resources.Load<Sprite>("UrbanWildlife/Buildings/apartment-riverside-v04") == null)
             {
                 throw new InvalidOperationException(
                     "The sparse opening must contain two reference-scaled detached houses while retaining the apartment asset; " +
@@ -616,11 +616,11 @@ namespace UrbanWildlife.EditorTools
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
             string[] commercialVariants =
             {
-                "commercial-shop-reference-soft-v04",
+                "commercial-market-riverside-v05",
             };
             string[] communityVariants =
             {
-                "community-centre-reference-soft-v03",
+                "community-centre-riverside-v04",
             };
             int laterDestinationCount = renderers.Count(renderer =>
                 renderer.sprite != null &&

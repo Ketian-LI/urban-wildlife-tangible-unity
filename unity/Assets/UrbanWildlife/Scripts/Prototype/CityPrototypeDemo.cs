@@ -38,20 +38,20 @@ namespace UrbanWildlife.Prototype
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
         private const string CityResidentialLotBlueResourcePath =
-            "UrbanWildlife/Buildings/detached-house-riverside-blue-v08";
+            "UrbanWildlife/Buildings/detached-house-riverside-blue-v09";
         private const string CityResidentialLotCoralResourcePath =
-            "UrbanWildlife/Buildings/detached-house-riverside-coral-v08";
+            "UrbanWildlife/Buildings/detached-house-riverside-coral-v09";
         private const string CityResidentialLotBResourcePath =
-            "UrbanWildlife/Buildings/apartment-reference-soft-v03";
+            "UrbanWildlife/Buildings/apartment-riverside-v04";
         private const string CityResidentialLotCResourcePath =
-            "UrbanWildlife/Buildings/apartment-reference-soft-v03";
+            "UrbanWildlife/Buildings/apartment-riverside-v04";
         private static readonly string[] CityCommercialResourcePaths =
         {
-            "UrbanWildlife/Buildings/commercial-shop-reference-soft-v04",
+            "UrbanWildlife/Buildings/commercial-market-riverside-v05",
         };
         private static readonly string[] CityCommunityResourcePaths =
         {
-            "UrbanWildlife/Buildings/community-centre-reference-soft-v03",
+            "UrbanWildlife/Buildings/community-centre-riverside-v04",
         };
         private const string PigeonWildlifeResourcePath =
             "UrbanWildlife/Animals/pigeon-citybuilder-soft-v02";

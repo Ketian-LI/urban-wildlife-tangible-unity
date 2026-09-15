@@ -43,12 +43,18 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Buildings/residential-lot-b-simplified-v03";
         private const string CityResidentialLotCResourcePath =
             "UrbanWildlife/Buildings/residential-lot-c-sand-v03";
-        private const string CityMarketHallResourcePath =
-            "UrbanWildlife/Buildings/market-hall-citybuilder-v02";
-        private const string CityCornerShopsResourcePath =
-            "UrbanWildlife/Buildings/corner-shops-citybuilder-v02";
-        private const string CityCommunityCentreResourcePath =
-            "UrbanWildlife/Buildings/community-centre-citybuilder-v01";
+        private static readonly string[] CityCommercialResourcePaths =
+        {
+            "UrbanWildlife/Buildings/commercial-cafe-citybuilder-soft-v03",
+            "UrbanWildlife/Buildings/commercial-shop-row-citybuilder-soft-v03",
+            "UrbanWildlife/Buildings/commercial-market-hall-citybuilder-soft-v03",
+        };
+        private static readonly string[] CityCommunityResourcePaths =
+        {
+            "UrbanWildlife/Buildings/community-library-citybuilder-soft-v02",
+            "UrbanWildlife/Buildings/community-clinic-citybuilder-soft-v02",
+            "UrbanWildlife/Buildings/community-hall-citybuilder-soft-v02",
+        };
         private const string PigeonWildlifeResourcePath =
             "UrbanWildlife/Animals/pigeon-citybuilder-soft-v02";
         private const string SquirrelWildlifeResourcePath =
@@ -873,9 +879,7 @@ namespace UrbanWildlife.Prototype
                     CreateBuildingArtwork(
                         root.transform,
                         building,
-                        building.id == "market-hall"
-                            ? CityMarketHallResourcePath
-                            : CityCornerShopsResourcePath,
+                        BuildingVariantResourcePath(building, CityCommercialResourcePaths),
                         width,
                         depth,
                         0.30f))
@@ -886,7 +890,7 @@ namespace UrbanWildlife.Prototype
                     CreateBuildingArtwork(
                         root.transform,
                         building,
-                        CityCommunityCentreResourcePath,
+                        BuildingVariantResourcePath(building, CityCommunityResourcePaths),
                         width,
                         depth,
                         0.30f))
@@ -991,6 +995,28 @@ namespace UrbanWildlife.Prototype
         private static Vector3 BuildingArtworkOffset(string buildingId)
         {
             return Vector3.zero;
+        }
+
+        private static string BuildingVariantResourcePath(
+            CityBuilding building,
+            IReadOnlyList<string> resourcePaths)
+        {
+            if (resourcePaths == null || resourcePaths.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            int discriminator = building.source_token_id;
+            if (discriminator < 0)
+            {
+                discriminator = 17;
+                foreach (char character in building.id ?? string.Empty)
+                {
+                    discriminator = unchecked(discriminator * 31 + character);
+                }
+            }
+            int index = (int)((uint)discriminator % (uint)resourcePaths.Count);
+            return resourcePaths[index];
         }
 
         private void BuildPlanningOverlay()

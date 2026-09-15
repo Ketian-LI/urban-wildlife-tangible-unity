@@ -28,6 +28,7 @@ namespace UrbanWildlife.EditorTools
         {
             EnsureVehicleSpriteImports();
             EnsureWildlifeSpriteImports();
+            EnsureBuildingVariantSpriteImports();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             GameObject cameraObject = new GameObject("Main Camera");
@@ -108,6 +109,40 @@ namespace UrbanWildlife.EditorTools
                 "Assets/Resources/UrbanWildlife/Animals/squirrel-citybuilder-soft-v02.png",
                 "Assets/Resources/UrbanWildlife/Animals/fox-citybuilder-soft-v02.png",
                 "Assets/Resources/UrbanWildlife/Animals/hedgehog-citybuilder-soft-v02.png",
+            };
+            foreach (string assetPath in assetPaths)
+            {
+                if (AssetImporter.GetAtPath(assetPath) is not TextureImporter importer)
+                {
+                    continue;
+                }
+                bool changed = importer.textureType != TextureImporterType.Sprite ||
+                               importer.spriteImportMode != SpriteImportMode.Single ||
+                               importer.mipmapEnabled || !importer.alphaIsTransparency;
+                if (!changed)
+                {
+                    continue;
+                }
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 100f;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.textureCompression = TextureImporterCompression.Compressed;
+                importer.SaveAndReimport();
+            }
+        }
+
+        private static void EnsureBuildingVariantSpriteImports()
+        {
+            string[] assetPaths =
+            {
+                "Assets/Resources/UrbanWildlife/Buildings/commercial-cafe-citybuilder-soft-v03.png",
+                "Assets/Resources/UrbanWildlife/Buildings/commercial-shop-row-citybuilder-soft-v03.png",
+                "Assets/Resources/UrbanWildlife/Buildings/commercial-market-hall-citybuilder-soft-v03.png",
+                "Assets/Resources/UrbanWildlife/Buildings/community-library-citybuilder-soft-v02.png",
+                "Assets/Resources/UrbanWildlife/Buildings/community-clinic-citybuilder-soft-v02.png",
+                "Assets/Resources/UrbanWildlife/Buildings/community-hall-citybuilder-soft-v02.png",
             };
             foreach (string assetPath in assetPaths)
             {
@@ -460,29 +495,33 @@ namespace UrbanWildlife.EditorTools
             SpriteRenderer[] renderers = buildings == null
                 ? Array.Empty<SpriteRenderer>()
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
-            int marketHallCount = renderers.Count(renderer =>
+            string[] commercialVariants =
+            {
+                "commercial-cafe-citybuilder-soft-v03",
+                "commercial-shop-row-citybuilder-soft-v03",
+                "commercial-market-hall-citybuilder-soft-v03",
+            };
+            string[] communityVariants =
+            {
+                "community-library-citybuilder-soft-v02",
+                "community-clinic-citybuilder-soft-v02",
+                "community-hall-citybuilder-soft-v02",
+            };
+            int laterDestinationCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "market-hall-citybuilder-v02");
-            int cornerShopsCount = renderers.Count(renderer =>
-                renderer.sprite != null &&
-                renderer.sprite.name == "corner-shops-citybuilder-v02");
-            int communityCentreCount = renderers.Count(renderer =>
-                renderer.sprite != null &&
-                renderer.sprite.name == "community-centre-citybuilder-v01");
-            if (marketHallCount != 0 || cornerShopsCount != 0 ||
-                communityCentreCount != 0 ||
-                Resources.Load<Sprite>("UrbanWildlife/Buildings/market-hall-citybuilder-v02") == null ||
-                Resources.Load<Sprite>("UrbanWildlife/Buildings/corner-shops-citybuilder-v02") == null ||
-                Resources.Load<Sprite>("UrbanWildlife/Buildings/community-centre-citybuilder-v01") == null)
+                (commercialVariants.Contains(renderer.sprite.name) ||
+                 communityVariants.Contains(renderer.sprite.name)));
+            bool variantsLoad = commercialVariants.Concat(communityVariants).All(name =>
+                Resources.Load<Sprite>($"UrbanWildlife/Buildings/{name}") != null);
+            if (laterDestinationCount != 0 || !variantsLoad)
             {
                 throw new InvalidOperationException(
                     "Later public destinations must stay available without appearing in the opening map; " +
-                    $"marketHall={marketHallCount}, cornerShops={cornerShopsCount}, " +
-                    $"communityCentre={communityCentreCount}.");
+                    $"openingDestinations={laterDestinationCount}, variantsLoad={variantsLoad}.");
             }
             Debug.Log(
                 "UNITY_CITY_COMMERCIAL_VISUAL_SMOKE_OK opening_public_buildings=0 " +
-                "later_market_shops_community_assets=True " +
+                "commercial_variants=3 community_variants=3 deterministic_rotation=True " +
                 "citybuilder_sprites=True placeholder_blocks=False");
         }
 

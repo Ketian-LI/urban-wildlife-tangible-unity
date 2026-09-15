@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UrbanWildlife.City;
+using UrbanWildlife.Construction;
 
 namespace UrbanWildlife.Prototype
 {
@@ -172,11 +173,7 @@ namespace UrbanWildlife.Prototype
                 construction_state = CityConstructionState.Existing,
                 position_norm = new[] { x, y },
                 rotation_deg = 0f,
-                footprint_units = type == CityBuildingType.Apartment
-                    ? new[] { 20f, 20f }
-                    : type == CityBuildingType.DetachedHouse
-                        ? new[] { 10f, 10f }
-                        : new[] { 20f, 10f },
+                footprint_units = CityConstructionFactory.ReferenceFootprintUnits(type),
                 housing_capacity = housing,
                 human_origin_rate = origin,
                 human_destination_weight = destination,

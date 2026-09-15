@@ -1,5 +1,20 @@
 # Commercial and community building visual set v03
 
+## Current Unity reference-scaled set (2026-09-15)
+
+The active prototype now uses one tightly matched building-only sprite for each
+public destination category:
+
+- `commercial-shop-reference-soft-v04.png`: compact neighbourhood shop with a
+  restrained ochre awning and no embedded site tile.
+- `community-centre-reference-soft-v03.png`: low, wide civic building with a
+  muted sage roof and no embedded site tile.
+
+Both use the same camera, palette, low-detail geometry and transparent ground as
+the active detached and apartment sprites. The six v02/v03 variants documented
+below remain in the repository for comparison, but are no longer mixed into the
+runtime because their stronger volume conflicted with the approved map style.
+
 These assets were generated with the built-in ImageGen tool and are wired into
 the Unity city prototype. Six new production files use true alpha and the
 brighter, softer Riverside Park palette. Earlier detailed v01/v02 files remain

@@ -145,12 +145,11 @@ namespace UrbanWildlife.EditorTools
         {
             string[] assetPaths =
             {
-                "Assets/Resources/UrbanWildlife/Buildings/commercial-cafe-citybuilder-soft-v03.png",
-                "Assets/Resources/UrbanWildlife/Buildings/commercial-shop-row-citybuilder-soft-v03.png",
-                "Assets/Resources/UrbanWildlife/Buildings/commercial-market-hall-citybuilder-soft-v03.png",
-                "Assets/Resources/UrbanWildlife/Buildings/community-library-citybuilder-soft-v02.png",
-                "Assets/Resources/UrbanWildlife/Buildings/community-clinic-citybuilder-soft-v02.png",
-                "Assets/Resources/UrbanWildlife/Buildings/community-hall-citybuilder-soft-v02.png",
+                "Assets/Resources/UrbanWildlife/Buildings/detached-house-reference-blue-v06.png",
+                "Assets/Resources/UrbanWildlife/Buildings/detached-house-reference-coral-v06.png",
+                "Assets/Resources/UrbanWildlife/Buildings/apartment-reference-soft-v03.png",
+                "Assets/Resources/UrbanWildlife/Buildings/commercial-shop-reference-soft-v04.png",
+                "Assets/Resources/UrbanWildlife/Buildings/community-centre-reference-soft-v03.png",
             };
             foreach (string assetPath in assetPaths)
             {
@@ -335,7 +334,7 @@ namespace UrbanWildlife.EditorTools
             VerifyVehicleRoutesStayOnRoad();
             Debug.Log(
                 "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True sidebar_width=28_percent full_frame_clear=True bright_city_style=True opening_buildings=2 vehicle_roads=3 " +
-                "planning_grid=9x6 planning_cells=54 available_cells=43 multi_cell_buildings=True hidden_grid=True " +
+                "planning_grid=9x6 planning_cells=54 available_cells=43 reference_scaled_footprints=True hidden_grid=True " +
                 "pedestrian_links=3 amenities=0 food_sources=True waste_pressure=True " +
                 "wildlife_agents=15 species=4 utility_targets=True " +
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
@@ -478,30 +477,24 @@ namespace UrbanWildlife.EditorTools
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
             int residentialBlueCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "residential-lot-a-pastel-blue-clean-v05");
+                renderer.sprite.name == "detached-house-reference-blue-v06");
             int residentialCoralCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "residential-lot-a-pastel-coral-clean-v05");
-            int residentialLotBCount = renderers.Count(renderer =>
+                renderer.sprite.name == "detached-house-reference-coral-v06");
+            int apartmentCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "residential-lot-b-simplified-v03");
-            int residentialLotCCount = renderers.Count(renderer =>
-                renderer.sprite != null &&
-                renderer.sprite.name == "residential-lot-c-sand-v03");
+                renderer.sprite.name == "apartment-reference-soft-v03");
             if (residentialBlueCount != 1 || residentialCoralCount != 1 ||
-                residentialLotBCount != 0 ||
-                residentialLotCCount != 0 ||
-                Resources.Load<Sprite>("UrbanWildlife/Buildings/residential-lot-b-simplified-v03") == null ||
-                Resources.Load<Sprite>("UrbanWildlife/Buildings/residential-lot-c-sand-v03") == null)
+                apartmentCount != 0 ||
+                Resources.Load<Sprite>("UrbanWildlife/Buildings/apartment-reference-soft-v03") == null)
             {
                 throw new InvalidOperationException(
-                    "The sparse opening must contain two matching detached houses while retaining later residential assets; " +
-                    $"blue={residentialBlueCount}, coral={residentialCoralCount}, lotB={residentialLotBCount}, " +
-                    $"lotC={residentialLotCCount}.");
+                    "The sparse opening must contain two reference-scaled detached houses while retaining the apartment asset; " +
+                    $"blue={residentialBlueCount}, coral={residentialCoralCount}, apartment={apartmentCount}.");
             }
             Debug.Log(
-                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK opening_blue=1 opening_coral=1 later_lot_b_c_available=True " +
-                "landscaped_lots=True lawn_retained=True " +
+                "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK opening_blue=1 opening_coral=1 apartment_available=True " +
+                "transparent_building_only=True map_controls_ground=True " +
                 "placeholder_blocks=False");
         }
 
@@ -513,15 +506,11 @@ namespace UrbanWildlife.EditorTools
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
             string[] commercialVariants =
             {
-                "commercial-cafe-citybuilder-soft-v03",
-                "commercial-shop-row-citybuilder-soft-v03",
-                "commercial-market-hall-citybuilder-soft-v03",
+                "commercial-shop-reference-soft-v04",
             };
             string[] communityVariants =
             {
-                "community-library-citybuilder-soft-v02",
-                "community-clinic-citybuilder-soft-v02",
-                "community-hall-citybuilder-soft-v02",
+                "community-centre-reference-soft-v03",
             };
             int laterDestinationCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
@@ -537,8 +526,8 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_COMMERCIAL_VISUAL_SMOKE_OK opening_public_buildings=0 " +
-                "commercial_variants=3 community_variants=3 deterministic_rotation=True " +
-                "citybuilder_sprites=True placeholder_blocks=False");
+                "commercial_reference_asset=1 community_reference_asset=1 " +
+                "transparent_building_only=True placeholder_blocks=False");
         }
 
         private static void VerifyPlanningGridVisuals(CityPrototypeDemo prototype)
@@ -805,6 +794,19 @@ namespace UrbanWildlife.EditorTools
 
         private static void VerifyGridConstructionRules()
         {
+            if (!CityConstructionFactory.ReferenceFootprintUnits(CityBuildingType.DetachedHouse)
+                    .SequenceEqual(new[] { 5f, 5f }) ||
+                !CityConstructionFactory.ReferenceFootprintUnits(CityBuildingType.Apartment)
+                    .SequenceEqual(new[] { 7f, 7f }) ||
+                !CityConstructionFactory.ReferenceFootprintUnits(CityBuildingType.Commercial)
+                    .SequenceEqual(new[] { 7.5f, 5f }) ||
+                !CityConstructionFactory.ReferenceFootprintUnits(CityBuildingType.CommunityFacility)
+                    .SequenceEqual(new[] { 9f, 6f }))
+            {
+                throw new InvalidOperationException(
+                    "Building footprints no longer match the Riverside Park reference ratios.");
+            }
+
             CityState woodlandCity = CityPrototypeStateFactory.Create();
             CityTokenState[] baseline = CityPlanningDemoScanFactory.ConfirmedTokensFrom(woodlandCity);
             CityConstructionManager woodlandConstruction =
@@ -949,25 +951,20 @@ namespace UrbanWildlife.EditorTools
                 TokenAt(131, CityPhysicalTokenType.CommunityFacility, rotationAnchor),
                 CityConstructionState.Proposed);
             rotatedCommunity.rotation_deg = 90f;
-            if (!CityGridResolver.TryOccupyWithBuilding(
+            string rotationError = string.Empty;
+            if (rotatedCommunity.footprint_units.Length != 2 ||
+                Math.Abs(rotatedCommunity.footprint_units[0] - 9f) > 0.001f ||
+                Math.Abs(rotatedCommunity.footprint_units[1] - 6f) > 0.001f ||
+                !CityGridResolver.TryOccupyWithBuilding(
                     rotationGrid,
                     rotationCity.bounds,
                     rotatedCommunity,
                     rotationCity.revision + 1,
-                    out string rotationError) ||
-                rotatedCommunity.planning_cell_ids.Length != 2)
+                    out rotationError) ||
+                rotatedCommunity.planning_cell_ids.Length != 1)
             {
                 throw new InvalidOperationException(
-                    $"A rotated 2x1 building did not occupy a 1x2 footprint: {rotationError}");
-            }
-            CityGridCell[] rotatedCells = rotatedCommunity.planning_cell_ids
-                .Select(id => CityGridResolver.GetCell(rotationGrid, id))
-                .ToArray();
-            if (rotatedCells.Select(cell => cell.col).Distinct().Count() != 1 ||
-                rotatedCells.Select(cell => cell.row).Distinct().Count() != 2)
-            {
-                throw new InvalidOperationException(
-                    "A 90-degree building rotation must swap its grid width and height.");
+                    $"The compact 9x6 reference community footprint was not retained: {rotationError}");
             }
 
             CityState capCity = CityPrototypeStateFactory.Create();
@@ -1013,8 +1010,9 @@ namespace UrbanWildlife.EditorTools
 
             Debug.Log(
                 "UNITY_CITY_GRID_RULES_SMOKE_OK snap_radius_cm=5 same_cell_jitter=Moved " +
-                "footprints=1x1/2x1/2x2 woodland_build=Building woodland_patches_removed=True " +
-                "multi_cell_demolition=Released fixed_river_rejected=True active_building_cap_rule=True");
+                "footprints_units=detached_5x5/apartment_7x7/commercial_7.5x5/community_9x6 " +
+                "woodland_build=Building woodland_patches_removed=True " +
+                "footprint_demolition=Released fixed_river_rejected=True active_building_cap_rule=True");
         }
 
         private static void VerifyFreePlacementAndAutomaticAccess()
@@ -1051,7 +1049,7 @@ namespace UrbanWildlife.EditorTools
                 .ToArray();
             if (Math.Abs(placed.position_norm[0] - placedX) > 0.0001f ||
                 Math.Abs(placed.position_norm[1] - placedY) > 0.0001f ||
-                occupiedCells.Length < 2 ||
+                occupiedCells.Length < 1 ||
                 !occupiedCells.Any(cell => cell.was_woodland) ||
                 occupiedCells.Any(cell => cell.current_cover != CityLandCover.Building))
             {

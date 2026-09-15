@@ -36,24 +36,20 @@ namespace UrbanWildlife.Prototype
         private const string CityBushResourcePath =
             "UrbanWildlife/Environment/bush-citybuilder-default-v01";
         private const string CityResidentialLotBlueResourcePath =
-            "UrbanWildlife/Buildings/residential-lot-a-pastel-blue-clean-v05";
+            "UrbanWildlife/Buildings/detached-house-reference-blue-v06";
         private const string CityResidentialLotCoralResourcePath =
-            "UrbanWildlife/Buildings/residential-lot-a-pastel-coral-clean-v05";
+            "UrbanWildlife/Buildings/detached-house-reference-coral-v06";
         private const string CityResidentialLotBResourcePath =
-            "UrbanWildlife/Buildings/residential-lot-b-simplified-v03";
+            "UrbanWildlife/Buildings/apartment-reference-soft-v03";
         private const string CityResidentialLotCResourcePath =
-            "UrbanWildlife/Buildings/residential-lot-c-sand-v03";
+            "UrbanWildlife/Buildings/apartment-reference-soft-v03";
         private static readonly string[] CityCommercialResourcePaths =
         {
-            "UrbanWildlife/Buildings/commercial-cafe-citybuilder-soft-v03",
-            "UrbanWildlife/Buildings/commercial-shop-row-citybuilder-soft-v03",
-            "UrbanWildlife/Buildings/commercial-market-hall-citybuilder-soft-v03",
+            "UrbanWildlife/Buildings/commercial-shop-reference-soft-v04",
         };
         private static readonly string[] CityCommunityResourcePaths =
         {
-            "UrbanWildlife/Buildings/community-library-citybuilder-soft-v02",
-            "UrbanWildlife/Buildings/community-clinic-citybuilder-soft-v02",
-            "UrbanWildlife/Buildings/community-hall-citybuilder-soft-v02",
+            "UrbanWildlife/Buildings/community-centre-reference-soft-v03",
         };
         private const string PigeonWildlifeResourcePath =
             "UrbanWildlife/Animals/pigeon-citybuilder-soft-v02";
@@ -741,23 +737,10 @@ namespace UrbanWildlife.Prototype
 
         private float[][] CompactBuildingSitePolygon(CityBuilding building)
         {
-            Vector2 scale;
-            switch (building.type)
-            {
-                case CityBuildingType.Apartment:
-                    scale = new Vector2(0.66f, 0.66f);
-                    break;
-                case CityBuildingType.Commercial:
-                case CityBuildingType.CommunityFacility:
-                    scale = new Vector2(0.54f, 0.72f);
-                    break;
-                default:
-                    scale = new Vector2(0.76f, 0.76f);
-                    break;
-            }
-
-            float halfWidth = (building.footprint_units[0] * scale.x + 0.9f) * 0.5f;
-            float halfDepth = (building.footprint_units[1] * scale.y + 0.9f) * 0.5f;
+            // The model footprint now already represents the visible development lot.
+            // Clearing and placement preview therefore use the exact same dimensions.
+            float halfWidth = building.footprint_units[0] * 0.5f;
+            float halfDepth = building.footprint_units[1] * 0.5f;
             float centreX = building.position_norm[0] * city.bounds.width_units;
             float centreY = building.position_norm[1] * city.bounds.height_units;
             float radians = building.rotation_deg * Mathf.Deg2Rad;
@@ -955,7 +938,7 @@ namespace UrbanWildlife.Prototype
                             : CityResidentialLotCoralResourcePath,
                         width,
                         depth,
-                        0.68f))
+                        1.50f))
                 {
                     continue;
                 }
@@ -968,7 +951,7 @@ namespace UrbanWildlife.Prototype
                             : CityResidentialLotCResourcePath,
                         width,
                         depth,
-                        0.49f))
+                        1.05f))
                 {
                     continue;
                 }
@@ -979,7 +962,7 @@ namespace UrbanWildlife.Prototype
                         BuildingVariantResourcePath(building, CityCommercialResourcePaths),
                         width,
                         depth,
-                        0.30f))
+                        1.00f))
                 {
                     continue;
                 }
@@ -990,7 +973,7 @@ namespace UrbanWildlife.Prototype
                         BuildingVariantResourcePath(building, CityCommunityResourcePaths),
                         width,
                         depth,
-                        0.30f))
+                        0.88f))
                 {
                     continue;
                 }

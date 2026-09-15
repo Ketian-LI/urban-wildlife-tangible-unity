@@ -6,6 +6,26 @@ namespace UrbanWildlife.Construction
 {
     public static class CityConstructionFactory
     {
+        // Calibrated against the 1536 x 1024 Riverside Park reference. The playable
+        // map occupies about 1216 px of its width, so these lots read as compact
+        // city-builder parcels instead of the former 10-20 unit super-blocks.
+        public static float[] ReferenceFootprintUnits(CityBuildingType type)
+        {
+            switch (type)
+            {
+                case CityBuildingType.DetachedHouse:
+                    return new[] { 5f, 5f };
+                case CityBuildingType.Apartment:
+                    return new[] { 7f, 7f };
+                case CityBuildingType.Commercial:
+                    return new[] { 7.5f, 5f };
+                case CityBuildingType.CommunityFacility:
+                    return new[] { 9f, 6f };
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported building type.");
+            }
+        }
+
         public static string ObjectId(CityTokenState token)
         {
             if (token == null)
@@ -31,7 +51,7 @@ namespace UrbanWildlife.Construction
             {
                 case CityPhysicalTokenType.Apartment:
                     building.type = CityBuildingType.Apartment;
-                    building.footprint_units = new[] { 20f, 20f };
+                    building.footprint_units = ReferenceFootprintUnits(building.type);
                     building.housing_capacity = 60;
                     building.human_origin_rate = 0.85f;
                     building.human_destination_weight = 0.25f;
@@ -43,7 +63,7 @@ namespace UrbanWildlife.Construction
                     break;
                 case CityPhysicalTokenType.DetachedHouse:
                     building.type = CityBuildingType.DetachedHouse;
-                    building.footprint_units = new[] { 10f, 10f };
+                    building.footprint_units = ReferenceFootprintUnits(building.type);
                     building.housing_capacity = 12;
                     building.human_origin_rate = 0.35f;
                     building.human_destination_weight = 0.15f;
@@ -55,7 +75,7 @@ namespace UrbanWildlife.Construction
                     break;
                 case CityPhysicalTokenType.Commercial:
                     building.type = CityBuildingType.Commercial;
-                    building.footprint_units = new[] { 20f, 10f };
+                    building.footprint_units = ReferenceFootprintUnits(building.type);
                     building.housing_capacity = 0;
                     building.human_origin_rate = 0.05f;
                     building.human_destination_weight = 0.9f;
@@ -67,7 +87,7 @@ namespace UrbanWildlife.Construction
                     break;
                 case CityPhysicalTokenType.CommunityFacility:
                     building.type = CityBuildingType.CommunityFacility;
-                    building.footprint_units = new[] { 20f, 10f };
+                    building.footprint_units = ReferenceFootprintUnits(building.type);
                     building.housing_capacity = 0;
                     building.human_origin_rate = 0.05f;
                     building.human_destination_weight = 0.7f;

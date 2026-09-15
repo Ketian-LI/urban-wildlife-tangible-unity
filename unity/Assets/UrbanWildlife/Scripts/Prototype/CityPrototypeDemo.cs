@@ -146,6 +146,11 @@ namespace UrbanWildlife.Prototype
         private GUIStyle captionStyle;
         private GUIStyle metricStyle;
         private GUIStyle buttonStyle;
+        private GUIStyle heatmapCardStyle;
+        private GUIStyle heatmapToggleStyle;
+        private GUIStyle heatmapEmptyStyle;
+        private Sprite heatmapMapSprite;
+        private Texture2D heatmapDotTexture;
         private float uiScale = 1f;
         private int styledScreenHeight = -1;
         private int configuredScreenWidth = -1;
@@ -183,6 +188,8 @@ namespace UrbanWildlife.Prototype
         public int VisibleHeatCellCount => traceVisualizer?.VisibleCellCount ?? 0;
         public bool HeatmapVisible => showHeatmap;
         public bool HeatmapUsesAnimalData => traceDisplayMode == CityTraceDisplayMode.AnimalTrace;
+        public bool HeatmapRendersInSidebar => true;
+        public bool HeatmapOverlaysMap => traceVisualizer?.WorldOverlayActive ?? false;
         public bool PlanningWorkflowConnected => planningWorkflow != null;
         public string ResolvedCityScanPath => CityTokenScanFileSource.Resolve(cityScanPath);
         public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
@@ -1698,14 +1705,18 @@ namespace UrbanWildlife.Prototype
             int topPadding = CityPrototypeUiTheme.ScaledPixel(
                 CityPrototypeUiTheme.SpaceMd,
                 uiScale);
-            int bottomPadding = CityPrototypeUiTheme.ScaledPixel(
-                CityPrototypeUiTheme.SpaceLg,
+            float contentWidth = Mathf.Max(1f, panelWidth - horizontalPadding * 2f);
+            float heatmapGap = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceMd,
                 uiScale);
+            Rect heatmapCardRect = HeatmapCardRectForScreen(Screen.width, Screen.height);
             Rect contentRect = new Rect(
                 panelX + horizontalPadding,
                 topPadding,
-                Mathf.Max(1f, panelWidth - horizontalPadding * 2f),
-                Mathf.Max(1f, Screen.height - topPadding - bottomPadding));
+                contentWidth,
+                Mathf.Max(
+                    1f,
+                    heatmapCardRect.y - topPadding - heatmapGap));
             GUILayout.BeginArea(contentRect, GUIStyle.none);
             sidebarScroll = GUILayout.BeginScrollView(
                 sidebarScroll,
@@ -1849,6 +1860,167 @@ namespace UrbanWildlife.Prototype
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+
+            DrawHeatmapCard(heatmapCardRect);
+        }
+
+        public static Rect HeatmapCardRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            float panelX = screenWidth * MapViewportWidth;
+            float panelWidth = screenWidth * (1f - MapViewportWidth);
+            float horizontalPadding = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceLg,
+                scale);
+            float bottomPadding = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceLg,
+                scale);
+            float availableWidth = Mathf.Max(1f, panelWidth - horizontalPadding * 2f);
+            float innerWidth = Mathf.Min(
+                Mathf.Max(1f, availableWidth -
+                    CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceLg, scale) * 2f),
+                CityPrototypeUiTheme.ScaledPixel(340, scale));
+            float mapHeight = innerWidth * MapHeight / MapWidth;
+            float cardHeight = mapHeight + CityPrototypeUiTheme.ScaledPixel(78, scale);
+            return new Rect(
+                panelX + horizontalPadding,
+                screenHeight - bottomPadding - cardHeight,
+                availableWidth,
+                cardHeight);
+        }
+
+        private void DrawHeatmapCard(Rect cardRect)
+        {
+            GUI.Box(cardRect, GUIContent.none, heatmapCardStyle);
+            float padding = CityPrototypeUiTheme.ScaledPixel(
+                CityPrototypeUiTheme.SpaceMd,
+                uiScale);
+            float headerHeight = CityPrototypeUiTheme.ScaledPixel(30, uiScale);
+            float footerHeight = CityPrototypeUiTheme.ScaledPixel(26, uiScale);
+            Rect titleRect = new Rect(
+                cardRect.x + padding,
+                cardRect.y + padding * 0.65f,
+                cardRect.width - padding * 2f,
+                headerHeight);
+            GUI.Label(titleRect, T("ANIMAL ACTIVITY", "动物活动热点"), headingStyle);
+
+            float toggleWidth = CityPrototypeUiTheme.ScaledPixel(88, uiScale);
+            Rect toggleRect = new Rect(
+                cardRect.xMax - padding - toggleWidth,
+                cardRect.y + padding * 0.45f,
+                toggleWidth,
+                CityPrototypeUiTheme.ScaledPixel(28, uiScale));
+            if (GUI.Button(
+                    toggleRect,
+                    showHeatmap ? T("H  ·  ON", "H  ·  开") : T("H  ·  OFF", "H  ·  关"),
+                    heatmapToggleStyle))
+            {
+                SetHeatmapVisible(!showHeatmap);
+            }
+
+            float maximumMapWidth = CityPrototypeUiTheme.ScaledPixel(340, uiScale);
+            float mapWidth = Mathf.Min(cardRect.width - padding * 2f, maximumMapWidth);
+            float mapHeight = mapWidth * MapHeight / MapWidth;
+            Rect mapRect = new Rect(
+                cardRect.center.x - mapWidth * 0.5f,
+                cardRect.y + headerHeight + padding * 0.75f,
+                mapWidth,
+                mapHeight);
+            DrawHeatmapMapBase(mapRect);
+            if (showHeatmap)
+            {
+                DrawAnimalHeatDots(mapRect);
+            }
+            else
+            {
+                Color previousColour = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, 0.70f);
+                GUI.DrawTexture(mapRect, panelStyle.normal.background, ScaleMode.StretchToFill, false);
+                GUI.color = previousColour;
+                GUI.Label(
+                    mapRect,
+                    T("Press H to show hotspots", "按 H 显示动物热点"),
+                    heatmapEmptyStyle);
+            }
+
+            Rect footerRect = new Rect(
+                cardRect.x + padding,
+                mapRect.yMax + CityPrototypeUiTheme.ScaledPixel(4, uiScale),
+                cardRect.width - padding * 2f,
+                footerHeight);
+            GUI.Label(
+                footerRect,
+                $"{T("Animal samples", "动物样本")}  {AnimalTracePointCount}  ·  " +
+                $"{T("Active areas", "活跃区域")}  {VisibleHeatCellCount}",
+                captionStyle);
+        }
+
+        private void DrawHeatmapMapBase(Rect mapRect)
+        {
+            if (heatmapMapSprite?.texture == null)
+            {
+                GUI.DrawTexture(
+                    mapRect,
+                    panelStyle.normal.background,
+                    ScaleMode.StretchToFill,
+                    false);
+                return;
+            }
+            Texture2D texture = heatmapMapSprite.texture;
+            Rect source = heatmapMapSprite.textureRect;
+            Rect uv = new Rect(
+                source.x / texture.width,
+                source.y / texture.height,
+                source.width / texture.width,
+                source.height / texture.height);
+            GUI.DrawTextureWithTexCoords(mapRect, texture, uv, true);
+        }
+
+        private void DrawAnimalHeatDots(Rect mapRect)
+        {
+            if (traceVisualizer == null || heatmapDotTexture == null)
+            {
+                return;
+            }
+            Color previousColour = GUI.color;
+            float cellWidth = mapRect.width / CityTraceVisualizer.HeatmapColumns;
+            float cellHeight = mapRect.height / CityTraceVisualizer.HeatmapRows;
+            for (int column = 0; column < CityTraceVisualizer.HeatmapColumns; column += 1)
+            {
+                for (int row = 0; row < CityTraceVisualizer.HeatmapRows; row += 1)
+                {
+                    float intensity = traceVisualizer.CellIntensity(column, row);
+                    if (intensity <= 0f)
+                    {
+                        continue;
+                    }
+                    float diameter = Mathf.Min(cellWidth, cellHeight) *
+                                     Mathf.Lerp(2.0f, 3.5f, intensity);
+                    float centreX = mapRect.x + (column + 0.5f) * cellWidth;
+                    float centreY = mapRect.y + (row + 0.5f) * cellHeight;
+                    GUI.color = HeatmapColour(intensity);
+                    GUI.DrawTexture(
+                        new Rect(
+                            centreX - diameter * 0.5f,
+                            centreY - diameter * 0.5f,
+                            diameter,
+                            diameter),
+                        heatmapDotTexture,
+                        ScaleMode.StretchToFill,
+                        true);
+                }
+            }
+            GUI.color = previousColour;
+        }
+
+        private static Color HeatmapColour(float intensity)
+        {
+            Color low = new Color(0.26f, 0.67f, 0.74f, 0.72f);
+            Color middle = new Color(0.98f, 0.75f, 0.25f, 0.80f);
+            Color high = new Color(0.93f, 0.30f, 0.20f, 0.88f);
+            return intensity < 0.5f
+                ? Color.Lerp(low, middle, intensity * 2f)
+                : Color.Lerp(middle, high, (intensity - 0.5f) * 2f);
         }
 
         private void DrawLanguageSwitch()
@@ -2157,23 +2329,6 @@ namespace UrbanWildlife.Prototype
             {
                 return;
             }
-            AddUiSpace(CityPrototypeUiTheme.SpaceMd);
-            GUILayout.Label(T("WILDLIFE HEATMAP", "动物活动热点"), headingStyle);
-            if (GUILayout.Button(
-                    showHeatmap
-                        ? T("HIDE WILDLIFE HEATMAP  [H]", "隐藏动物热点  [H]")
-                        : T("SHOW WILDLIFE HEATMAP  [H]", "显示动物热点  [H]"),
-                    buttonStyle))
-            {
-                SetHeatmapVisible(!showHeatmap);
-            }
-            GUILayout.Label(
-                $"{T("Active wildlife cells", "动物活跃单元")} " +
-                $"{VisibleHeatCellCount}/{CityTraceVisualizer.MaximumVisibleMarks}  ·  " +
-                $"{T("Samples", "样本")} {AnimalTracePointCount}  ·  " +
-                (showHeatmap ? T("VISIBLE", "显示中") : T("HIDDEN", "已隐藏")),
-                bodyStyle);
-
             AddUiSpace(CityPrototypeUiTheme.SpaceMd);
             GUILayout.Label(T("CITY FEED", "城市动态"), headingStyle);
             CityFeedEntry[] latest = observation.Snapshot.city_feed
@@ -2531,7 +2686,7 @@ namespace UrbanWildlife.Prototype
 
         private void EnsureStyles()
         {
-            if (panelStyle != null &&
+            if (panelStyle != null && heatmapCardStyle != null &&
                 styledScreenHeight == Screen.height &&
                 styledChineseUi == useChineseUi)
             {
@@ -2677,6 +2832,38 @@ namespace UrbanWildlife.Prototype
                     textColor = CityPrototypeUiTheme.ButtonText,
                 },
             };
+            heatmapCardStyle = new GUIStyle(GUI.skin.box)
+            {
+                border = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                normal =
+                {
+                    background = SolidTexture(new Color(1f, 1f, 1f, 0.78f)),
+                },
+            };
+            heatmapToggleStyle = new GUIStyle(buttonStyle)
+            {
+                fixedHeight = 0f,
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(
+                    CityPrototypeUiTheme.CaptionFontSize,
+                    uiScale),
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+            };
+            heatmapEmptyStyle = new GUIStyle(captionStyle)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = CityPrototypeUiTheme.InkSecondary },
+            };
+            if (heatmapMapSprite == null)
+            {
+                heatmapMapSprite = Resources.Load<Sprite>(CityBoardUnderlayResourcePath);
+            }
+            if (heatmapDotTexture == null)
+            {
+                heatmapDotTexture = CreateHeatmapDotTexture();
+            }
         }
 
         private void AddUiSpace(int referencePixels)
@@ -2955,6 +3142,38 @@ namespace UrbanWildlife.Prototype
             };
             texture.SetPixel(0, 0, colour);
             texture.Apply();
+            return texture;
+        }
+
+        private static Texture2D CreateHeatmapDotTexture()
+        {
+            const int size = 64;
+            Texture2D texture = new Texture2D(
+                size,
+                size,
+                TextureFormat.RGBA32,
+                false)
+            {
+                name = "Sidebar animal heat dot",
+                hideFlags = HideFlags.DontSave,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+            };
+            Color[] pixels = new Color[size * size];
+            for (int y = 0; y < size; y += 1)
+            {
+                for (int x = 0; x < size; x += 1)
+                {
+                    float normalizedX = ((x + 0.5f) / size) * 2f - 1f;
+                    float normalizedY = ((y + 0.5f) / size) * 2f - 1f;
+                    float distance = Mathf.Sqrt(
+                        normalizedX * normalizedX + normalizedY * normalizedY);
+                    float alpha = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01(distance));
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha * alpha);
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
             return texture;
         }
 

@@ -341,7 +341,7 @@ namespace UrbanWildlife.EditorTools
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
                 "representative_agents=6 represented_population=24 walk_trips=4 vehicle_trips=2 " +
                 "external_return_routes=True live_vehicle_agents=True visible_pedestrian_paths=True max_speed=2x no_questionnaire=True " +
-                "animal_activity_heatmap=True heatmap_hotkey_h=True footprints_removed=True city_feed_panel=True phase_snapshot=True " +
+                "animal_activity_heatmap=True heatmap_hotkey_h=True heatmap_sidebar_bottom_right=True heatmap_world_overlay=False footprints_removed=True city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
                 "sparse_opening_map=True road_following=True no_premature_buildings=True " +
@@ -376,7 +376,16 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException("The activity heatmap must start hidden.");
             }
             prototype.SetHeatmapVisible(true);
-            bool prototypeToggleOn = prototype.HeatmapVisible && prototype.HeatmapUsesAnimalData;
+            Rect sidebarCard = CityPrototypeDemo.HeatmapCardRectForScreen(1920, 1080);
+            bool bottomRightCard = sidebarCard.x >= 1920f * 0.72f &&
+                                   sidebarCard.xMax <= 1920f &&
+                                   sidebarCard.y >= 1080f * 0.55f &&
+                                   sidebarCard.yMax <= 1080f;
+            bool prototypeToggleOn = prototype.HeatmapVisible &&
+                                     prototype.HeatmapUsesAnimalData &&
+                                     prototype.HeatmapRendersInSidebar &&
+                                     !prototype.HeatmapOverlaysMap &&
+                                     bottomRightCard;
             prototype.SetHeatmapVisible(false);
 
             GameObject host = new GameObject("Heatmap smoke host");
@@ -392,17 +401,20 @@ namespace UrbanWildlife.EditorTools
                 visualizer.Render(samples);
                 visualizer.SetVisible(true);
                 visualizer.SetMode(CityTraceDisplayMode.AnimalTrace);
-                bool animalOnly = visualizer.VisibleCellCount == 1;
+                bool animalOnly = visualizer.VisibleCellCount == 1 &&
+                                  visualizer.CellCount(14, 9) == 1 &&
+                                  visualizer.CellIntensity(14, 9) > 0.99f;
+                bool noWorldOverlay = !visualizer.WorldOverlayActive;
                 bool noFootprintObjects = !host.GetComponentsInChildren<Transform>(true)
                     .Any(item =>
                         item.name.IndexOf("shoe", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         item.name.IndexOf("tyre", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         item.name.IndexOf("paw", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         item.name.IndexOf("toe", StringComparison.OrdinalIgnoreCase) >= 0);
-                if (!prototypeToggleOn || !animalOnly || !noFootprintObjects)
+                if (!prototypeToggleOn || !animalOnly || !noWorldOverlay || !noFootprintObjects)
                 {
                     throw new InvalidOperationException(
-                        "The activity heatmap must aggregate trace samples, filter layers and contain no footprint geometry.");
+                        "The animal heatmap must aggregate trace samples in the fixed sidebar card without overlaying the map.");
                 }
             }
             finally
@@ -411,7 +423,8 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_ACTIVITY_HEATMAP_SMOKE_OK default_hidden=True h_toggle=True " +
-                "animal_only=True animal_cells=1 human_samples_excluded=True individual_marks=False");
+                "animal_only=True animal_cells=1 human_samples_excluded=True individual_marks=False " +
+                "sidebar_bottom_right=True world_map_overlay=False");
         }
 
         private static CityTracePoint HeatSample(

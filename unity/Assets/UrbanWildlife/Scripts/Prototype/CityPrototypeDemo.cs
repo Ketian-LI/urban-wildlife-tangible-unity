@@ -22,7 +22,7 @@ namespace UrbanWildlife.Prototype
         private const string UiLanguagePreferenceKey =
             "UrbanWildlife.CityPrototype.UiLanguage";
         private const float MapHeight = 8f;
-        private const float MapViewportWidth = 0.72f;
+        private const float MapViewportWidth = 0.79f;
         private const float BoardViewMargin = 0.55f;
         private const float RuntimeSpeed = 2f;
         private const float HumanArtworkHeight = 0.23f;
@@ -151,12 +151,33 @@ namespace UrbanWildlife.Prototype
         private GUIStyle heatmapCardStyle;
         private GUIStyle heatmapToggleStyle;
         private GUIStyle heatmapEmptyStyle;
+        private GUIStyle chromeCardStyle;
+        private GUIStyle chromeShadowStyle;
+        private GUIStyle mapTitleStyle;
+        private GUIStyle mapSubtitleStyle;
+        private GUIStyle topMetricStyle;
+        private GUIStyle tabBarStyle;
+        private GUIStyle tabStyle;
+        private GUIStyle activeTabStyle;
+        private GUIStyle catalogItemStyle;
+        private GUIStyle selectedCatalogItemStyle;
+        private GUIStyle catalogLabelStyle;
+        private GUIStyle rightCaptionStyle;
+        private GUIStyle toolbarButtonStyle;
+        private GUIStyle backButtonStyle;
+        private GUIStyle progressTrackStyle;
+        private GUIStyle progressGreenStyle;
+        private GUIStyle progressBlueStyle;
+        private GUIStyle progressOrangeStyle;
+        private GUIStyle progressPurpleStyle;
         private Sprite heatmapMapSprite;
         private Texture2D heatmapDotTexture;
+        private Texture2D heatmapLegendTexture;
         private float uiScale = 1f;
         private int styledScreenHeight = -1;
         private int configuredScreenWidth = -1;
         private int configuredScreenHeight = -1;
+        private int sidebarTab = 1;
 
         public int GeneratedBuildingCount { get; private set; }
         public int GeneratedVehicleRoadCount { get; private set; }
@@ -192,6 +213,9 @@ namespace UrbanWildlife.Prototype
         public bool HeatmapUsesAnimalData => traceDisplayMode == CityTraceDisplayMode.AnimalTrace;
         public bool HeatmapRendersInSidebar => true;
         public bool HeatmapOverlaysMap => traceVisualizer?.WorldOverlayActive ?? false;
+        public bool RiversideUiLayoutEnabled => true;
+        public int ActiveSidebarTab => sidebarTab;
+        public static float MapViewportFraction => MapViewportWidth;
         public bool PlanningWorkflowConnected => planningWorkflow != null;
         public string ResolvedCityScanPath => CityTokenScanFileSource.Resolve(cityScanPath);
         public CityPlanningWorkflowPhase PlanningPhase => planningWorkflow?.Phase ??
@@ -1600,6 +1624,11 @@ namespace UrbanWildlife.Prototype
             {
                 return;
             }
+            Vector2 guiPoint = new Vector2(mouse.x, Screen.height - mouse.y);
+            if (PointerOverMapChrome(guiPoint))
+            {
+                return;
+            }
             Camera camera = Camera.main;
             if (camera == null)
             {
@@ -1617,6 +1646,33 @@ namespace UrbanWildlife.Prototype
             float xNorm = world.x / MapWidth + 0.5f;
             float yNorm = 0.5f - world.z / MapHeight;
             TryPlaceDesktopBuilding(desktopBuildingType, xNorm, yNorm, out _);
+        }
+
+        private static bool PointerOverMapChrome(Vector2 guiPoint)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(Screen.height);
+            float mapWidth = Screen.width * MapViewportWidth;
+            float padding = CityPrototypeUiTheme.ScaledPixel(18, scale);
+            float headerWidth = Mathf.Min(
+                CityPrototypeUiTheme.ScaledPixel(430, scale),
+                mapWidth * 0.43f);
+            Rect header = new Rect(
+                padding,
+                padding,
+                headerWidth,
+                CityPrototypeUiTheme.ScaledPixel(72, scale));
+            float statusWidth = Mathf.Min(
+                CityPrototypeUiTheme.ScaledPixel(450, scale),
+                mapWidth * 0.40f);
+            Rect status = new Rect(
+                mapWidth - padding - statusWidth,
+                padding,
+                statusWidth,
+                CityPrototypeUiTheme.ScaledPixel(54, scale));
+            return header.Contains(guiPoint) ||
+                   status.Contains(guiPoint) ||
+                   CityStatusRectForScreen(Screen.width, Screen.height).Contains(guiPoint) ||
+                   ToolbarRectForScreen(Screen.width, Screen.height).Contains(guiPoint);
         }
 
         public bool TryPlaceDesktopBuilding(
@@ -1705,6 +1761,625 @@ namespace UrbanWildlife.Prototype
         }
 
         private void OnGUI()
+        {
+            if (!Application.isPlaying || plan == null || mobility == null)
+            {
+                return;
+            }
+
+            EnsureStyles();
+            GUI.depth = -20;
+            DrawMapChrome();
+            DrawRightSidebar();
+        }
+
+        private void DrawMapChrome()
+        {
+            float mapWidth = Screen.width * MapViewportWidth;
+            float padding = CityPrototypeUiTheme.ScaledPixel(18, uiScale);
+            float headerHeight = CityPrototypeUiTheme.ScaledPixel(72, uiScale);
+            float headerWidth = Mathf.Min(
+                CityPrototypeUiTheme.ScaledPixel(430, uiScale),
+                mapWidth * 0.43f);
+            Rect headerRect = new Rect(padding, padding, headerWidth, headerHeight);
+            DrawShadowedCard(headerRect);
+
+            float backSize = CityPrototypeUiTheme.ScaledPixel(46, uiScale);
+            Rect backRect = new Rect(
+                headerRect.x + CityPrototypeUiTheme.ScaledPixel(10, uiScale),
+                headerRect.center.y - backSize * 0.5f,
+                backSize,
+                backSize);
+            GUI.Button(backRect, "←", backButtonStyle);
+
+            float textX = backRect.xMax + CityPrototypeUiTheme.ScaledPixel(12, uiScale);
+            float languageWidth = CityPrototypeUiTheme.ScaledPixel(72, uiScale);
+            Rect titleRect = new Rect(
+                textX,
+                headerRect.y + CityPrototypeUiTheme.ScaledPixel(8, uiScale),
+                headerRect.xMax - textX - languageWidth -
+                CityPrototypeUiTheme.ScaledPixel(10, uiScale),
+                CityPrototypeUiTheme.ScaledPixel(32, uiScale));
+            GUI.Label(titleRect, T("Riverside Park", "河畔公园"), mapTitleStyle);
+            Rect subtitleRect = new Rect(
+                textX,
+                titleRect.yMax,
+                titleRect.width,
+                CityPrototypeUiTheme.ScaledPixel(24, uiScale));
+            GUI.Label(
+                subtitleRect,
+                T("A city for people and wildlife", "人与野生动物共生的城市"),
+                mapSubtitleStyle);
+            DrawLanguagePill(new Rect(
+                headerRect.xMax - languageWidth - CityPrototypeUiTheme.ScaledPixel(8, uiScale),
+                headerRect.y + CityPrototypeUiTheme.ScaledPixel(12, uiScale),
+                languageWidth,
+                CityPrototypeUiTheme.ScaledPixel(30, uiScale)));
+
+            float statusWidth = Mathf.Min(
+                CityPrototypeUiTheme.ScaledPixel(450, uiScale),
+                mapWidth * 0.40f);
+            Rect statusRect = new Rect(
+                mapWidth - padding - statusWidth,
+                padding,
+                statusWidth,
+                CityPrototypeUiTheme.ScaledPixel(54, uiScale));
+            DrawShadowedCard(statusRect);
+            string[] statusItems =
+            {
+                T("DAY 1", "第 1 天"),
+                $"{T("PEOPLE", "人口")}  {plan.RepresentedPopulation}",
+                $"{T("NATURE", "自然")}  {Mathf.Clamp(Mathf.RoundToInt(CityBalanceTotal), 0, 99)}",
+                $"{T("WELLBEING", "幸福")}  72",
+            };
+            float itemWidth = statusRect.width / statusItems.Length;
+            for (int index = 0; index < statusItems.Length; index += 1)
+            {
+                Rect itemRect = new Rect(
+                    statusRect.x + itemWidth * index,
+                    statusRect.y,
+                    itemWidth,
+                    statusRect.height);
+                GUI.Label(itemRect, statusItems[index], topMetricStyle);
+                if (index > 0)
+                {
+                    GUI.DrawTexture(
+                        new Rect(itemRect.x, itemRect.y + itemRect.height * 0.24f, 1f,
+                            itemRect.height * 0.52f),
+                        progressTrackStyle.normal.background);
+                }
+            }
+
+            DrawCityStatusCard(CityStatusRectForScreen(Screen.width, Screen.height));
+            DrawBottomToolbar(ToolbarRectForScreen(Screen.width, Screen.height));
+        }
+
+        private void DrawCityStatusCard(Rect rect)
+        {
+            DrawShadowedCard(rect);
+            float padding = CityPrototypeUiTheme.ScaledPixel(16, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding * 0.65f,
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(26, uiScale)),
+                T("City Status", "城市状态"),
+                metricStyle);
+            float firstY = rect.y + CityPrototypeUiTheme.ScaledPixel(48, uiScale);
+            float rowHeight = CityPrototypeUiTheme.ScaledPixel(27, uiScale);
+            DrawStatusBar(rect, firstY, T("Biodiversity", "生物多样性"), 72,
+                progressGreenStyle);
+            DrawStatusBar(rect, firstY + rowHeight, T("Cleanliness", "环境整洁度"),
+                environment?.Snapshot?.overflow_active == true ? 54 : 76, progressBlueStyle);
+            DrawStatusBar(rect, firstY + rowHeight * 2f, T("Resident Happiness", "居民幸福度"),
+                Mathf.Clamp(Mathf.RoundToInt(CityBalanceTotal), 0, 100), progressOrangeStyle);
+            DrawStatusBar(rect, firstY + rowHeight * 3f, T("Animal Wellbeing", "动物福祉"),
+                Mathf.Clamp(68 + WildlifeSpeciesCount * 2, 0, 100), progressPurpleStyle);
+        }
+
+        private void DrawStatusBar(Rect card, float y, string label, int value, GUIStyle fillStyle)
+        {
+            float padding = CityPrototypeUiTheme.ScaledPixel(16, uiScale);
+            float labelWidth = card.width * 0.39f;
+            float valueWidth = CityPrototypeUiTheme.ScaledPixel(30, uiScale);
+            float barX = card.x + padding + labelWidth;
+            float barWidth = card.width - padding * 2f - labelWidth - valueWidth;
+            Rect labelRect = new Rect(
+                card.x + padding,
+                y,
+                labelWidth,
+                CityPrototypeUiTheme.ScaledPixel(22, uiScale));
+            GUI.Label(labelRect, label, captionStyle);
+            Rect trackRect = new Rect(
+                barX,
+                y + CityPrototypeUiTheme.ScaledPixel(5, uiScale),
+                barWidth,
+                CityPrototypeUiTheme.ScaledPixel(12, uiScale));
+            GUI.Box(trackRect, GUIContent.none, progressTrackStyle);
+            GUI.Box(
+                new Rect(trackRect.x, trackRect.y,
+                    trackRect.width * Mathf.Clamp01(value / 100f), trackRect.height),
+                GUIContent.none,
+                fillStyle);
+            GUI.Label(
+                new Rect(trackRect.xMax + CityPrototypeUiTheme.ScaledPixel(6, uiScale),
+                    y, valueWidth, CityPrototypeUiTheme.ScaledPixel(22, uiScale)),
+                value.ToString(),
+                captionStyle);
+        }
+
+        private void DrawBottomToolbar(Rect rect)
+        {
+            DrawShadowedCard(rect);
+            string[] labels =
+            {
+                T("SELECT", "选择"),
+                T("FOOD", "食物"),
+                T("BIN", "垃圾桶"),
+                T("BENCH", "长椅"),
+                T("TREE", "树木"),
+                "•••",
+            };
+            float padding = CityPrototypeUiTheme.ScaledPixel(10, uiScale);
+            float gap = CityPrototypeUiTheme.ScaledPixel(7, uiScale);
+            float buttonWidth = (rect.width - padding * 2f - gap * (labels.Length - 1)) /
+                                labels.Length;
+            for (int index = 0; index < labels.Length; index += 1)
+            {
+                Rect buttonRect = new Rect(
+                    rect.x + padding + index * (buttonWidth + gap),
+                    rect.y + padding,
+                    buttonWidth,
+                    rect.height - padding * 2f);
+                GUIStyle style = index == 0 ? selectedCatalogItemStyle : toolbarButtonStyle;
+                if (GUI.Button(buttonRect, labels[index], style) && index == labels.Length - 1)
+                {
+                    sidebarTab = 2;
+                }
+            }
+        }
+
+        private void DrawRightSidebar()
+        {
+            float panelX = Screen.width * MapViewportWidth;
+            float panelWidth = Screen.width - panelX;
+            Rect panelRect = new Rect(panelX, 0f, panelWidth, Screen.height);
+            GUI.DrawTexture(panelRect, panelStyle.normal.background, ScaleMode.StretchToFill, false);
+
+            float padding = CityPrototypeUiTheme.ScaledPixel(14, uiScale);
+            Rect tabsRect = new Rect(
+                panelX + padding,
+                CityPrototypeUiTheme.ScaledPixel(18, uiScale),
+                panelWidth - padding * 2f,
+                CityPrototypeUiTheme.ScaledPixel(50, uiScale));
+            GUI.Box(tabsRect, GUIContent.none, tabBarStyle);
+            string[] tabs = { T("Animals", "动物"), T("Buildings", "建筑"), T("Tools", "工具") };
+            float tabWidth = tabsRect.width / tabs.Length;
+            for (int index = 0; index < tabs.Length; index += 1)
+            {
+                Rect tabRect = new Rect(
+                    tabsRect.x + index * tabWidth,
+                    tabsRect.y,
+                    tabWidth,
+                    tabsRect.height);
+                if (GUI.Button(tabRect, tabs[index],
+                        sidebarTab == index ? activeTabStyle : tabStyle))
+                {
+                    sidebarTab = index;
+                }
+            }
+
+            Rect heatmapRect = HeatmapCardRectForScreen(Screen.width, Screen.height);
+            Rect contentRect = new Rect(
+                panelX + padding,
+                tabsRect.yMax + CityPrototypeUiTheme.ScaledPixel(10, uiScale),
+                panelWidth - padding * 2f,
+                Mathf.Max(1f, heatmapRect.y - tabsRect.yMax -
+                    CityPrototypeUiTheme.ScaledPixel(20, uiScale)));
+            if (sidebarTab == 0)
+            {
+                DrawAnimalSidebar(contentRect);
+            }
+            else if (sidebarTab == 2)
+            {
+                DrawToolsSidebar(contentRect);
+            }
+            else
+            {
+                DrawBuildingSidebar(contentRect);
+            }
+            DrawHeatmapCard(heatmapRect);
+        }
+
+        private void DrawBuildingSidebar(Rect rect)
+        {
+            GUI.Box(rect, GUIContent.none, chromeCardStyle);
+            float padding = CityPrototypeUiTheme.ScaledPixel(14, uiScale);
+            float gap = CityPrototypeUiTheme.ScaledPixel(8, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding * 0.7f,
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(28, uiScale)),
+                T("Buildings", "建筑"),
+                metricStyle);
+
+            float gridTop = rect.y + CityPrototypeUiTheme.ScaledPixel(38, uiScale);
+            float cellWidth = (rect.width - padding * 2f - gap) * 0.5f;
+            float rowHeight = CityPrototypeUiTheme.ScaledPixel(114, uiScale);
+            DrawBuildingCatalogItem(
+                new Rect(rect.x + padding, gridTop, cellWidth, rowHeight),
+                CityPhysicalTokenType.DetachedHouse,
+                CityResidentialLotBlueResourcePath,
+                T("Detached House", "独栋住宅"));
+            DrawBuildingCatalogItem(
+                new Rect(rect.x + padding + cellWidth + gap, gridTop, cellWidth, rowHeight),
+                CityPhysicalTokenType.Apartment,
+                CityResidentialLotBResourcePath,
+                T("Apartment", "公寓"));
+            DrawBuildingCatalogItem(
+                new Rect(rect.x + padding, gridTop + rowHeight + gap, cellWidth, rowHeight),
+                CityPhysicalTokenType.Commercial,
+                CityCommercialResourcePaths[0],
+                T("Market", "市场"));
+            DrawBuildingCatalogItem(
+                new Rect(rect.x + padding + cellWidth + gap, gridTop + rowHeight + gap,
+                    cellWidth, rowHeight),
+                CityPhysicalTokenType.CommunityFacility,
+                CityCommunityResourcePaths[0],
+                T("Community", "社区设施"));
+
+            float actionY = gridTop + rowHeight * 2f + gap * 2f;
+            DrawPlacementActionRow(new Rect(
+                rect.x + padding,
+                actionY,
+                rect.width - padding * 2f,
+                CityPrototypeUiTheme.ScaledPixel(38, uiScale)));
+
+            float dividerY = actionY + CityPrototypeUiTheme.ScaledPixel(44, uiScale);
+            GUI.DrawTexture(
+                new Rect(rect.x + padding, dividerY, rect.width - padding * 2f, 1f),
+                progressTrackStyle.normal.background);
+            GUI.Label(
+                new Rect(rect.x + padding, dividerY + CityPrototypeUiTheme.ScaledPixel(8, uiScale),
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(26, uiScale)),
+                T("Environment", "环境"),
+                metricStyle);
+
+            float environmentTop = dividerY + CityPrototypeUiTheme.ScaledPixel(34, uiScale);
+            float environmentGap = CityPrototypeUiTheme.ScaledPixel(5, uiScale);
+            float environmentWidth = (rect.width - padding * 2f - environmentGap * 2f) / 3f;
+            float environmentHeight = Mathf.Max(
+                CityPrototypeUiTheme.ScaledPixel(58, uiScale),
+                Mathf.Min(
+                    CityPrototypeUiTheme.ScaledPixel(74, uiScale),
+                    (rect.yMax - environmentTop - padding - environmentGap) * 0.5f));
+            string[] environmentLabels =
+            {
+                T("Tree", "树木"), T("Bush", "灌木"), T("Pond", "池塘"),
+                T("Bench", "长椅"), T("Bin", "垃圾桶"), T("Street Light", "路灯"),
+            };
+            string[] environmentPaths =
+            {
+                LegacyCityTreeResourcePath,
+                CityBushResourcePath,
+                CityPondResourcePath,
+                "UrbanWildlife/Environment/human-activity-bench-v01",
+                string.Empty,
+                string.Empty,
+            };
+            for (int index = 0; index < environmentLabels.Length; index += 1)
+            {
+                int column = index % 3;
+                int row = index / 3;
+                DrawEnvironmentItem(
+                    new Rect(
+                        rect.x + padding + column * (environmentWidth + environmentGap),
+                        environmentTop + row * (environmentHeight + environmentGap),
+                        environmentWidth,
+                        environmentHeight),
+                    environmentPaths[index],
+                    environmentLabels[index],
+                    index);
+            }
+        }
+
+        private void DrawPlacementActionRow(Rect rect)
+        {
+            if (planningWorkflow?.Phase == CityPlanningWorkflowPhase.Preview)
+            {
+                float gap = CityPrototypeUiTheme.ScaledPixel(6, uiScale);
+                float width = (rect.width - gap) * 0.5f;
+                bool previousEnabled = GUI.enabled;
+                GUI.enabled = previousEnabled && planningWorkflow.Snapshot.CanConfirmPreview;
+                if (GUI.Button(new Rect(rect.x, rect.y, width, rect.height),
+                        T("Build", "建造"), buttonStyle))
+                {
+                    ConfirmDesktopPlacement(out _);
+                }
+                GUI.enabled = previousEnabled;
+                if (GUI.Button(new Rect(rect.x + width + gap, rect.y, width, rect.height),
+                        T("Cancel", "取消"), buttonStyle))
+                {
+                    CancelDesktopPlacement();
+                }
+                return;
+            }
+            GUI.Label(
+                rect,
+                $"{T("Selected", "已选择")} · {DesktopBuildingLabel(desktopBuildingType)}  —  " +
+                T("click open ground", "点击地图空地放置"),
+                captionStyle);
+        }
+
+        private void DrawBuildingCatalogItem(
+            Rect rect,
+            CityPhysicalTokenType type,
+            string resourcePath,
+            string label)
+        {
+            bool selected = desktopBuildingType == type;
+            if (GUI.Button(rect, GUIContent.none,
+                    selected ? selectedCatalogItemStyle : catalogItemStyle))
+            {
+                desktopBuildingType = type;
+                desktopInputMessage =
+                    $"{DesktopBuildingLabel(type)} selected. Click an open part of the map.";
+            }
+            Rect artworkRect = new Rect(
+                rect.x + rect.width * 0.13f,
+                rect.y + CityPrototypeUiTheme.ScaledPixel(5, uiScale),
+                rect.width * 0.74f,
+                rect.height * 0.68f);
+            DrawSpriteInRect(Resources.Load<Sprite>(resourcePath), artworkRect);
+            GUI.Label(
+                new Rect(rect.x + CityPrototypeUiTheme.ScaledPixel(3, uiScale),
+                    rect.y + rect.height * 0.72f,
+                    rect.width - CityPrototypeUiTheme.ScaledPixel(6, uiScale),
+                    rect.height * 0.25f),
+                label,
+                catalogLabelStyle);
+        }
+
+        private void DrawEnvironmentItem(
+            Rect rect,
+            string resourcePath,
+            string label,
+            int index)
+        {
+            GUI.Box(rect, GUIContent.none, catalogItemStyle);
+            Rect iconRect = new Rect(
+                rect.x + rect.width * 0.22f,
+                rect.y + CityPrototypeUiTheme.ScaledPixel(3, uiScale),
+                rect.width * 0.56f,
+                rect.height * 0.58f);
+            Sprite sprite = string.IsNullOrEmpty(resourcePath)
+                ? null
+                : Resources.Load<Sprite>(resourcePath);
+            if (sprite != null)
+            {
+                DrawSpriteInRect(sprite, iconRect);
+            }
+            else if (index == 4)
+            {
+                GUI.Box(
+                    new Rect(iconRect.center.x - iconRect.width * 0.18f,
+                        iconRect.y + iconRect.height * 0.12f,
+                        iconRect.width * 0.36f,
+                        iconRect.height * 0.72f),
+                    GUIContent.none,
+                    progressGreenStyle);
+                GUI.DrawTexture(
+                    new Rect(iconRect.center.x - iconRect.width * 0.23f,
+                        iconRect.y + iconRect.height * 0.05f,
+                        iconRect.width * 0.46f,
+                        CityPrototypeUiTheme.ScaledPixel(4, uiScale)),
+                    progressGreenStyle.normal.background);
+            }
+            else
+            {
+                GUI.DrawTexture(
+                    new Rect(iconRect.center.x - 1f, iconRect.y + iconRect.height * 0.30f,
+                        2f, iconRect.height * 0.56f),
+                    metricStyle.normal.background ?? progressTrackStyle.normal.background);
+                GUI.Box(
+                    new Rect(iconRect.center.x - iconRect.width * 0.12f,
+                        iconRect.y + iconRect.height * 0.12f,
+                        iconRect.width * 0.24f,
+                        iconRect.width * 0.24f),
+                    GUIContent.none,
+                    progressOrangeStyle);
+            }
+            GUI.Label(
+                new Rect(rect.x, rect.y + rect.height * 0.63f, rect.width, rect.height * 0.33f),
+                label,
+                catalogLabelStyle);
+        }
+
+        private void DrawAnimalSidebar(Rect rect)
+        {
+            GUI.Box(rect, GUIContent.none, chromeCardStyle);
+            float padding = CityPrototypeUiTheme.ScaledPixel(14, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding * 0.7f,
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(28, uiScale)),
+                T("Animals", "动物"),
+                metricStyle);
+            string[] paths =
+            {
+                PigeonWildlifeResourcePath,
+                SquirrelWildlifeResourcePath,
+                FoxWildlifeResourcePath,
+                HedgehogWildlifeResourcePath,
+            };
+            string[] names =
+            {
+                T("Pigeon", "鸽子"), T("Squirrel", "松鼠"),
+                T("Fox", "狐狸"), T("Hedgehog", "刺猬"),
+            };
+            float gap = CityPrototypeUiTheme.ScaledPixel(10, uiScale);
+            float cellWidth = (rect.width - padding * 2f - gap) * 0.5f;
+            float cellHeight = CityPrototypeUiTheme.ScaledPixel(132, uiScale);
+            float top = rect.y + CityPrototypeUiTheme.ScaledPixel(42, uiScale);
+            for (int index = 0; index < paths.Length; index += 1)
+            {
+                int column = index % 2;
+                int row = index / 2;
+                Rect cell = new Rect(
+                    rect.x + padding + column * (cellWidth + gap),
+                    top + row * (cellHeight + gap),
+                    cellWidth,
+                    cellHeight);
+                GUI.Box(cell, GUIContent.none, catalogItemStyle);
+                DrawSpriteInRect(
+                    Resources.Load<Sprite>(paths[index]),
+                    new Rect(cell.x + cell.width * 0.10f, cell.y + cell.height * 0.08f,
+                        cell.width * 0.80f, cell.height * 0.66f));
+                GUI.Label(
+                    new Rect(cell.x, cell.y + cell.height * 0.74f, cell.width,
+                        cell.height * 0.22f),
+                    names[index],
+                    catalogLabelStyle);
+            }
+            GUI.Label(
+                new Rect(rect.x + padding,
+                    top + cellHeight * 2f + gap * 2f,
+                    rect.width - padding * 2f,
+                    CityPrototypeUiTheme.ScaledPixel(60, uiScale)),
+                T("Press H to display animal activity hotspots in the card below.",
+                    "按 H 键可在下方卡片中显示动物活动热点。"),
+                bodyStyle);
+        }
+
+        private void DrawToolsSidebar(Rect rect)
+        {
+            GUI.Box(rect, GUIContent.none, chromeCardStyle);
+            float padding = CityPrototypeUiTheme.ScaledPixel(14, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding * 0.7f,
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(28, uiScale)),
+                T("Tools", "工具"),
+                metricStyle);
+            float top = rect.y + CityPrototypeUiTheme.ScaledPixel(46, uiScale);
+            float gap = CityPrototypeUiTheme.ScaledPixel(8, uiScale);
+            float width = (rect.width - padding * 2f - gap) * 0.5f;
+            float height = CityPrototypeUiTheme.ScaledPixel(42, uiScale);
+            if (GUI.Button(new Rect(rect.x + padding, top, width, height),
+                    paused ? T("Resume", "继续") : T("Pause", "暂停"), buttonStyle))
+            {
+                paused = !paused;
+            }
+            if (GUI.Button(new Rect(rect.x + padding + width + gap, top, width, height),
+                    T("Restart", "重新开始"), buttonStyle))
+            {
+                InitializePrototype(false);
+            }
+            top += height + gap;
+            if (GUI.Button(new Rect(rect.x + padding, top, width, height),
+                    showVehicleNetwork ? T("Hide roads", "隐藏车路") : T("Show roads", "显示车路"),
+                    buttonStyle))
+            {
+                showVehicleNetwork = !showVehicleNetwork;
+                vehicleRoadRoot?.SetActive(showVehicleNetwork);
+            }
+            if (GUI.Button(new Rect(rect.x + padding + width + gap, top, width, height),
+                    showPedestrianNetwork ? T("Hide paths", "隐藏步道") : T("Show paths", "显示步道"),
+                    buttonStyle))
+            {
+                showPedestrianNetwork = !showPedestrianNetwork;
+                pedestrianRoot?.SetActive(showPedestrianNetwork);
+            }
+            top += height + CityPrototypeUiTheme.ScaledPixel(18, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, top, rect.width - padding * 2f,
+                    CityPrototypeUiTheme.ScaledPixel(26, uiScale)),
+                T("How to build", "建造方法"),
+                metricStyle);
+            GUI.Label(
+                new Rect(rect.x + padding, top + CityPrototypeUiTheme.ScaledPixel(30, uiScale),
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(118, uiScale)),
+                T(
+                    "1. Open the Buildings tab and choose a building.\n2. Click open ground on the map.\n3. Confirm the preview. The building will connect to the nearest existing street.",
+                    "1. 打开“建筑”页并选择一种建筑。\n2. 点击地图上的空地。\n3. 确认预览；建筑会自动接入最近的既有道路。"),
+                bodyStyle);
+        }
+
+        private void DrawLanguagePill(Rect rect)
+        {
+            float gap = CityPrototypeUiTheme.ScaledPixel(3, uiScale);
+            float width = (rect.width - gap) * 0.5f;
+            if (GUI.Button(new Rect(rect.x, rect.y, width, rect.height), "ZH",
+                    useChineseUi ? activeTabStyle : tabStyle))
+            {
+                SetUiLanguage(true);
+            }
+            if (GUI.Button(new Rect(rect.x + width + gap, rect.y, width, rect.height), "EN",
+                    useChineseUi ? tabStyle : activeTabStyle))
+            {
+                SetUiLanguage(false);
+            }
+        }
+
+        private void DrawShadowedCard(Rect rect)
+        {
+            Rect shadow = rect;
+            shadow.y += CityPrototypeUiTheme.ScaledPixel(3, uiScale);
+            GUI.Box(shadow, GUIContent.none, chromeShadowStyle);
+            GUI.Box(rect, GUIContent.none, chromeCardStyle);
+        }
+
+        private static void DrawSpriteInRect(Sprite sprite, Rect rect)
+        {
+            if (sprite?.texture == null)
+            {
+                return;
+            }
+            Texture2D texture = sprite.texture;
+            Rect source = sprite.textureRect;
+            float sourceAspect = source.width / Mathf.Max(1f, source.height);
+            float targetAspect = rect.width / Mathf.Max(1f, rect.height);
+            Rect fitted = rect;
+            if (sourceAspect > targetAspect)
+            {
+                fitted.height = rect.width / sourceAspect;
+                fitted.y = rect.center.y - fitted.height * 0.5f;
+            }
+            else
+            {
+                fitted.width = rect.height * sourceAspect;
+                fitted.x = rect.center.x - fitted.width * 0.5f;
+            }
+            Rect uv = new Rect(
+                source.x / texture.width,
+                source.y / texture.height,
+                source.width / texture.width,
+                source.height / texture.height);
+            GUI.DrawTextureWithTexCoords(fitted, texture, uv, true);
+        }
+
+        public static Rect CityStatusRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            float padding = CityPrototypeUiTheme.ScaledPixel(18, scale);
+            return new Rect(
+                padding,
+                screenHeight - padding - CityPrototypeUiTheme.ScaledPixel(172, scale),
+                CityPrototypeUiTheme.ScaledPixel(360, scale),
+                CityPrototypeUiTheme.ScaledPixel(172, scale));
+        }
+
+        public static Rect ToolbarRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            float mapWidth = screenWidth * MapViewportWidth;
+            float width = Mathf.Min(
+                CityPrototypeUiTheme.ScaledPixel(520, scale),
+                mapWidth * 0.42f);
+            float height = CityPrototypeUiTheme.ScaledPixel(64, scale);
+            return new Rect(
+                mapWidth * 0.5f - width * 0.5f,
+                screenHeight - CityPrototypeUiTheme.ScaledPixel(18, scale) - height,
+                width,
+                height);
+        }
+
+        private void DrawLegacySidebar()
         {
             if (!Application.isPlaying || plan == null || mobility == null)
             {
@@ -1922,7 +2597,7 @@ namespace UrbanWildlife.Prototype
                 cardRect.y + padding * 0.65f,
                 cardRect.width - padding * 2f,
                 headerHeight);
-            GUI.Label(titleRect, T("ANIMAL ACTIVITY", "动物活动热点"), headingStyle);
+            GUI.Label(titleRect, T("Animal Hotspots", "动物热点图"), headingStyle);
 
             float toggleWidth = CityPrototypeUiTheme.ScaledPixel(88, uiScale);
             Rect toggleRect = new Rect(
@@ -1968,11 +2643,36 @@ namespace UrbanWildlife.Prototype
                 mapRect.yMax + CityPrototypeUiTheme.ScaledPixel(4, uiScale),
                 cardRect.width - padding * 2f,
                 footerHeight);
-            GUI.Label(
-                footerRect,
-                $"{T("Animal samples", "动物样本")}  {AnimalTracePointCount}  ·  " +
-                $"{T("Active areas", "活跃区域")}  {VisibleHeatCellCount}",
-                captionStyle);
+            if (showHeatmap && heatmapLegendTexture != null)
+            {
+                float labelWidth = CityPrototypeUiTheme.ScaledPixel(34, uiScale);
+                GUI.Label(
+                    new Rect(footerRect.x, footerRect.y, labelWidth, footerRect.height),
+                    T("Low", "低"),
+                    captionStyle);
+                GUI.DrawTexture(
+                    new Rect(
+                        footerRect.x + labelWidth,
+                        footerRect.y + footerRect.height * 0.32f,
+                        footerRect.width - labelWidth * 2f,
+                        CityPrototypeUiTheme.ScaledPixel(8, uiScale)),
+                    heatmapLegendTexture,
+                    ScaleMode.StretchToFill,
+                    false);
+                GUI.Label(
+                    new Rect(footerRect.xMax - labelWidth, footerRect.y,
+                        labelWidth, footerRect.height),
+                    T("High", "高"),
+                    rightCaptionStyle);
+            }
+            else
+            {
+                GUI.Label(
+                    footerRect,
+                    $"{T("Animal samples", "动物样本")}  {AnimalTracePointCount}  ·  " +
+                    $"{T("Active areas", "活跃区域")}  {VisibleHeatCellCount}",
+                    captionStyle);
+            }
         }
 
         private void DrawHeatmapMapBase(Rect mapRect)
@@ -2706,7 +3406,7 @@ namespace UrbanWildlife.Prototype
 
         private void EnsureStyles()
         {
-            if (panelStyle != null && heatmapCardStyle != null &&
+            if (panelStyle != null && heatmapCardStyle != null && chromeCardStyle != null &&
                 styledScreenHeight == Screen.height &&
                 styledChineseUi == useChineseUi)
             {
@@ -2814,6 +3514,7 @@ namespace UrbanWildlife.Prototype
             buttonStyle = new GUIStyle(GUI.skin.button)
             {
                 font = boldFont,
+                border = new RectOffset(14, 14, 14, 14),
                 fixedHeight = CityPrototypeUiTheme.ScaledPixel(42, uiScale),
                 fontSize = CityPrototypeUiTheme.ScaledFontSize(
                     CityPrototypeUiTheme.ButtonFontSize,
@@ -2833,33 +3534,33 @@ namespace UrbanWildlife.Prototype
                     CityPrototypeUiTheme.ScaledPixel(CityPrototypeUiTheme.SpaceXs, uiScale)),
                 normal =
                 {
-                    background = SolidTexture(CityPrototypeUiTheme.Button),
+                    background = RoundedTexture(CityPrototypeUiTheme.Button, 14),
                     textColor = CityPrototypeUiTheme.ButtonText,
                 },
                 hover =
                 {
-                    background = SolidTexture(CityPrototypeUiTheme.ButtonHover),
+                    background = RoundedTexture(CityPrototypeUiTheme.ButtonHover, 14),
                     textColor = CityPrototypeUiTheme.ButtonText,
                 },
                 active =
                 {
-                    background = SolidTexture(CityPrototypeUiTheme.ButtonPressed),
+                    background = RoundedTexture(CityPrototypeUiTheme.ButtonPressed, 14),
                     textColor = CityPrototypeUiTheme.ButtonText,
                 },
                 focused =
                 {
-                    background = SolidTexture(CityPrototypeUiTheme.ButtonHover),
+                    background = RoundedTexture(CityPrototypeUiTheme.ButtonHover, 14),
                     textColor = CityPrototypeUiTheme.ButtonText,
                 },
             };
             heatmapCardStyle = new GUIStyle(GUI.skin.box)
             {
-                border = new RectOffset(0, 0, 0, 0),
+                border = new RectOffset(18, 18, 18, 18),
                 margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(0, 0, 0, 0),
                 normal =
                 {
-                    background = SolidTexture(new Color(1f, 1f, 1f, 0.78f)),
+                    background = RoundedTexture(new Color(1f, 1f, 1f, 0.96f), 18),
                 },
             };
             heatmapToggleStyle = new GUIStyle(buttonStyle)
@@ -2876,6 +3577,151 @@ namespace UrbanWildlife.Prototype
                 alignment = TextAnchor.MiddleCenter,
                 normal = { textColor = CityPrototypeUiTheme.InkSecondary },
             };
+            chromeCardStyle = new GUIStyle(GUI.skin.box)
+            {
+                border = new RectOffset(18, 18, 18, 18),
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                normal =
+                {
+                    background = RoundedTexture(new Color(1f, 1f, 1f, 0.94f), 18),
+                },
+            };
+            chromeShadowStyle = new GUIStyle(chromeCardStyle)
+            {
+                normal =
+                {
+                    background = RoundedTexture(new Color(0.10f, 0.18f, 0.20f, 0.10f), 18),
+                },
+            };
+            mapTitleStyle = new GUIStyle(titleStyle)
+            {
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(27, uiScale),
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                wordWrap = false,
+            };
+            mapSubtitleStyle = new GUIStyle(captionStyle)
+            {
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(13, uiScale),
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                wordWrap = false,
+            };
+            topMetricStyle = new GUIStyle(captionStyle)
+            {
+                font = boldFont,
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Clip,
+                wordWrap = false,
+                normal = { textColor = CityPrototypeUiTheme.Ink },
+            };
+            tabBarStyle = new GUIStyle(chromeCardStyle)
+            {
+                normal =
+                {
+                    background = RoundedTexture(new Color32(0xEB, 0xEC, 0xE9, 0xF2), 18),
+                },
+            };
+            tabStyle = new GUIStyle(GUI.skin.button)
+            {
+                border = new RectOffset(14, 14, 14, 14),
+                font = regularFont,
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(14, uiScale),
+                alignment = TextAnchor.MiddleCenter,
+                normal =
+                {
+                    background = RoundedTexture(new Color(1f, 1f, 1f, 0f), 14),
+                    textColor = CityPrototypeUiTheme.InkSecondary,
+                },
+                hover =
+                {
+                    background = RoundedTexture(new Color(1f, 1f, 1f, 0.52f), 14),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+                active =
+                {
+                    background = RoundedTexture(new Color(1f, 1f, 1f, 0.74f), 14),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+            };
+            activeTabStyle = new GUIStyle(tabStyle)
+            {
+                font = boldFont,
+                normal =
+                {
+                    background = RoundedTexture(new Color(1f, 1f, 1f, 0.98f), 14),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+            };
+            catalogItemStyle = new GUIStyle(GUI.skin.button)
+            {
+                border = new RectOffset(13, 13, 13, 13),
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                normal =
+                {
+                    background = RoundedTexture(new Color(0.98f, 0.98f, 0.96f, 0.74f), 13),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+                hover =
+                {
+                    background = RoundedTexture(new Color32(0xEB, 0xF4, 0xF5, 0xF5), 13),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+                active =
+                {
+                    background = RoundedTexture(new Color32(0xD8, 0xEB, 0xEE, 0xFF), 13),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+            };
+            selectedCatalogItemStyle = new GUIStyle(catalogItemStyle)
+            {
+                normal =
+                {
+                    background = RoundedTexture(new Color32(0xD8, 0xEB, 0xEE, 0xFF), 13),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+            };
+            catalogLabelStyle = new GUIStyle(captionStyle)
+            {
+                font = boldFont,
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Clip,
+                wordWrap = false,
+                normal = { textColor = CityPrototypeUiTheme.Ink },
+            };
+            rightCaptionStyle = new GUIStyle(captionStyle)
+            {
+                alignment = TextAnchor.MiddleRight,
+            };
+            toolbarButtonStyle = new GUIStyle(buttonStyle)
+            {
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(11, uiScale),
+                padding = new RectOffset(0, 0, 0, 0),
+                normal =
+                {
+                    background = RoundedTexture(new Color(1f, 1f, 1f, 0.12f), 13),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+                hover =
+                {
+                    background = RoundedTexture(CityPrototypeUiTheme.Button, 13),
+                    textColor = CityPrototypeUiTheme.Ink,
+                },
+            };
+            backButtonStyle = new GUIStyle(selectedCatalogItemStyle)
+            {
+                font = boldFont,
+                fontSize = CityPrototypeUiTheme.ScaledFontSize(22, uiScale),
+                alignment = TextAnchor.MiddleCenter,
+                padding = new RectOffset(0, 0, 0, 0),
+            };
+            progressTrackStyle = RoundedBoxStyle(new Color32(0xDD, 0xE7, 0xE9, 0xFF), 8);
+            progressGreenStyle = RoundedBoxStyle(new Color32(0x62, 0xB5, 0x91, 0xFF), 8);
+            progressBlueStyle = RoundedBoxStyle(new Color32(0x62, 0xB6, 0xDD, 0xFF), 8);
+            progressOrangeStyle = RoundedBoxStyle(new Color32(0xFF, 0x9B, 0x55, 0xFF), 8);
+            progressPurpleStyle = RoundedBoxStyle(new Color32(0x91, 0x83, 0xDF, 0xFF), 8);
             if (heatmapMapSprite == null)
             {
                 heatmapMapSprite = Resources.Load<Sprite>(CityBoardUnderlayResourcePath);
@@ -2883,6 +3729,10 @@ namespace UrbanWildlife.Prototype
             if (heatmapDotTexture == null)
             {
                 heatmapDotTexture = CreateHeatmapDotTexture();
+            }
+            if (heatmapLegendTexture == null)
+            {
+                heatmapLegendTexture = CreateHeatmapLegendTexture();
             }
         }
 
@@ -3162,6 +4012,81 @@ namespace UrbanWildlife.Prototype
             };
             texture.SetPixel(0, 0, colour);
             texture.Apply();
+            return texture;
+        }
+
+        private static GUIStyle RoundedBoxStyle(Color colour, int radius)
+        {
+            return new GUIStyle(GUI.skin.box)
+            {
+                border = new RectOffset(radius, radius, radius, radius),
+                margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(0, 0, 0, 0),
+                normal = { background = RoundedTexture(colour, radius) },
+            };
+        }
+
+        private static Texture2D RoundedTexture(Color colour, int radius)
+        {
+            const int size = 64;
+            int safeRadius = Mathf.Clamp(radius, 2, size / 2 - 1);
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "Riverside UI rounded surface",
+                hideFlags = HideFlags.DontSave,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+            };
+            Color[] pixels = new Color[size * size];
+            float left = safeRadius;
+            float right = size - 1f - safeRadius;
+            float top = safeRadius;
+            float bottom = size - 1f - safeRadius;
+            for (int y = 0; y < size; y += 1)
+            {
+                for (int x = 0; x < size; x += 1)
+                {
+                    float closestX = Mathf.Clamp(x, left, right);
+                    float closestY = Mathf.Clamp(y, top, bottom);
+                    float dx = x - closestX;
+                    float dy = y - closestY;
+                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
+                    float edgeAlpha = Mathf.Clamp01(safeRadius + 0.5f - distance);
+                    pixels[y * size + x] = new Color(
+                        colour.r,
+                        colour.g,
+                        colour.b,
+                        colour.a * edgeAlpha);
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return texture;
+        }
+
+        private static Texture2D CreateHeatmapLegendTexture()
+        {
+            const int width = 128;
+            const int height = 8;
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = "Animal heatmap low-to-high legend",
+                hideFlags = HideFlags.DontSave,
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear,
+            };
+            Color[] pixels = new Color[width * height];
+            for (int x = 0; x < width; x += 1)
+            {
+                Color colour = HeatmapColour(x / (width - 1f));
+                colour.a = 1f;
+                for (int y = 0; y < height; y += 1)
+                {
+                    pixels[y * width + x] = colour;
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
             return texture;
         }
 

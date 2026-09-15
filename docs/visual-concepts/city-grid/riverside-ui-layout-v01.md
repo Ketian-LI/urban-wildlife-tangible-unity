@@ -1,0 +1,14 @@
+# Riverside UI layout v01
+
+This pass aligns the playable Unity interface with the supplied Riverside Park references while preserving the current map simulation.
+
+- The game area uses 79% of the screen and the right tool panel uses 21%.
+- The title card sits at the upper left; city metrics sit in the upper centre.
+- City status remains at the lower left and the primary toolbar is centred along the bottom.
+- The right panel opens on Buildings and keeps Animals and Tools as switchable tabs.
+- Building and environment choices use the in-game sprites rather than text-only controls.
+- The animal hotspot panel remains at the lower right, toggled with `H`, with a low-to-high colour legend.
+- Chinese and English modes share the same hierarchy and spacing.
+- UI rectangles block map placement clicks so interface interaction cannot place buildings accidentally.
+
+`city-riverside-ui-layout-preview-v01.png` is a layout composite made from the verified Unity map capture and the verified UI layer capture. It documents the intended combined presentation; it is not presented as a single runtime screenshot.

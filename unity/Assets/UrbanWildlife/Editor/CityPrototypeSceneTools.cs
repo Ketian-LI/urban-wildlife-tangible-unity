@@ -50,8 +50,8 @@ namespace UrbanWildlife.EditorTools
             camera.orthographicSize = CityPrototypeDemo.OrthographicSizeForViewport(
                 Screen.width,
                 Screen.height,
-                0.72f);
-            camera.rect = new Rect(0f, 0f, 0.72f, 1f);
+                CityPrototypeDemo.MapViewportFraction);
+            camera.rect = new Rect(0f, 0f, CityPrototypeDemo.MapViewportFraction, 1f);
 
             GameObject lightObject = new GameObject("Directional Light");
             Light light = lightObject.AddComponent<Light>();
@@ -247,7 +247,8 @@ namespace UrbanWildlife.EditorTools
             Camera camera = Camera.main;
             bool separateViewport = camera != null &&
                                     Math.Abs(camera.rect.x) < 0.001f &&
-                                    Math.Abs(camera.rect.width - 0.72f) < 0.001f;
+                                    Math.Abs(camera.rect.width -
+                                        CityPrototypeDemo.MapViewportFraction) < 0.001f;
             Camera clearCamera = GameObject.Find("UI Background Camera")?.GetComponent<Camera>();
             bool fullFrameClear = camera != null &&
                                   clearCamera != null &&
@@ -277,6 +278,8 @@ namespace UrbanWildlife.EditorTools
                 prototype.WalkTripCount != 4 ||
                 !prototype.PedestrianNetworkVisible ||
                 !prototype.DesktopPlayEnabled ||
+                !prototype.RiversideUiLayoutEnabled ||
+                prototype.ActiveSidebarTab != 1 ||
                 !fullFrameClear ||
                 !separateViewport)
             {
@@ -323,6 +326,7 @@ namespace UrbanWildlife.EditorTools
             VerifyCommercialBuildingVisuals(prototype);
             VerifyCompactNeighbourhoodPresentation(prototype);
             VerifyBilingualUi(prototype);
+            VerifyRiversideUi(prototype);
             VerifyActivityHeatmap(prototype);
             VerifyStreetLifeVisuals(prototype);
             VerifyResponsiveCameraFit();
@@ -333,7 +337,7 @@ namespace UrbanWildlife.EditorTools
             VerifyDesktopPlayableFlow(prototype);
             VerifyVehicleRoutesStayOnRoad();
             Debug.Log(
-                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True sidebar_width=28_percent full_frame_clear=True bright_city_style=True opening_buildings=2 vehicle_roads=6 " +
+                "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True sidebar_width=21_percent riverside_ui_chrome=True full_frame_clear=True bright_city_style=True opening_buildings=2 vehicle_roads=6 " +
                 "planning_grid=18x12 planning_cells=216 available_cells=214 reference_scaled_footprints=True hidden_grid=True " +
                 "pedestrian_links=6 amenities=0 food_sources=True waste_pressure=True " +
                 "wildlife_agents=15 species=4 utility_targets=True " +
@@ -369,6 +373,34 @@ namespace UrbanWildlife.EditorTools
                 $"planning_overlay_refresh=True cjk_font_fallback=True font={prototype.ChineseUiFontName}");
         }
 
+        private static void VerifyRiversideUi(CityPrototypeDemo prototype)
+        {
+            const int width = 1920;
+            const int height = 1080;
+            float mapWidth = width * CityPrototypeDemo.MapViewportFraction;
+            Rect cityStatus = CityPrototypeDemo.CityStatusRectForScreen(width, height);
+            Rect toolbar = CityPrototypeDemo.ToolbarRectForScreen(width, height);
+            Rect heatmap = CityPrototypeDemo.HeatmapCardRectForScreen(width, height);
+            bool valid = prototype.RiversideUiLayoutEnabled &&
+                         prototype.ActiveSidebarTab == 1 &&
+                         Math.Abs(CityPrototypeDemo.MapViewportFraction - 0.79f) < 0.001f &&
+                         cityStatus.x >= 0f && cityStatus.xMax < mapWidth &&
+                         cityStatus.y >= height * 0.70f && cityStatus.yMax <= height &&
+                         toolbar.x >= cityStatus.xMax && toolbar.xMax < mapWidth &&
+                         toolbar.y >= height * 0.80f && toolbar.yMax <= height &&
+                         heatmap.x >= mapWidth && heatmap.xMax <= width &&
+                         heatmap.y >= height * 0.55f && heatmap.yMax <= height;
+            if (!valid)
+            {
+                throw new InvalidOperationException(
+                    "The city UI must use the Riverside Park overlay hierarchy and 79/21 map/sidebar split.");
+            }
+            Debug.Log(
+                "UNITY_CITY_RIVERSIDE_UI_SMOKE_OK map_width=79_percent sidebar_width=21_percent " +
+                "top_header=True top_metrics=True city_status_bottom_left=True toolbar_bottom_center=True " +
+                "building_catalog=True environment_catalog=True heatmap_bottom_right=True active_tab=buildings");
+        }
+
         private static void VerifyActivityHeatmap(CityPrototypeDemo prototype)
         {
             if (prototype.HeatmapVisible)
@@ -377,7 +409,8 @@ namespace UrbanWildlife.EditorTools
             }
             prototype.SetHeatmapVisible(true);
             Rect sidebarCard = CityPrototypeDemo.HeatmapCardRectForScreen(1920, 1080);
-            bool bottomRightCard = sidebarCard.x >= 1920f * 0.72f &&
+            bool bottomRightCard = sidebarCard.x >= 1920f *
+                CityPrototypeDemo.MapViewportFraction &&
                                    sidebarCard.xMax <= 1920f &&
                                    sidebarCard.y >= 1080f * 0.55f &&
                                    sidebarCard.yMax <= 1080f;
@@ -793,7 +826,7 @@ namespace UrbanWildlife.EditorTools
             };
             foreach ((int width, int height) in sizes)
             {
-                const float viewportWidth = 0.72f;
+                float viewportWidth = CityPrototypeDemo.MapViewportFraction;
                 float size = CityPrototypeDemo.OrthographicSizeForViewport(
                     width,
                     height,

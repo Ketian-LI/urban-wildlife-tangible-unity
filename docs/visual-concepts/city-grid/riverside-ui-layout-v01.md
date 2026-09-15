@@ -4,7 +4,8 @@ This pass aligns the playable Unity interface with the supplied Riverside Park r
 
 - The game area uses 79% of the screen and the right tool panel uses 21%.
 - The title card sits at the upper left; city metrics sit in the upper centre.
-- City status remains at the lower left and the primary toolbar is centred along the bottom.
+- The title card also carries the current development stage, while the top metrics begin with year and season.
+- City status remains at the lower left and the Build / Info / Trace / Pause navigation is centred along the bottom.
 - The right panel opens on Buildings and keeps Animals and Tools as switchable tabs.
 - Building and environment choices use the in-game sprites rather than text-only controls.
 - The animal hotspot panel remains at the lower right, toggled with `H`, with a low-to-high colour legend.

@@ -178,6 +178,7 @@ namespace UrbanWildlife.Prototype
         private int configuredScreenWidth = -1;
         private int configuredScreenHeight = -1;
         private int sidebarTab = 1;
+        private int bottomNavigationIndex;
 
         public int GeneratedBuildingCount { get; private set; }
         public int GeneratedVehicleRoadCount { get; private set; }
@@ -214,6 +215,11 @@ namespace UrbanWildlife.Prototype
         public bool HeatmapRendersInSidebar => true;
         public bool HeatmapOverlaysMap => traceVisualizer?.WorldOverlayActive ?? false;
         public bool RiversideUiLayoutEnabled => true;
+        public bool ReferenceStageHudEnabled => true;
+        public int BottomNavigationItemCount => 4;
+        public int ActiveBottomNavigationIndex => bottomNavigationIndex;
+        public int DisplayStageNumber => StageNumberForBuildingCount(
+            Mathf.Max(GeneratedBuildingCount, city?.buildings?.Length ?? 0));
         public int ActiveSidebarTab => sidebarTab;
         public static float MapViewportFraction => MapViewportWidth;
         public bool PlanningWorkflowConnected => planningWorkflow != null;
@@ -1660,7 +1666,7 @@ namespace UrbanWildlife.Prototype
                 padding,
                 padding,
                 headerWidth,
-                CityPrototypeUiTheme.ScaledPixel(72, scale));
+                CityPrototypeUiTheme.ScaledPixel(100, scale));
             float statusWidth = Mathf.Min(
                 CityPrototypeUiTheme.ScaledPixel(450, scale),
                 mapWidth * 0.40f);
@@ -1777,7 +1783,7 @@ namespace UrbanWildlife.Prototype
         {
             float mapWidth = Screen.width * MapViewportWidth;
             float padding = CityPrototypeUiTheme.ScaledPixel(18, uiScale);
-            float headerHeight = CityPrototypeUiTheme.ScaledPixel(72, uiScale);
+            float headerHeight = CityPrototypeUiTheme.ScaledPixel(100, uiScale);
             float headerWidth = Mathf.Min(
                 CityPrototypeUiTheme.ScaledPixel(430, uiScale),
                 mapWidth * 0.43f);
@@ -1810,6 +1816,16 @@ namespace UrbanWildlife.Prototype
                 subtitleRect,
                 T("A city for people and wildlife", "人与野生动物共生的城市"),
                 mapSubtitleStyle);
+            Rect stageRect = new Rect(
+                textX,
+                headerRect.y + CityPrototypeUiTheme.ScaledPixel(66, uiScale),
+                Mathf.Min(titleRect.width, CityPrototypeUiTheme.ScaledPixel(228, uiScale)),
+                CityPrototypeUiTheme.ScaledPixel(25, uiScale));
+            GUI.Label(
+                stageRect,
+                $"{T("STAGE " + DisplayStageNumber, "阶段 " + DisplayStageNumber)}  ·  " +
+                StageName(DisplayStageNumber),
+                heatmapToggleStyle);
             DrawLanguagePill(new Rect(
                 headerRect.xMax - languageWidth - CityPrototypeUiTheme.ScaledPixel(8, uiScale),
                 headerRect.y + CityPrototypeUiTheme.ScaledPixel(12, uiScale),
@@ -1827,7 +1843,8 @@ namespace UrbanWildlife.Prototype
             DrawShadowedCard(statusRect);
             string[] statusItems =
             {
-                T("DAY 1", "第 1 天"),
+                T($"YEAR {DisplayYear}  ·  {SeasonName(DisplayStageNumber)}",
+                    $"第 {DisplayYear} 年  ·  {SeasonName(DisplayStageNumber)}"),
                 $"{T("PEOPLE", "人口")}  {plan.RepresentedPopulation}",
                 $"{T("NATURE", "自然")}  {Mathf.Clamp(Mathf.RoundToInt(CityBalanceTotal), 0, 99)}",
                 $"{T("WELLBEING", "幸福")}  72",
@@ -1911,12 +1928,10 @@ namespace UrbanWildlife.Prototype
             DrawShadowedCard(rect);
             string[] labels =
             {
-                T("SELECT", "选择"),
-                T("FOOD", "食物"),
-                T("BIN", "垃圾桶"),
-                T("BENCH", "长椅"),
-                T("TREE", "树木"),
-                "•••",
+                T("BUILD", "建造"),
+                T("INFO", "信息"),
+                T("TRACE", "轨迹"),
+                paused ? T("RESUME", "继续") : T("PAUSE", "暂停"),
             };
             float padding = CityPrototypeUiTheme.ScaledPixel(10, uiScale);
             float gap = CityPrototypeUiTheme.ScaledPixel(7, uiScale);
@@ -1929,10 +1944,29 @@ namespace UrbanWildlife.Prototype
                     rect.y + padding,
                     buttonWidth,
                     rect.height - padding * 2f);
-                GUIStyle style = index == 0 ? selectedCatalogItemStyle : toolbarButtonStyle;
-                if (GUI.Button(buttonRect, labels[index], style) && index == labels.Length - 1)
+                GUIStyle style = index == bottomNavigationIndex
+                    ? selectedCatalogItemStyle
+                    : toolbarButtonStyle;
+                if (!GUI.Button(buttonRect, labels[index], style))
                 {
-                    sidebarTab = 2;
+                    continue;
+                }
+                bottomNavigationIndex = index;
+                switch (index)
+                {
+                    case 0:
+                        sidebarTab = 1;
+                        break;
+                    case 1:
+                        sidebarTab = 0;
+                        break;
+                    case 2:
+                        sidebarTab = 0;
+                        SetHeatmapVisible(!showHeatmap);
+                        break;
+                    default:
+                        paused = !paused;
+                        break;
                 }
             }
         }
@@ -3243,6 +3277,45 @@ namespace UrbanWildlife.Prototype
         private string T(string english, string chinese)
         {
             return useChineseUi ? chinese : english;
+        }
+
+        private int DisplayYear => DisplayStageNumber == 1
+            ? 1
+            : DisplayStageNumber == 2
+                ? 3
+                : 5;
+
+        private static int StageNumberForBuildingCount(int buildingCount)
+        {
+            if (buildingCount <= 5)
+            {
+                return 1;
+            }
+            if (buildingCount <= 16)
+            {
+                return 2;
+            }
+            return 3;
+        }
+
+        private string StageName(int stageNumber)
+        {
+            switch (stageNumber)
+            {
+                case 1: return T("Early Development", "初期发展");
+                case 2: return T("Growing City", "城市扩展");
+                default: return T("Mature City", "成熟城市");
+            }
+        }
+
+        private string SeasonName(int stageNumber)
+        {
+            switch (stageNumber)
+            {
+                case 1: return T("SPRING", "春季");
+                case 2: return T("AUTUMN", "秋季");
+                default: return T("WINTER", "冬季");
+            }
         }
 
         private string DevelopmentPhaseLabel(CityDevelopmentPhase phase)

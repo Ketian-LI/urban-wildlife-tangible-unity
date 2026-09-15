@@ -382,6 +382,10 @@ namespace UrbanWildlife.EditorTools
             Rect toolbar = CityPrototypeDemo.ToolbarRectForScreen(width, height);
             Rect heatmap = CityPrototypeDemo.HeatmapCardRectForScreen(width, height);
             bool valid = prototype.RiversideUiLayoutEnabled &&
+                         prototype.ReferenceStageHudEnabled &&
+                         prototype.BottomNavigationItemCount == 4 &&
+                         prototype.ActiveBottomNavigationIndex == 0 &&
+                         prototype.DisplayStageNumber == 1 &&
                          prototype.ActiveSidebarTab == 1 &&
                          Math.Abs(CityPrototypeDemo.MapViewportFraction - 0.79f) < 0.001f &&
                          cityStatus.x >= 0f && cityStatus.xMax < mapWidth &&
@@ -398,6 +402,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_RIVERSIDE_UI_SMOKE_OK map_width=79_percent sidebar_width=21_percent " +
                 "top_header=True top_metrics=True city_status_bottom_left=True toolbar_bottom_center=True " +
+                "stage_hud=True stage=early bottom_nav=build_info_trace_pause " +
                 "building_catalog=True environment_catalog=True heatmap_bottom_right=True active_tab=buildings");
         }
 

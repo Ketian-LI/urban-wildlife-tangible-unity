@@ -663,7 +663,7 @@ namespace UrbanWildlife.EditorTools
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 0 ||
                 boundaries.GetComponentsInChildren<LineRenderer>().Length != 32 ||
                 underlayRenderer?.sprite == null ||
-                underlayRenderer.sprite.name != "city-board-woodland-existing-streets-v06" ||
+                underlayRenderer.sprite.name != "city-board-woodland-existing-streets-v07" ||
                 underlayRenderer.sortingOrder != -50 ||
                 regularFont == null || boldFont == null ||
                 prototype.GetComponentsInChildren<Transform>().Any(item => item.name == "East canal"))

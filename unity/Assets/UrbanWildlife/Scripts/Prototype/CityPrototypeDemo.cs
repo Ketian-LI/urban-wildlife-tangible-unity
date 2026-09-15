@@ -28,7 +28,7 @@ namespace UrbanWildlife.Prototype
         private const float HumanArtworkHeight = 0.23f;
         private const float VehicleArtworkDepth = 0.24f;
         private const string CityBoardUnderlayResourcePath =
-            "UrbanWildlife/Environment/city-board-woodland-existing-streets-v06";
+            "UrbanWildlife/Environment/city-board-woodland-existing-streets-v07";
         private const string CityPlazaResourcePath =
             "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string CityPondResourcePath =

@@ -1160,14 +1160,29 @@ namespace UrbanWildlife.EditorTools
             }
             Transform access = prototype.transform.Find(
                 "Generated City Prototype/Visible building access roads");
-            if (access == null || access.GetComponentsInChildren<LineRenderer>().Length != 6)
+            LineRenderer[] accessLines = access == null
+                ? Array.Empty<LineRenderer>()
+                : access.GetComponentsInChildren<LineRenderer>();
+            if (access == null || accessLines.Length != 6 ||
+                accessLines.Max(line => line.startWidth) > 0.20f)
             {
                 throw new InvalidOperationException(
-                    "Desktop placement did not add its visible smooth access road.");
+                    "Desktop placement did not add a compact visible access road.");
+            }
+            Transform clearings = prototype.transform.Find(
+                "Generated City Prototype/Planning grid/Compact development clearings");
+            Transform[] generated = prototype.GetComponentsInChildren<Transform>();
+            if (clearings == null ||
+                clearings.GetComponentsInChildren<LineRenderer>().Length != 3 ||
+                generated.Any(item => item.name == "Cleared white ground"))
+            {
+                throw new InvalidOperationException(
+                    "Desktop construction must use compact site and road clearings instead of full-cell white holes.");
             }
             Debug.Log(
                 "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
-                "confirm_build=True camera_required=False camera_mode_retained=True");
+                "confirm_build=True compact_site_clearings=True narrow_access=True " +
+                "camera_required=False camera_mode_retained=True");
         }
 
         private static void VerifyVehicleRoutesStayOnRoad()

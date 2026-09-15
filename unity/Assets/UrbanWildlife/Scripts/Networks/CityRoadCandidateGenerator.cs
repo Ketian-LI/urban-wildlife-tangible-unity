@@ -221,7 +221,7 @@ namespace UrbanWildlife.Networks
                     ClonePoint(building.position_norm),
                     ClonePoint(connection.Point),
                 },
-                width_units = 1.8f,
+                width_units = 0.70f,
                 step_free_accessible = true,
                 connected_building_ids = new[] { building.id },
                 connected_link_ids = new[] { connection.RoadId },

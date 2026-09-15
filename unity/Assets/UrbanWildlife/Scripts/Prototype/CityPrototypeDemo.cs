@@ -508,24 +508,6 @@ namespace UrbanWildlife.Prototype
                     PlanningCellColour(cell.current_cover),
                     -40,
                     true);
-                if (cell.was_woodland &&
-                    (cell.current_cover == CityLandCover.Building ||
-                     cell.current_cover == CityLandCover.OpenLand))
-                {
-                    float[][] clearingShape = OrganicCellShape(
-                        cell,
-                        20,
-                        cell.current_cover == CityLandCover.Building ? 0.43f : 0.39f,
-                        cell.current_cover == CityLandCover.Building ? 0.41f : 0.37f);
-                    CreatePolygon(
-                        cellObject.transform,
-                        "Cleared white ground",
-                        clearingShape,
-                        0.018f,
-                        new Color(243f / 255f, 241f / 255f, 227f / 255f, 1f),
-                        -27,
-                        true);
-                }
                 BuildNaturalCellFeature(cellObject.transform, cell);
                 GeneratedPlanningCellCount += 1;
                 if (cell.buildable && !cell.fixed_feature &&
@@ -534,6 +516,8 @@ namespace UrbanWildlife.Prototype
                     AvailablePlanningCellCount += 1;
                 }
             }
+
+            BuildCompactDevelopmentClearings(root.transform, grid);
 
             Color boundaryColour = new Color(0.48f, 0.58f, 0.58f, 0.035f);
             for (int col = 0; col <= grid.cols; col += 1)
@@ -700,6 +684,102 @@ namespace UrbanWildlife.Prototype
                     {
                         centreX + Mathf.Cos(angle) * cell.size_norm[0] * radiusX * ripple,
                         centreY + Mathf.Sin(angle) * cell.size_norm[1] * radiusY * ripple,
+                    };
+                })
+                .ToArray();
+        }
+
+        private void BuildCompactDevelopmentClearings(
+            Transform parent,
+            CityPlanningGrid grid)
+        {
+            GameObject clearingRoot = new GameObject("Compact development clearings");
+            clearingRoot.transform.SetParent(parent, false);
+            Color clearedGround = new Color(243f / 255f, 241f / 255f, 227f / 255f, 1f);
+
+            Dictionary<string, CityGridCell> cellsById = grid.cells
+                .Where(cell => cell != null)
+                .ToDictionary(cell => cell.id, StringComparer.Ordinal);
+            foreach (CityBuilding building in city.buildings.Where(item =>
+                         item != null &&
+                         item.construction_state == CityConstructionState.Existing &&
+                         BuildingReplacedWoodland(item, cellsById)))
+            {
+                CreatePolygon(
+                    clearingRoot.transform,
+                    building.id + " compact building clearing",
+                    CompactBuildingSitePolygon(building),
+                    0.018f,
+                    clearedGround,
+                    -27);
+            }
+
+            foreach (CityVehicleRoad road in city.vehicle_roads.Where(item =>
+                         item != null &&
+                         item.role == CityVehicleRoadRole.BuildingAccess &&
+                         item.construction_state == CityConstructionState.Existing))
+            {
+                float roadWidth = road.width_units / city.bounds.width_units * MapWidth;
+                CreateLine(
+                    clearingRoot.transform,
+                    road.id + " compact cleared verge",
+                    road.points_norm,
+                    Mathf.Max(0.12f, roadWidth + 0.055f),
+                    clearedGround,
+                    0.019f,
+                    -26);
+            }
+        }
+
+        private static bool BuildingReplacedWoodland(
+            CityBuilding building,
+            IReadOnlyDictionary<string, CityGridCell> cellsById)
+        {
+            return (building.planning_cell_ids ?? Array.Empty<string>())
+                .Any(id => cellsById.TryGetValue(id, out CityGridCell cell) && cell.was_woodland);
+        }
+
+        private float[][] CompactBuildingSitePolygon(CityBuilding building)
+        {
+            Vector2 scale;
+            switch (building.type)
+            {
+                case CityBuildingType.Apartment:
+                    scale = new Vector2(0.66f, 0.66f);
+                    break;
+                case CityBuildingType.Commercial:
+                case CityBuildingType.CommunityFacility:
+                    scale = new Vector2(0.54f, 0.72f);
+                    break;
+                default:
+                    scale = new Vector2(0.76f, 0.76f);
+                    break;
+            }
+
+            float halfWidth = (building.footprint_units[0] * scale.x + 0.9f) * 0.5f;
+            float halfDepth = (building.footprint_units[1] * scale.y + 0.9f) * 0.5f;
+            float centreX = building.position_norm[0] * city.bounds.width_units;
+            float centreY = building.position_norm[1] * city.bounds.height_units;
+            float radians = building.rotation_deg * Mathf.Deg2Rad;
+            float cosine = Mathf.Cos(radians);
+            float sine = Mathf.Sin(radians);
+            const int pointCount = 24;
+            return Enumerable.Range(0, pointCount)
+                .Select(index =>
+                {
+                    float angle = Mathf.PI * 2f * index / pointCount;
+                    float cosAngle = Mathf.Cos(angle);
+                    float sinAngle = Mathf.Sin(angle);
+                    float localX = halfWidth * Mathf.Sign(cosAngle) *
+                                   Mathf.Pow(Mathf.Abs(cosAngle), 0.55f);
+                    float localY = halfDepth * Mathf.Sign(sinAngle) *
+                                   Mathf.Pow(Mathf.Abs(sinAngle), 0.55f);
+                    float rotatedX = localX * cosine - localY * sine;
+                    float rotatedY = localX * sine + localY * cosine;
+                    return new[]
+                    {
+                        (centreX + rotatedX) / city.bounds.width_units,
+                        (centreY + rotatedY) / city.bounds.height_units,
                     };
                 })
                 .ToArray();
@@ -1146,16 +1226,24 @@ namespace UrbanWildlife.Prototype
 
         private void DrawPlanningFootprint(CityBuilding building, string status)
         {
-            float width = building.footprint_units[0] / city.bounds.width_units * MapWidth;
-            float depth = building.footprint_units[1] / city.bounds.height_units * MapHeight;
-            GameObject footprint = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            footprint.name = $"{status} {building.id}";
-            footprint.transform.SetParent(planningPreviewRoot.transform, false);
-            footprint.transform.localPosition = ToWorld(building.position_norm, 0.115f);
-            footprint.transform.localScale = new Vector3(width, 0.035f, depth);
-            footprint.transform.localRotation = Quaternion.Euler(0f, -building.rotation_deg, 0f);
-            RemoveCollider(footprint);
-            SetMaterial(footprint, new Color(0.30f, 0.84f, 0.90f, 1f));
+            float[][] site = CompactBuildingSitePolygon(building);
+            CreatePolygon(
+                planningPreviewRoot.transform,
+                $"{status} {building.id}",
+                site,
+                0.115f,
+                new Color(0.30f, 0.84f, 0.90f, 0.62f),
+                8,
+                true);
+            CreateLine(
+                planningPreviewRoot.transform,
+                $"{status} {building.id} edge",
+                site.Concat(new[] { site[0] }).ToArray(),
+                0.025f,
+                new Color(0.18f, 0.61f, 0.68f, 0.92f),
+                0.120f,
+                9,
+                true);
             CreateLabel(
                 planningPreviewRoot.transform,
                 status,

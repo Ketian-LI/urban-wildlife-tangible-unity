@@ -50,8 +50,8 @@ namespace UrbanWildlife.Prototype
                     type = CityPedestrianLinkType.ExistingNetwork,
                     construction_state = CityConstructionState.Existing,
                     source = CityNetworkSource.ExistingMap,
-                    points_norm = Points((0.00f, 0.272f), (0.08f, 0.277f), (0.16f, 0.327f), (0.25f, 0.357f), (0.34f, 0.412f), (0.43f, 0.412f), (0.53f, 0.377f), (0.60f, 0.382f), (0.66f, 0.427f), (0.70f, 0.477f), (0.78f, 0.507f), (0.86f, 0.497f), (1.00f, 0.447f)),
-                    width_units = 0.28f,
+                    points_norm = Points((0.00f, 0.250f), (0.08f, 0.255f), (0.16f, 0.305f), (0.25f, 0.335f), (0.34f, 0.390f), (0.43f, 0.390f), (0.53f, 0.355f), (0.60f, 0.360f), (0.66f, 0.405f), (0.70f, 0.455f), (0.78f, 0.485f), (0.86f, 0.475f), (1.00f, 0.425f)),
+                    width_units = 0.75f,
                     step_free_accessible = true,
                     connected_building_ids = buildings.Select(building => building.id).ToArray(),
                     connected_link_ids = Array.Empty<string>(),
@@ -67,7 +67,7 @@ namespace UrbanWildlife.Prototype
                 string roadId = $"road-access-{building.id}";
                 string linkId = $"walk-access-{building.id}";
                 float roadY = building.id == "detached-garden" ? 0.368f : 0.398f;
-                float linkY = roadY - 0.013f;
+                float linkY = roadY - 0.035f;
                 float buildingEdgeY = building.position_norm[1] +
                                       building.footprint_units[1] / bounds.height_units * 0.46f;
                 roads.Add(new CityVehicleRoad

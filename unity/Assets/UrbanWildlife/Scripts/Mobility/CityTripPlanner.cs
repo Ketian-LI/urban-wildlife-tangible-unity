@@ -65,7 +65,9 @@ namespace UrbanWildlife.Mobility
             int sequence = 0;
             foreach (CityBuilding origin in origins)
             {
-                int desired = DesiredAgentCount(origin);
+                int desired = destinations.Length == 0
+                    ? Math.Max(3, DesiredAgentCount(origin))
+                    : DesiredAgentCount(origin);
                 for (int localIndex = 0;
                      localIndex < desired && trips.Count < maximumRepresentativeAgents;
                      localIndex += 1)
@@ -78,9 +80,12 @@ namespace UrbanWildlife.Mobility
                                            (localIndex == 0 && origin.vehicle_demand > 0.5f);
                     if (externalJourney)
                     {
-                        float[][] externalRoute = CityNetworkRouteBuilder.BuildExternalDrive(
-                            city,
-                            origin);
+                        CityTravelMode externalMode = destinations.Length == 0 && localIndex > 0
+                            ? CityTravelMode.Walk
+                            : CityTravelMode.Drive;
+                        float[][] externalRoute = externalMode == CityTravelMode.Drive
+                            ? CityNetworkRouteBuilder.BuildExternalDrive(city, origin)
+                            : CityNetworkRouteBuilder.BuildExternalWalk(city, origin);
                         float routeDistance = CityNetworkRouteBuilder.Length(
                             externalRoute,
                             city.bounds);
@@ -91,7 +96,7 @@ namespace UrbanWildlife.Mobility
                             origin_building_id = origin.id,
                             destination_building_id = ExternalGatewayDestinationId,
                             purpose = CityTripPurpose.ExternalJourney,
-                            mode = CityTravelMode.Drive,
+                            mode = externalMode,
                             route_points_norm = externalRoute,
                             direct_distance_units = Distance(
                                 origin.position_norm,

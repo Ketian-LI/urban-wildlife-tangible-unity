@@ -2209,7 +2209,8 @@ namespace UrbanWildlife.EditorTools
             CityState city = CityPrototypeStateFactory.Create();
             CityMobilityPlan plan = CityTripPlanner.CreatePlan(city);
             CityRepresentativeTrip[] externalTrips = plan.trips
-                .Where(trip => trip.purpose == CityTripPurpose.ExternalJourney)
+                .Where(trip => trip.purpose == CityTripPurpose.ExternalJourney &&
+                               trip.mode == CityTravelMode.Drive)
                 .ToArray();
             if (externalTrips.Length != 2)
             {

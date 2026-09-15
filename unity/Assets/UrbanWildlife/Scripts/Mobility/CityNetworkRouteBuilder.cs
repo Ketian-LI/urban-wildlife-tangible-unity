@@ -88,6 +88,23 @@ namespace UrbanWildlife.Mobility
             CityBuilding origin,
             float outsideMarginNorm = 0.06f)
         {
+            return BuildExternal(city, origin, CityTravelMode.Drive, outsideMarginNorm);
+        }
+
+        public static float[][] BuildExternalWalk(
+            CityState city,
+            CityBuilding origin,
+            float outsideMarginNorm = 0.035f)
+        {
+            return BuildExternal(city, origin, CityTravelMode.Walk, outsideMarginNorm);
+        }
+
+        private static float[][] BuildExternal(
+            CityState city,
+            CityBuilding origin,
+            CityTravelMode mode,
+            float outsideMarginNorm)
+        {
             if (city?.bounds == null || origin == null)
             {
                 throw new ArgumentException("A city and origin are required.");
@@ -99,12 +116,17 @@ namespace UrbanWildlife.Mobility
                     "The outside gateway margin must stay between 0 and 0.25.");
             }
 
-            Dictionary<string, NetworkLine> network = VehicleNetwork(city);
+            Dictionary<string, NetworkLine> network = mode == CityTravelMode.Drive
+                ? VehicleNetwork(city)
+                : PedestrianNetwork(city);
+            string[] references = mode == CityTravelMode.Drive
+                ? origin.vehicle_road_ids
+                : origin.pedestrian_link_ids;
             NetworkLine current = FirstReferenced(
                 network,
-                origin.vehicle_road_ids,
+                references,
                 origin.id,
-                CityTravelMode.Drive);
+                mode);
             List<float[]> route = new List<float[]> { ClonePoint(origin.position_norm) };
             AppendOriented(route, current.Points, city.bounds);
 

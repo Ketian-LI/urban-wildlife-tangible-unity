@@ -26,6 +26,7 @@ namespace UrbanWildlife.EditorTools
         [MenuItem("Urban Wildlife/City Prototype/Create or Reset Scene")]
         public static void CreateCityPrototypeScene()
         {
+            EnsureVehicleSpriteImports();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             GameObject cameraObject = new GameObject("Main Camera");
@@ -65,6 +66,37 @@ namespace UrbanWildlife.EditorTools
             AssetDatabase.SaveAssets();
             Selection.activeGameObject = prototypeObject;
             Debug.Log($"Created {ScenePath} with a split-screen live city prototype.");
+        }
+
+        private static void EnsureVehicleSpriteImports()
+        {
+            string[] assetPaths =
+            {
+                "Assets/Resources/UrbanWildlife/Vehicles/city-car-pastel-blue-v01.png",
+                "Assets/Resources/UrbanWildlife/Vehicles/city-car-muted-coral-v01.png",
+                "Assets/Resources/UrbanWildlife/Vehicles/city-car-warm-mustard-v01.png",
+            };
+            foreach (string assetPath in assetPaths)
+            {
+                if (AssetImporter.GetAtPath(assetPath) is not TextureImporter importer)
+                {
+                    continue;
+                }
+                bool changed = importer.textureType != TextureImporterType.Sprite ||
+                               importer.spriteImportMode != SpriteImportMode.Single ||
+                               importer.mipmapEnabled || !importer.alphaIsTransparency;
+                if (!changed)
+                {
+                    continue;
+                }
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 100f;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.textureCompression = TextureImporterCompression.Compressed;
+                importer.SaveAndReimport();
+            }
         }
 
         [MenuItem("Urban Wildlife/City Prototype/Open for Inspection")]
@@ -158,10 +190,11 @@ namespace UrbanWildlife.EditorTools
                 prototype.CityFeedCount <= 0 ||
                 !prototype.PlanningWorkflowConnected ||
                 string.IsNullOrWhiteSpace(prototype.ResolvedCityScanPath) ||
-                prototype.RepresentativeAgentCount <= 0 ||
+                prototype.RepresentativeAgentCount != 6 ||
                 prototype.RepresentedPopulation != 24 ||
-                prototype.VehicleTripCount < 0 ||
-                prototype.VehicleTripCount > prototype.RepresentativeAgentCount ||
+                prototype.VehicleTripCount != 2 ||
+                prototype.WalkTripCount != 4 ||
+                !prototype.PedestrianNetworkVisible ||
                 !prototype.DesktopPlayEnabled ||
                 !separateViewport)
             {
@@ -208,6 +241,7 @@ namespace UrbanWildlife.EditorTools
             VerifyCompactNeighbourhoodPresentation(prototype);
             VerifyBilingualUi(prototype);
             VerifyActivityHeatmap(prototype);
+            VerifyStreetLifeVisuals(prototype);
             VerifyResponsiveCameraFit();
             VerifyCameraScanFileSource();
             VerifyPlanningWorkflow();
@@ -222,8 +256,8 @@ namespace UrbanWildlife.EditorTools
                 "wildlife_agents=15 species=4 utility_targets=True " +
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
-                "represented_population=24 external_return_routes=True " +
-                "live_vehicle_agents=True max_speed=2x no_questionnaire=True " +
+                "representative_agents=6 represented_population=24 walk_trips=4 vehicle_trips=2 " +
+                "external_return_routes=True live_vehicle_agents=True visible_pedestrian_paths=True max_speed=2x no_questionnaire=True " +
                 "animal_activity_heatmap=True heatmap_hotkey_h=True footprints_removed=True city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
@@ -312,6 +346,44 @@ namespace UrbanWildlife.EditorTools
                     : CityTraceMark.BirdTrack,
                 position_norm = new[] { x, y },
             };
+        }
+
+        private static void VerifyStreetLifeVisuals(CityPrototypeDemo prototype)
+        {
+            Transform mobilityRoot = prototype.transform.Find(
+                "Generated City Prototype/Representative mobility agents");
+            Transform pedestrianRoot = prototype.transform.Find(
+                "Generated City Prototype/Pedestrian link network");
+            int humanArtworkCount = mobilityRoot == null
+                ? 0
+                : mobilityRoot.GetComponentsInChildren<SpriteRenderer>(true)
+                    .Count(renderer => renderer.gameObject.name == "Human artwork");
+            int vehicleArtworkCount = mobilityRoot == null
+                ? 0
+                : mobilityRoot.GetComponentsInChildren<SpriteRenderer>(true)
+                    .Count(renderer => renderer.gameObject.name == "Vehicle artwork");
+            int visiblePathLayers = pedestrianRoot == null
+                ? 0
+                : pedestrianRoot.GetComponentsInChildren<LineRenderer>(true).Length;
+            string[] vehicleSprites =
+            {
+                "UrbanWildlife/Vehicles/city-car-pastel-blue-v01",
+                "UrbanWildlife/Vehicles/city-car-muted-coral-v01",
+                "UrbanWildlife/Vehicles/city-car-warm-mustard-v01",
+            };
+            bool resourcesLoad = vehicleSprites.All(path => Resources.Load<Sprite>(path) != null);
+            if (!resourcesLoad || humanArtworkCount != 6 || vehicleArtworkCount != 2 ||
+                visiblePathLayers != 6 || !prototype.PedestrianNetworkVisible ||
+                prototype.WalkTripCount != 4)
+            {
+                throw new InvalidOperationException(
+                    $"Street-life presentation is incomplete: humans={humanArtworkCount}, " +
+                    $"vehicles={vehicleArtworkCount}, pathLayers={visiblePathLayers}, " +
+                    $"pathsVisible={prototype.PedestrianNetworkVisible}, walkTrips={prototype.WalkTripCount}.");
+            }
+            Debug.Log(
+                "UNITY_CITY_STREET_LIFE_SMOKE_OK humans=6 walking=4 vehicles=2 " +
+                "vehicle_sprites=3 pedestrian_links=3 outlined_paths=6 visible_by_default=True");
         }
 
         private static void VerifyResidentialBuildingVisuals(CityPrototypeDemo prototype)
@@ -504,18 +576,19 @@ namespace UrbanWildlife.EditorTools
             if (roads == null || roads.gameObject.activeSelf ||
                 accessRoads == null || !accessRoads.gameObject.activeSelf ||
                 accessRoads.GetComponentsInChildren<LineRenderer>().Length != 4 ||
-                footpaths == null || footpaths.gameObject.activeSelf ||
+                footpaths == null || !footpaths.gameObject.activeSelf ||
+                footpaths.GetComponentsInChildren<LineRenderer>().Length != 6 ||
                 wildlife == null || wildlife.childCount != 15 ||
                 wildlifeSprites.Length != 14 ||
                 wildlifeSprites.Any(renderer => renderer.sprite == null ||
                                                   !expectedWildlifeSprites.Contains(renderer.sprite.name)))
             {
                 throw new InvalidOperationException(
-                    "The opening view must hide debug networks, keep two house driveways visible, and use wildlife artwork.");
+                    "The opening view must hide vehicle debug routes, show two house driveways and three pedestrian paths, and use wildlife artwork.");
             }
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
-                "road_routes_default_hidden=True two_driveways_visible=True footpaths_default_hidden=True " +
+                "road_routes_default_hidden=True two_driveways_visible=True pedestrian_paths_default_visible=True " +
                 "wildlife_artwork=14 hedgehog_fallback=1 compact_buildings=True");
         }
 
@@ -1013,7 +1086,8 @@ namespace UrbanWildlife.EditorTools
             CityState city = CityPrototypeStateFactory.Create();
             CityMobilityPlan plan = CityTripPlanner.CreatePlan(city);
             CityRepresentativeTrip[] externalTrips = plan.trips
-                .Where(trip => trip.purpose == CityTripPurpose.ExternalJourney)
+                .Where(trip => trip.purpose == CityTripPurpose.ExternalJourney &&
+                               trip.mode == CityTravelMode.Drive)
                 .ToArray();
             float longestSegment = externalTrips
                 .SelectMany(trip => trip.route_points_norm.Zip(

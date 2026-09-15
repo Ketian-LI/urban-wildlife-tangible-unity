@@ -55,6 +55,12 @@ namespace UrbanWildlife.Prototype
             "UrbanWildlife/Animals/squirrel-side-walk-a-v01";
         private const string FoxWildlifeResourcePath =
             "UrbanWildlife/Animals/fox-side-walk-a-v01";
+        private static readonly string[] CityVehicleResourcePaths =
+        {
+            "UrbanWildlife/Vehicles/city-car-pastel-blue-v01",
+            "UrbanWildlife/Vehicles/city-car-muted-coral-v01",
+            "UrbanWildlife/Vehicles/city-car-warm-mustard-v01",
+        };
         private static readonly string[] CityTreeResourcePaths =
         {
             "UrbanWildlife/Environment/tree-citybuilder-pear-v02",
@@ -111,7 +117,7 @@ namespace UrbanWildlife.Prototype
         private GameObject planningPreviewRoot;
         private bool paused;
         private bool showVehicleNetwork;
-        private bool showPedestrianNetwork;
+        private bool showPedestrianNetwork = true;
         private bool showHeatmap;
         [SerializeField]
         private bool useCameraInput;
@@ -150,6 +156,10 @@ namespace UrbanWildlife.Prototype
         public int RepresentativeAgentCount => plan?.RepresentativeAgentCount ?? 0;
         public int RepresentedPopulation => plan?.RepresentedPopulation ?? 0;
         public int VehicleTripCount => plan?.DriveTripCount ?? 0;
+        public int WalkTripCount => plan?.WalkTripCount ?? 0;
+        public bool PedestrianNetworkVisible => pedestrianRoot != null
+            ? pedestrianRoot.activeSelf
+            : showPedestrianNetwork;
         public int FoodSourceCount => environment?.Snapshot?.food_sources?.Length ?? 0;
         public bool OverflowActive => environment?.Snapshot?.overflow_active ?? false;
         public int WildlifeAgentCount => wildlife?.Snapshot?.agents?.Length ?? 0;
@@ -802,11 +812,19 @@ namespace UrbanWildlife.Prototype
                 float width = link.width_units / city.bounds.width_units * MapWidth;
                 CreateLine(
                     pedestrianRoot.transform,
-                    link.id,
+                    link.id + " edge",
                     link.points_norm,
-                    Mathf.Max(0.035f, width),
-                    new Color(0.96f, 0.93f, 0.84f, 0.88f),
-                    0.075f,
+                    Mathf.Max(0.105f, width + 0.045f),
+                    new Color(0.98f, 0.97f, 0.93f, 0.96f),
+                    0.070f,
+                    -5);
+                CreateLine(
+                    pedestrianRoot.transform,
+                    link.id + " surface",
+                    link.points_norm,
+                    Mathf.Max(0.070f, width),
+                    new Color(0.89f, 0.86f, 0.77f, 0.96f),
+                    0.078f,
                     -4);
             }
             pedestrianRoot.SetActive(showPedestrianNetwork);
@@ -1172,12 +1190,20 @@ namespace UrbanWildlife.Prototype
                 "UrbanWildlife/Humans/walker-topdown-v04",
                 "UrbanWildlife/Humans/visitor-topdown-v04",
             };
+            int pedestrianSpriteIndex = 0;
+            int vehicleSpriteIndex = 0;
             for (int index = 0; index < plan.trips.Length; index += 1)
             {
-                GameObject human = CreateHumanToken(root.transform, index, humanSprites[index % humanSprites.Length]);
-                GameObject vehicle = CreateVehicleToken(root.transform, index);
+                CityRepresentativeTrip trip = plan.trips[index];
+                string humanSprite = trip.mode == CityTravelMode.Walk
+                    ? humanSprites[pedestrianSpriteIndex++ % humanSprites.Length]
+                    : humanSprites[index % humanSprites.Length];
+                GameObject human = CreateHumanToken(root.transform, index, humanSprite);
+                GameObject vehicle = trip.mode == CityTravelMode.Drive
+                    ? CreateVehicleToken(root.transform, index, vehicleSpriteIndex++)
+                    : null;
                 human.SetActive(false);
-                vehicle.SetActive(false);
+                vehicle?.SetActive(false);
                 actorViews[index] = new ActorView { human = human, vehicle = vehicle };
             }
         }
@@ -1338,20 +1364,32 @@ namespace UrbanWildlife.Prototype
             return token;
         }
 
-        private GameObject CreateVehicleToken(Transform parent, int index)
+        private GameObject CreateVehicleToken(Transform parent, int index, int variantIndex)
         {
-            GameObject vehicle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            vehicle.name = $"Trip vehicle {index + 1:00}";
+            GameObject vehicle = new GameObject($"Trip vehicle {index + 1:00}");
             vehicle.transform.SetParent(parent, false);
-            vehicle.transform.localScale = new Vector3(0.24f, 0.08f, 0.13f);
-            RemoveCollider(vehicle);
-            Color[] colours =
+            string resourcePath = CityVehicleResourcePaths[
+                variantIndex % CityVehicleResourcePaths.Length];
+            Sprite sprite = Resources.Load<Sprite>(resourcePath);
+            if (sprite != null)
             {
-                new Color(0.16f, 0.36f, 0.50f, 1f),
-                new Color(0.55f, 0.18f, 0.12f, 1f),
-                new Color(0.77f, 0.61f, 0.18f, 1f),
-            };
-            SetMaterial(vehicle, colours[index % colours.Length]);
+                GameObject artwork = new GameObject("Vehicle artwork");
+                artwork.transform.SetParent(vehicle.transform, false);
+                artwork.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                float scale = 0.36f / Mathf.Max(0.001f, sprite.bounds.size.y);
+                artwork.transform.localScale = Vector3.one * scale;
+                SpriteRenderer renderer = artwork.AddComponent<SpriteRenderer>();
+                renderer.sprite = sprite;
+                renderer.sortingOrder = 43;
+                return vehicle;
+            }
+
+            GameObject fallback = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            fallback.name = "Fallback vehicle block";
+            fallback.transform.SetParent(vehicle.transform, false);
+            fallback.transform.localScale = new Vector3(0.24f, 0.08f, 0.13f);
+            RemoveCollider(fallback);
+            SetMaterial(fallback, new Color(0.36f, 0.58f, 0.74f, 1f));
             return vehicle;
         }
 
@@ -1368,16 +1406,19 @@ namespace UrbanWildlife.Prototype
                                        (agent.State == CityTripMotionState.Outbound ||
                                         agent.State == CityTripMotionState.Returning);
                 view.human.SetActive(active && !travellingByCar);
-                view.vehicle.SetActive(active && agent.Trip.mode == CityTravelMode.Drive);
+                view.vehicle?.SetActive(active && agent.Trip.mode == CityTravelMode.Drive);
                 if (!active)
                 {
                     continue;
                 }
 
                 Vector3 position = ToWorld(agent.PositionNorm, 0.18f);
-                GameObject movingObject = travellingByCar ? view.vehicle : view.human;
+                GameObject movingObject = travellingByCar && view.vehicle != null
+                    ? view.vehicle
+                    : view.human;
                 movingObject.transform.localPosition = position;
-                if (agent.Trip.mode == CityTravelMode.Drive && !travellingByCar)
+                if (agent.Trip.mode == CityTravelMode.Drive &&
+                    !travellingByCar && view.vehicle != null)
                 {
                     view.vehicle.transform.localPosition = position + new Vector3(0.22f, 0f, 0.16f);
                 }

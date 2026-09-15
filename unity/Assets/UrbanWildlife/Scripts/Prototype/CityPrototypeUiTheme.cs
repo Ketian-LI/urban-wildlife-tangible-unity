@@ -50,7 +50,7 @@ namespace UrbanWildlife.Prototype
             {
                 if (preferCjk)
                 {
-                    runtimeFont = CreateCjkFont(bold);
+                    runtimeFont = CreateCjkFont();
                 }
                 if (runtimeFont == null)
                 {
@@ -74,26 +74,25 @@ namespace UrbanWildlife.Prototype
             return runtimeFont;
         }
 
-        private static Font CreateCjkFont(bool bold)
+        private static Font CreateCjkFont()
         {
-            string[] preferred = bold
-                ? new[]
-                {
-                    "Microsoft YaHei UI Bold",
-                    "Microsoft YaHei Bold",
-                    "PingFang SC Semibold",
-                    "Noto Sans CJK SC Bold",
-                    "Noto Sans SC Bold",
-                }
-                : new[]
-                {
-                    "Microsoft YaHei UI",
-                    "Microsoft YaHei",
-                    "PingFang SC",
-                    "Noto Sans CJK SC",
-                    "Noto Sans SC",
-                    "Arial Unicode MS",
-                };
+            // Unity's TextCore bridge treats the value passed here as a font
+            // family and separately requests the Regular face. Windows exposes
+            // entries such as "Microsoft YaHei UI Bold" in its installed-font
+            // list, but that is a face name rather than a valid family name.
+            // Passing it to CreateDynamicFontFromOSFont makes TextCore retry the
+            // missing face on every IMGUI label and corrupts the sidebar atlas.
+            // Use the stable family name for both weights; the GUI style still
+            // supplies the visual hierarchy through size, colour and spacing.
+            string[] preferred =
+            {
+                "Microsoft YaHei UI",
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Noto Sans CJK SC",
+                "Noto Sans SC",
+                "Arial Unicode MS",
+            };
             string[] installed = Font.GetOSInstalledFontNames();
             string selected = preferred.FirstOrDefault(candidate =>
                 installed.Any(font => string.Equals(font, candidate, StringComparison.OrdinalIgnoreCase)));

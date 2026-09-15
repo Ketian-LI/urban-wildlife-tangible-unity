@@ -26,11 +26,11 @@
 
 ### 9 × 6 城市建设网格
 
-正式城市地图在 90 × 60 cm 板面上使用 9 列 × 6 行、共 54 个逻辑单元，每格对应 10 × 10 cm。界面以连续的柔和城市底图为主，格线只作很淡的对齐提示且不显示开发者坐标；Plan 与 Preview 再用占地色显示即将改变的单元。摄像头继续输出归一化连续坐标，Unity 将 Token 吸附到最近单元中心，默认吸附半径为 5 cm。水体、广场和公共绿地等固定单元拒绝建设。
+正式城市地图在 90 × 60 cm 板面上使用 9 列 × 6 行、共 54 个后台逻辑单元，每格对应 10 × 10 cm。界面以连续的柔和城市底图为主，格线只作很淡的统计与对齐提示且不显示开发者坐标；Plan 与 Preview 再用占地色显示即将改变的区域。摄像头继续输出归一化连续坐标，建筑保留自由坐标而不吸附格心；后台网格只记录占地、生态状态和跨周期历史。开局底图没有河流或水域格，机动车主干道仍拒绝建筑覆盖；`Water` 土地类型继续作为以后加入小池塘等固定设施时的通用规则。
 
-建筑使用真实的多格占地：Detached House 为 1 × 1，Commercial 与 Community Facility 为 2 × 1，Apartment 为 2 × 2；旋转 90° 会交换横纵跨度。Token 所在格是建筑锚点，确认前一次检查完整矩形占地，任一格越界、固定或已有建筑都会阻止建设。确认后 `planning_cell_ids` 保存全部占用格，建筑视觉位于这些格的几何中心；拆除会整体释放，而不是只清除锚点。
+建筑使用按参考图标定的连续占地：Detached House 为 5 × 5、Apartment 为 7 × 7、Commercial 为 7.5 × 5、Community Facility 为 9 × 6 地图单位；旋转会同步改变占地包围盒。确认前检查完整占地是否越界、与主干道或既有建筑相交，确认后 `planning_cell_ids` 保存被覆盖的后台单元；拆除会整体释放，而不是只清除中心所在单元。
 
-初始地图包含 6 栋既有建筑，共占 15 格；另有 15 格 Woodland、1 格 Water、1 格 Civic Plaza、1 格 Public Green 与 21 格 Open Land。扣除固定设施和既有建筑后还有 36 个可规划单元。玩家有 11 枚建筑 Token 和 3 枚 Green Intervention，玩家建筑同时上限仍为 9 个，每周期也继续受变更预算约束。当前地面动物会检查 Water 与 Building，避免跨越障碍；上下左右四邻接继续作为通行和栖息地连接基础。
+稀疏开局包含 2 栋既有住宅、38 格 Woodland 与 14 格 Open Land，Water、Civic Plaza 和 Public Green 基线均为 0；因此 54 格中有 52 格未被固定设施或既有建筑占用，实际能否建设仍由连续占地、道路和建筑碰撞共同决定。玩家有 11 枚建筑 Token 和 3 枚 Green Intervention，玩家建筑同时上限仍为 9 个，每周期也继续受变更预算约束。当前地面动物会检查 Water 与 Building，避免跨越障碍；开局虽然没有 Water，但这一障碍规则仍由独立测试保留。上下左右四邻接继续作为后台栖息地连接基础。
 
 `CityPlanningGrid` 与 `CityGridCell` 保存行列、归一化中心与尺寸、基线/当前土地覆盖、建设许可、固定状态、建筑或栖息地引用以及最后变更 revision。建筑覆盖 Woodland 时，涉及单元切换为 Building 并永久保留 `was_woodland = true`；建筑拆除后这些单元进入 Disturbed，而不是立即恢复林地，后续 Green Intervention 才能推进 Recovering。该状态随 `CityState` revision 跨周期保留。松鼠、狐狸与刺猬初始优先从 Woodland 生成；鸽子可从 Public Green、Civic Plaza 与 Open Land 起飞或落脚，也可飞越障碍。
 

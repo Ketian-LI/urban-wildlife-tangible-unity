@@ -21,7 +21,7 @@ namespace UrbanWildlife.Prototype
                 // The opening state is deliberately sparse. The denser reference is the
                 // player's destination, not pre-authored scenery.
                 Building("detached-garden", CityBuildingType.DetachedHouse, 110, 0.277778f, 0.25f, 12, 0.35f, 0.15f, 4, 0.45f),
-                Building("detached-river", CityBuildingType.DetachedHouse, 111, 0.50f, 0.25f, 12, 0.35f, 0.15f, 4, 0.45f),
+                Building("detached-east", CityBuildingType.DetachedHouse, 111, 0.50f, 0.25f, 12, 0.35f, 0.15f, 4, 0.45f),
             };
             CityPlanningGrid planningGrid = CreatePlanningGrid(buildings, bounds);
 
@@ -256,17 +256,6 @@ namespace UrbanWildlife.Prototype
 
         private static CityLandCover BaselineCover(int row, int col)
         {
-            bool river = (row == 0 && col == 7) ||
-                         (row == 1 && (col == 6 || col == 7)) ||
-                         (row == 2 && col == 6) ||
-                         (row == 3 && (col == 5 || col == 6)) ||
-                         (row == 4 && col == 5) ||
-                         (row == 5 && (col == 5 || col == 6));
-            if (river)
-            {
-                return CityLandCover.Water;
-            }
-
             bool woodland = row == 0 || row == 5 ||
                             (row == 1 && (col <= 2 || col == 4 || col >= 6)) ||
                             (row == 2 && (col <= 1 || col == 4 || col >= 7)) ||

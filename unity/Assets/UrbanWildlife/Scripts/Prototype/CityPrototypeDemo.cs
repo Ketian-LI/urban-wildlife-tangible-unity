@@ -26,7 +26,7 @@ namespace UrbanWildlife.Prototype
         private const float BoardViewMargin = 0.55f;
         private const float RuntimeSpeed = 2f;
         private const string CityBoardUnderlayResourcePath =
-            "UrbanWildlife/Environment/city-board-riverside-opening-v01";
+            "UrbanWildlife/Environment/city-board-woodland-opening-v02";
         private const string CityPlazaResourcePath =
             "UrbanWildlife/Environment/human-activity-plaza-v01";
         private const string CityPondResourcePath =
@@ -568,9 +568,11 @@ namespace UrbanWildlife.Prototype
             switch (cell.current_cover)
             {
                 case CityLandCover.Water:
-                    // The opening underlay contains the single continuous river and bridge.
-                    // Grid water cells remain as collision data but do not draw pond circles.
-                    return;
+                    colour = new Color(0.38f, 0.76f, 0.90f, 0.24f);
+                    radiusX = 0.44f;
+                    radiusY = 0.40f;
+                    points = 16;
+                    break;
                 case CityLandCover.CivicPlaza:
                     colour = new Color(0.88f, 0.79f, 0.63f, 0.20f);
                     radiusX = 0.43f;
@@ -1785,8 +1787,8 @@ namespace UrbanWildlife.Prototype
                 bodyStyle);
             GUILayout.Label(
                 T(
-                    "Warm-white ground · Woodland · Buildings\nRiver cells block construction\nMain road — Automatic access road",
-                    "暖白空地 · 林地 · 建筑\n河流区域禁止建设\n主干道 — 自动接入道路"),
+                    "Warm-white ground · Woodland · Buildings\nMain road — Automatic access road",
+                    "暖白空地 · 林地 · 建筑\n主干道 — 自动接入道路"),
                 bodyStyle);
             AddUiSpace(CityPrototypeUiTheme.SpaceLg);
 
@@ -2065,8 +2067,8 @@ namespace UrbanWildlife.Prototype
                     GUILayout.Label(T("2  CLICK OPEN GROUND ON THE MAP", "2  点击地图上的可用空地"), headingStyle);
                     GUILayout.Label(
                         T(
-                            "Buildings cannot overlap the main road or river. Woodland is cleared to warm-white ground, and a smooth access road is added automatically.",
-                            "建筑不能覆盖主干道或河流。占用林地时会将其改为暖白空地，并自动生成平滑的接入道路。"),
+                            "Buildings cannot overlap the main road. Woodland is cleared to warm-white ground, and a smooth access road is added automatically.",
+                            "建筑不能覆盖主干道。占用林地时会将其改为暖白空地，并自动生成平滑的接入道路。"),
                         bodyStyle);
                     GUILayout.Label(LocaliseRuntimeMessage(desktopInputMessage), captionStyle);
                     break;

@@ -271,11 +271,15 @@ namespace UrbanWildlife.Prototype
 
         private static CityLandCover BaselineCover(int row, int col)
         {
-            bool woodland = row == 0 || row == 5 ||
-                            (row == 1 && (col <= 2 || col == 4 || col >= 6)) ||
-                            (row == 2 && (col <= 1 || col == 4 || col >= 7)) ||
-                            (row == 3 && (col <= 1 || col >= 7)) ||
-                            (row == 4 && (col <= 3 || col >= 7));
+            // Preserve the approved organic woodland/open-land zoning while subdividing each
+            // former 10 x 10 planning area into four 5 x 5 ecological/occupancy cells.
+            int zoneRow = row / 2;
+            int zoneCol = col / 2;
+            bool woodland = zoneRow == 0 || zoneRow == 5 ||
+                            (zoneRow == 1 && (zoneCol <= 2 || zoneCol == 4 || zoneCol >= 6)) ||
+                            (zoneRow == 2 && (zoneCol <= 1 || zoneCol == 4 || zoneCol >= 7)) ||
+                            (zoneRow == 3 && (zoneCol <= 1 || zoneCol >= 7)) ||
+                            (zoneRow == 4 && (zoneCol <= 3 || zoneCol >= 7));
             if (woodland)
             {
                 return CityLandCover.Woodland;

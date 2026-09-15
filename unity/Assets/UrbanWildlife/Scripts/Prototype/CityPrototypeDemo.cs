@@ -515,7 +515,7 @@ namespace UrbanWildlife.Prototype
 
             BuildCompactDevelopmentClearings(root.transform, grid);
 
-            // The 9 x 6 grid remains a semantic occupancy/ecology layer. Its geometry is kept
+            // The 18 x 12 grid remains a semantic occupancy/ecology layer. Its geometry is kept
             // for inspection and tests, but the normal player view must not read as square tiles.
             Color boundaryColour = new Color(0.48f, 0.58f, 0.58f, 0f);
             for (int col = 0; col <= grid.cols; col += 1)

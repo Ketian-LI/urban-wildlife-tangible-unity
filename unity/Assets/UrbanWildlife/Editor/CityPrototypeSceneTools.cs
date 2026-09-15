@@ -255,8 +255,8 @@ namespace UrbanWildlife.EditorTools
                                   clearCamera.depth < camera.depth &&
                                   Math.Abs(clearCamera.rect.width - 1f) < 0.001f;
             if (prototype == null || prototype.GeneratedBuildingCount != 2 ||
-                prototype.GeneratedPlanningCellCount != 54 ||
-                prototype.AvailablePlanningCellCount != 52 ||
+                prototype.GeneratedPlanningCellCount != 216 ||
+                prototype.AvailablePlanningCellCount != 214 ||
                 prototype.GeneratedVehicleRoadCount != 3 ||
                 prototype.GeneratedPedestrianLinkCount != 3 ||
                 prototype.GeneratedAmenityCount != 0 ||
@@ -334,7 +334,7 @@ namespace UrbanWildlife.EditorTools
             VerifyVehicleRoutesStayOnRoad();
             Debug.Log(
                 "UNITY_CITY_PROTOTYPE_SMOKE_OK split_screen=True right_sidebar=True sidebar_width=28_percent full_frame_clear=True bright_city_style=True opening_buildings=2 vehicle_roads=3 " +
-                "planning_grid=9x6 planning_cells=54 available_cells=52 reference_scaled_footprints=True hidden_grid=True " +
+                "planning_grid=18x12 planning_cells=216 available_cells=214 reference_scaled_footprints=True hidden_grid=True " +
                 "pedestrian_links=3 amenities=0 food_sources=True waste_pressure=True " +
                 "wildlife_agents=15 species=4 utility_targets=True " +
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
@@ -544,14 +544,14 @@ namespace UrbanWildlife.EditorTools
                 "UrbanWildlife/Fonts/Nunito-Regular");
             Font boldFont = Resources.Load<Font>(
                 "UrbanWildlife/Fonts/Nunito-Bold");
-            if (grid.cols != 9 || grid.rows != 6 || cells.childCount != 54 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.OpenLand) != 14 ||
-                grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland) != 38 ||
+            if (grid.cols != 18 || grid.rows != 12 || cells.childCount != 216 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.OpenLand) != 56 ||
+                grid.cells.Count(cell => cell.current_cover == CityLandCover.Woodland) != 158 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Building) != 2 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.PublicGreen) != 0 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.CivicPlaza) != 0 ||
                 grid.cells.Count(cell => cell.current_cover == CityLandCover.Water) != 0 ||
-                boundaries.GetComponentsInChildren<LineRenderer>().Length != 17 ||
+                boundaries.GetComponentsInChildren<LineRenderer>().Length != 32 ||
                 underlayRenderer?.sprite == null ||
                 underlayRenderer.sprite.name != "city-board-woodland-terrain-only-v04" ||
                 underlayRenderer.sortingOrder != -50 ||
@@ -559,9 +559,9 @@ namespace UrbanWildlife.EditorTools
                 prototype.GetComponentsInChildren<Transform>().Any(item => item.name == "East canal"))
             {
                 throw new InvalidOperationException(
-                    "The sparse opening map must render its inland woodland underlay, 54 logical cells " +
-                    "(14 open, 38 woodland, 2 opening houses and no water cells), " +
-                    "17 faint grid lines, no river and no ocean.");
+                    "The sparse opening map must render its inland woodland underlay, 216 logical cells " +
+                    "(56 open, 158 woodland, 2 opening houses and no water cells), " +
+                    "32 fully transparent grid lines, no river and no ocean.");
             }
 
             LineRenderer[] boundaryLines = boundaries.GetComponentsInChildren<LineRenderer>();
@@ -625,7 +625,7 @@ namespace UrbanWildlife.EditorTools
             {
                 throw new InvalidOperationException($"Expected no duplicated dynamic woodland groves, found {actualGroves}.");
             }
-            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=9x6 cells=54 available=52 woodland_groves={actualGroves} baked_forest=True terrain_only_underlay=True dynamic_roads=True dynamic_footpaths=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False baseline_water_cells=0 no_river=True no_ocean=True static_nunito=Regular/Bold");
+            Debug.Log($"UNITY_CITY_PLANNING_GRID_VISUAL_SMOKE_OK grid=18x12 cells=216 available=214 woodland=158 open=56 woodland_groves={actualGroves} baked_forest=True terrain_only_underlay=True dynamic_roads=True dynamic_footpaths=True transparent_land_cover=True hidden_regular_grid=True developer_labels=False baseline_water_cells=0 no_river=True no_ocean=True static_nunito=Regular/Bold");
         }
 
         private static void VerifyCompactNeighbourhoodPresentation(CityPrototypeDemo prototype)
@@ -644,6 +644,14 @@ namespace UrbanWildlife.EditorTools
                 "fox-citybuilder-soft-v02",
                 "hedgehog-citybuilder-soft-v02",
             };
+            float wildlifeHorizontalSpan = wildlifeSprites.Length == 0
+                ? 0f
+                : wildlifeSprites.Max(renderer => renderer.transform.position.x) -
+                  wildlifeSprites.Min(renderer => renderer.transform.position.x);
+            float wildlifeVerticalSpan = wildlifeSprites.Length == 0
+                ? 0f
+                : wildlifeSprites.Max(renderer => renderer.transform.position.z) -
+                  wildlifeSprites.Min(renderer => renderer.transform.position.z);
             if (roads == null || !roads.gameObject.activeSelf ||
                 accessRoads == null || !accessRoads.gameObject.activeSelf ||
                 accessRoads.GetComponentsInChildren<LineRenderer>().Length != 4 ||
@@ -651,16 +659,18 @@ namespace UrbanWildlife.EditorTools
                 footpaths.GetComponentsInChildren<LineRenderer>().Length != 6 ||
                 wildlife == null || wildlife.childCount != 15 ||
                 wildlifeSprites.Length != 15 ||
+                wildlifeHorizontalSpan < 5f || wildlifeVerticalSpan < 3f ||
                 wildlifeSprites.Any(renderer => renderer.sprite == null ||
                                                   !expectedWildlifeSprites.Contains(renderer.sprite.name)))
             {
                 throw new InvalidOperationException(
-                    "The opening view must show its dynamic main road, two house driveways, three pedestrian paths, and wildlife artwork.");
+                    "The opening view must show its dynamic roads and paths, use wildlife artwork, and distribute animals across the map.");
             }
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
                 "dynamic_main_road_default_visible=True two_driveways_visible=True pedestrian_paths_default_visible=True " +
-                "wildlife_artwork=15 hedgehog_fallback=0 compact_buildings=True");
+                $"wildlife_artwork=15 wildlife_span={wildlifeHorizontalSpan:0.0}x{wildlifeVerticalSpan:0.0} " +
+                "hedgehog_fallback=0 compact_buildings=True");
         }
 
         private static void VerifyResponsiveCameraFit()
@@ -961,10 +971,10 @@ namespace UrbanWildlife.EditorTools
                     rotatedCommunity,
                     rotationCity.revision + 1,
                     out rotationError) ||
-                rotatedCommunity.planning_cell_ids.Length != 1)
+                rotatedCommunity.planning_cell_ids.Length != 4)
             {
                 throw new InvalidOperationException(
-                    $"The compact 9x6 reference community footprint was not retained: {rotationError}");
+                    $"The refined 18x12 reference community footprint was not retained: {rotationError}");
             }
 
             CityState capCity = CityPrototypeStateFactory.Create();
@@ -1009,7 +1019,7 @@ namespace UrbanWildlife.EditorTools
             }
 
             Debug.Log(
-                "UNITY_CITY_GRID_RULES_SMOKE_OK snap_radius_cm=5 same_cell_jitter=Moved " +
+                "UNITY_CITY_GRID_RULES_SMOKE_OK grid=18x12 cell_units=5x5 snap_radius_cm=5 same_cell_jitter=Moved " +
                 "footprints_units=detached_5x5/apartment_7x7/commercial_7.5x5/community_9x6 " +
                 "woodland_build=Building woodland_patches_removed=True " +
                 "footprint_demolition=Released synthetic_water_rule_rejected=True baseline_water_cells=0 active_building_cap_rule=True");

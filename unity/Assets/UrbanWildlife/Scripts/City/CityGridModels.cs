@@ -39,8 +39,8 @@ namespace UrbanWildlife.City
     [Serializable]
     public sealed class CityPlanningGrid
     {
-        public const int DefaultColumns = 9;
-        public const int DefaultRows = 6;
+        public const int DefaultColumns = 18;
+        public const int DefaultRows = 12;
         public const int DefaultCellCount = DefaultColumns * DefaultRows;
 
         public int cols = DefaultColumns;

@@ -156,7 +156,10 @@ namespace UrbanWildlife.Environmental
                 {
                     continue;
                 }
-                float sizeFactor = Mathf.Clamp(patch.patch_size_units / 300f, 0.2f, 1.5f);
+                // Keep natural-food supply proportional to habitat area. The lower floor is
+                // deliberately below one 5 x 5 planning cell so grid refinement cannot multiply
+                // the city's total food merely by splitting one habitat into more records.
+                float sizeFactor = Mathf.Clamp(patch.patch_size_units / 300f, 0.05f, 1.5f);
                 foodSources.Add(new CityFoodSource
                 {
                     id = $"food-natural-{patch.id}",

@@ -90,13 +90,13 @@
       "type": "object",
       "required": ["cols", "rows", "max_active_player_buildings", "cells"],
       "properties": {
-        "cols": { "const": 6 },
-        "rows": { "const": 4 },
+        "cols": { "const": 18 },
+        "rows": { "const": 12 },
         "max_active_player_buildings": { "const": 9 },
         "cells": {
           "type": "array",
-          "minItems": 24,
-          "maxItems": 24,
+          "minItems": 216,
+          "maxItems": 216,
           "items": { "$ref": "#/$defs/gridCell" }
         }
       }
@@ -119,9 +119,9 @@
         "last_changed_revision"
       ],
       "properties": {
-        "id": { "type": "string", "pattern": "^[A-D][1-6]$" },
-        "row": { "type": "integer", "minimum": 0, "maximum": 3 },
-        "col": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "id": { "type": "string", "pattern": "^[A-L](?:[1-9]|1[0-8])$" },
+        "row": { "type": "integer", "minimum": 0, "maximum": 11 },
+        "col": { "type": "integer", "minimum": 0, "maximum": 17 },
         "center_norm": { "$ref": "#/$defs/point" },
         "size_norm": { "$ref": "#/$defs/gridSize" },
         "baseline_cover": { "$ref": "#/$defs/landCover" },

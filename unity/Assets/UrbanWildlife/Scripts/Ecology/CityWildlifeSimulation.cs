@@ -181,7 +181,10 @@ namespace UrbanWildlife.Ecology
             }
             for (int index = 0; index < count; index += 1)
             {
-                float[] centre = spawnSites[(index + (int)species) % spawnSites.Length];
+                int spreadIndex = (int)Math.Floor(
+                    (index + 0.5f) * spawnSites.Length / Math.Max(1f, count));
+                int speciesPhase = (int)species * Math.Max(1, spawnSites.Length / 7);
+                float[] centre = spawnSites[(spreadIndex + speciesPhase) % spawnSites.Length];
                 agents.Add(CreateAgent(
                     species,
                     index + 1,
@@ -232,7 +235,9 @@ namespace UrbanWildlife.Ecology
             {
                 CityGreenPatch[] woodland = operational
                     .Where(patch => patch.type == CityGreenPatchType.Woodland)
-                    .OrderBy(patch => patch.id, StringComparer.Ordinal)
+                    .OrderBy(patch => PolygonCentroid(patch.polygon_norm)[1])
+                    .ThenBy(patch => PolygonCentroid(patch.polygon_norm)[0])
+                    .ThenBy(patch => patch.id, StringComparer.Ordinal)
                     .ToArray();
                 return (woodland.Length > 0 ? woodland : operational)
                     .Select(patch => PolygonCentroid(patch.polygon_norm))
@@ -240,6 +245,8 @@ namespace UrbanWildlife.Ecology
             }
             return operational
                 .OrderByDescending(patch => patch.type == CityGreenPatchType.OpenGrass)
+                .ThenBy(patch => PolygonCentroid(patch.polygon_norm)[1])
+                .ThenBy(patch => PolygonCentroid(patch.polygon_norm)[0])
                 .ThenBy(patch => patch.id, StringComparer.Ordinal)
                 .Select(patch => PolygonCentroid(patch.polygon_norm))
                 .ToArray();

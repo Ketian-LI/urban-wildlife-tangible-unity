@@ -340,7 +340,7 @@ namespace UrbanWildlife.EditorTools
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
                 "human_animal_combined_trace=True city_feed=True phase_report=True " +
                 "representative_agents=6 represented_population=24 walk_trips=4 vehicle_trips=2 " +
-                "external_return_routes=True live_vehicle_agents=True visible_pedestrian_paths=True max_speed=2x no_questionnaire=True " +
+                "external_return_routes=True live_vehicle_agents=True visible_pedestrian_paths=True shared_road_corridor=True pedestrians_on_sidewalk=True max_speed=2x no_questionnaire=True " +
                 "animal_activity_heatmap=True heatmap_hotkey_h=True heatmap_sidebar_bottom_right=True heatmap_world_overlay=False footprints_removed=True city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
@@ -468,9 +468,44 @@ namespace UrbanWildlife.EditorTools
                 "UrbanWildlife/Vehicles/city-car-warm-mustard-v01",
             };
             bool resourcesLoad = vehicleSprites.All(path => Resources.Load<Sprite>(path) != null);
+            CityState streetCity = CityPrototypeStateFactory.Create();
+            CityVehicleRoad mainRoad = streetCity.vehicle_roads.Single(road =>
+                road.id == "vehicle-main-street");
+            CityPedestrianLink mainSidewalk = streetCity.pedestrian_links.Single(link =>
+                link.id == "pedestrian-park-spine");
+            bool sidewalkFollowsRoad = mainRoad.points_norm.Length == mainSidewalk.points_norm.Length &&
+                mainRoad.points_norm.Select((point, index) => new { point, index })
+                    .Skip(1)
+                    .Take(mainRoad.points_norm.Length - 2)
+                    .Select(item => WorldDistance(
+                        item.point,
+                        mainSidewalk.points_norm[item.index],
+                        streetCity.bounds))
+                    .All(distance => distance >= 0.95f && distance <= 1.15f);
+            bool accessSidewalksFollowRoads = streetCity.vehicle_roads
+                .Where(road => road.role == CityVehicleRoadRole.BuildingAccess)
+                .All(road =>
+                {
+                    string buildingId = road.connected_building_ids.Single();
+                    CityPedestrianLink sidewalk = streetCity.pedestrian_links.Single(link =>
+                        link.connected_building_ids.Contains(buildingId) &&
+                        link.type == CityPedestrianLinkType.BasicBuildingAccess);
+                    return road.points_norm.Select((point, index) => WorldDistance(
+                            point,
+                            sidewalk.points_norm[index],
+                            streetCity.bounds))
+                        .All(distance => distance >= 0.40f && distance <= 0.56f);
+                });
+            CityMobilityPlan streetPlan = CityTripPlanner.CreatePlan(streetCity);
+            bool walkersUseSidewalk = streetPlan.trips
+                .Where(trip => trip.mode == CityTravelMode.Walk)
+                .All(trip => trip.route_points_norm.Any(routePoint =>
+                    mainSidewalk.points_norm.Any(sidewalkPoint =>
+                        WorldDistance(routePoint, sidewalkPoint, streetCity.bounds) <= 0.01f)));
             if (!resourcesLoad || humanArtworkCount != 6 || vehicleArtworkCount != 2 ||
                 visiblePathLayers != 6 || !prototype.PedestrianNetworkVisible ||
-                prototype.WalkTripCount != 4)
+                prototype.WalkTripCount != 4 || !sidewalkFollowsRoad ||
+                !accessSidewalksFollowRoads || !walkersUseSidewalk)
             {
                 throw new InvalidOperationException(
                     $"Street-life presentation is incomplete: humans={humanArtworkCount}, " +
@@ -479,7 +514,15 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_STREET_LIFE_SMOKE_OK humans=6 walking=4 vehicles=2 " +
-                "vehicle_sprites=3 pedestrian_links=3 outlined_paths=6 visible_by_default=True");
+                "vehicle_sprites=3 pedestrian_links=3 outlined_paths=6 visible_by_default=True " +
+                "shared_road_corridor=True pedestrians_on_sidewalk=True road_centre_separated=True");
+        }
+
+        private static float WorldDistance(float[] first, float[] second, CityBounds bounds)
+        {
+            float deltaX = (first[0] - second[0]) * bounds.width_units;
+            float deltaY = (first[1] - second[1]) * bounds.height_units;
+            return Mathf.Sqrt(deltaX * deltaX + deltaY * deltaY);
         }
 
         private static void VerifyResidentialBuildingVisuals(CityPrototypeDemo prototype)
@@ -1106,13 +1149,60 @@ namespace UrbanWildlife.EditorTools
             CityRoadChoiceSet access = CityRoadCandidateGenerator.Generate(placedCity, placed);
             CityRoadCandidate automatic = access.candidates.Single(candidate =>
                 candidate.route_option == CityRoadRouteOption.Direct);
+            CityPedestrianLink automaticSidewalk =
+                CityRoadCandidateGenerator.CreateBasicPedestrianAccess(
+                    placedCity,
+                    placed,
+                    automatic);
+            bool sidewalkTracksAutomaticRoad = automatic.points_norm
+                .Select((point, index) => WorldDistance(
+                    point,
+                    automaticSidewalk.points_norm[index],
+                    placedCity.bounds))
+                .All(distance => distance >= 0.90f && distance <= 1.06f);
             if (automatic.points_norm.Length != 11 ||
                 automatic.connection_road_id != "vehicle-main-street" ||
                 automatic.points_norm.Skip(1).Take(automatic.points_norm.Length - 2)
-                    .All(point => Math.Abs(point[0] - automatic.points_norm[0][0]) < 0.0001f))
+                    .All(point => Math.Abs(point[0] - automatic.points_norm[0][0]) < 0.0001f) ||
+                automaticSidewalk.points_norm.Length < automatic.points_norm.Length ||
+                !sidewalkTracksAutomaticRoad)
             {
                 throw new InvalidOperationException(
                     "Automatic access did not create a smooth multi-point curve to the main road.");
+            }
+
+            CityNetworkPlanningManager networkPlanner =
+                new CityNetworkPlanningManager(placedCity);
+            CityNetworkPlanPreview networkPreview = networkPlanner.BeginRouteSelection();
+            CityPedestrianLink directSidewalkPreview =
+                networkPreview.automatic_pedestrian_links.Single(link =>
+                    link.connected_building_ids.Contains(placed.id));
+            float[][] directSidewalkPoints = directSidewalkPreview.points_norm
+                .Select(point => (float[])point.Clone())
+                .ToArray();
+            if (!networkPlanner.SelectRoadOption(
+                    placed.id,
+                    CityRoadRouteOption.LowImpact,
+                    out string routeSelectionError))
+            {
+                throw new InvalidOperationException(
+                    $"Could not select a low-impact road for sidewalk synchronization: {routeSelectionError}");
+            }
+            CityPedestrianLink updatedSidewalkPreview =
+                networkPlanner.PendingPreview.automatic_pedestrian_links.Single(link =>
+                    link.connected_building_ids.Contains(placed.id));
+            bool sidewalkChangedWithRoad = directSidewalkPoints.Length !=
+                                           updatedSidewalkPreview.points_norm.Length ||
+                directSidewalkPoints.Select((point, index) => new { point, index })
+                    .Where(item => item.index < updatedSidewalkPreview.points_norm.Length)
+                    .Any(item => WorldDistance(
+                        item.point,
+                        updatedSidewalkPreview.points_norm[item.index],
+                        placedCity.bounds) > 0.05f);
+            if (!sidewalkChangedWithRoad)
+            {
+                throw new InvalidOperationException(
+                    "The automatic sidewalk did not update when the selected vehicle route changed.");
             }
 
             CityState clearingCity = CityPrototypeStateFactory.Create();
@@ -1150,7 +1240,8 @@ namespace UrbanWildlife.EditorTools
 
             Debug.Log(
                 "UNITY_CITY_FREE_PLACEMENT_SMOKE_OK continuous_position=True road_overlap_rejected=True " +
-                "smooth_main_road_curve=11_points woodland_to_white=True");
+                "smooth_main_road_curve=11_points parallel_sidewalk=True sidewalk_tracks_route_choice=True " +
+                "woodland_to_white=True");
         }
 
         private static void VerifyDesktopPlayableFlow(CityPrototypeDemo prototype)

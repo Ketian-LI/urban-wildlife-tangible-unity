@@ -60,7 +60,20 @@ namespace UrbanWildlife.Networks
                                    (building.pedestrian_link_ids == null ||
                                     building.pedestrian_link_ids.Length == 0))
                 .Select(building =>
-                    CityRoadCandidateGenerator.CreateBasicPedestrianAccess(CurrentState, building))
+                {
+                    CityRoadChoiceSet choice = choices.FirstOrDefault(item =>
+                        item.building_id == building.id);
+                    CityRoadCandidate direct = choice?.candidates.FirstOrDefault(candidate =>
+                        candidate.route_option == CityRoadRouteOption.Direct);
+                    return direct == null
+                        ? CityRoadCandidateGenerator.CreateBasicPedestrianAccess(
+                            CurrentState,
+                            building)
+                        : CityRoadCandidateGenerator.CreateBasicPedestrianAccess(
+                            CurrentState,
+                            building,
+                            direct);
+                })
                 .ToArray();
 
             PendingPreview = new CityNetworkPlanPreview
@@ -109,6 +122,21 @@ namespace UrbanWildlife.Networks
                 return false;
             }
             choice.selected_candidate_id = candidate.id;
+            CityBuilding building = CurrentState.buildings.FirstOrDefault(item =>
+                item != null && item.id == buildingId);
+            int pedestrianIndex = Array.FindIndex(
+                PendingPreview.automatic_pedestrian_links,
+                link => link != null &&
+                        link.connected_building_ids != null &&
+                        link.connected_building_ids.Contains(buildingId));
+            if (building?.requires_pedestrian_access == true && pedestrianIndex >= 0)
+            {
+                PendingPreview.automatic_pedestrian_links[pedestrianIndex] =
+                    CityRoadCandidateGenerator.CreateBasicPedestrianAccess(
+                        CurrentState,
+                        building,
+                        candidate);
+            }
             LastMessage =
                 $"Selected {routeOption} for {buildingId} " +
                 $"({candidate.estimated_length_units:0.0} units).";

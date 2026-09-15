@@ -46,13 +46,13 @@
 
 `CityRoadCandidateGenerator` 为每栋尚未接入机动车网络的 Proposed Building 生成三条独立候选：Direct投影到最近的既有道路段，Existing-network连接最近的既有网络端点，Low-impact在直连两侧建立绕行点，并以Woodland/ShrubGarden采样代价选择影响较低的一侧。候选公开长度、敏感绿地影响与按建筑Vehicle Demand标定的交通压力。该实现是确定性的几何/代价采样V0.1，不宣称等同真实交通模型；需要更复杂地图时可将内部求解器替换为隐藏Grid+A*，而不改变候选数据接口。
 
-`CityNetworkPlanningManager` 在Route Selection Preview中要求每栋建筑选且只选一个机动车候选。确认后只把选择结果写为`BuildingAccess` VehicleRoad，并更新Building引用。Pedestrian Network使用独立数组：系统同时为每栋新建筑生成最近既有人行网络的`BasicBuildingAccess`；玩家可在屏幕中新增、调整或删除`ScreenEdited ExtraFootpath`。确认是原子事务，删除ExtraFootpath时同步移除建筑引用；任何State验证失败都保留上一版CityState。正式输入中没有机动车或步行彩带字段。
+`CityNetworkPlanningManager` 在Route Selection Preview中要求每栋建筑选且只选一个机动车候选。确认后把选择结果写为`BuildingAccess` VehicleRoad，并更新Building引用。Pedestrian Network仍使用独立数据数组，但几何从车辆道路派生：主路人行道按真实地图单位沿道路切线做恒定法向偏移，建筑`BasicBuildingAccess`也沿当前所选车辆支路的侧边生成，并在玩家改选Direct、Existing-network或Low-impact时同步重算。玩家仍可在屏幕中新增、调整或删除`ScreenEdited ExtraFootpath`。确认是原子事务，删除ExtraFootpath时同步移除建筑引用；任何State验证失败都保留上一版CityState。正式输入中没有机动车或步行彩带字段。
 
 ### 代表性人流与车辆
 
 `CityTripPlanner` 只读取 `Existing` Building。住宅的 Housing Capacity 与 Human Origin Rate 决定代表性居民数量，默认最多24个且公开每个代理代表的人数；Commercial 与 Community Facility 作为目的地。目的地效用由 Destination Weight、归一化距离、稳定微扰和预计 Crowd Penalty 组成，Capacity 以代表人口而非屏幕代理数量计算。
 
-`CityNetworkRouteBuilder` 通过建筑接入线的 `connected_road_ids` 或 `connected_link_ids` 拼接主网络：Walk只查询PedestrianLink，Drive只查询VehicleRoad。高机动车需求住宅的首个代表性Drive Trip会沿道路连接寻找地图边缘出口，并在路线末端加入边界外网关；当城市尚无内部目的地时，住宅行程也可以全部通过该网关出城。`CityTripAgent` 使用同一路线完成Outbound、边界外Dwelling和完整逆序Returning，因此车辆会真实驶出画面再从同一入口返回。`CityMobilitySimulation` 按1.5秒间隔生成代理；Drive状态才公开对应Vehicle Agent，因此车辆数量可追溯到具体Trip，不存在随机背景交通。当前公式和速度是确定性玩法V0.1，不是人口或交通预测模型。
+`CityNetworkRouteBuilder` 通过建筑接入线的 `connected_road_ids` 或 `connected_link_ids` 拼接同一道路走廊：Drive查询VehicleRoad并沿道路中心线行驶，Walk查询由该道路派生的PedestrianLink并始终走在侧边人行道。高机动车需求住宅的首个代表性Drive Trip会沿道路连接寻找地图边缘出口，并在路线末端加入边界外网关；当城市尚无内部目的地时，住宅行程也可以全部通过该网关出城。`CityTripAgent` 使用同一路线完成Outbound、边界外Dwelling和完整逆序Returning，因此车辆会真实驶出画面再从同一入口返回。`CityMobilitySimulation` 按1.5秒间隔生成代理；Drive状态才公开对应Vehicle Agent，因此车辆数量可追溯到具体Trip，不存在随机背景交通。当前公式和速度是确定性玩法V0.1，不是人口或交通预测模型。
 
 ### 城市可视化集成壳
 

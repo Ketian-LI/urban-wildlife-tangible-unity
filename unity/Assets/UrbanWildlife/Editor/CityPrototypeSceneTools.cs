@@ -145,8 +145,8 @@ namespace UrbanWildlife.EditorTools
         {
             string[] assetPaths =
             {
-                "Assets/Resources/UrbanWildlife/Buildings/detached-house-riverside-blue-v07.png",
-                "Assets/Resources/UrbanWildlife/Buildings/detached-house-riverside-coral-v07.png",
+                "Assets/Resources/UrbanWildlife/Buildings/detached-house-riverside-blue-v08.png",
+                "Assets/Resources/UrbanWildlife/Buildings/detached-house-riverside-coral-v08.png",
                 "Assets/Resources/UrbanWildlife/Buildings/apartment-reference-soft-v03.png",
                 "Assets/Resources/UrbanWildlife/Buildings/commercial-shop-reference-soft-v04.png",
                 "Assets/Resources/UrbanWildlife/Buildings/community-centre-reference-soft-v03.png",
@@ -587,10 +587,10 @@ namespace UrbanWildlife.EditorTools
                 : buildings.GetComponentsInChildren<SpriteRenderer>();
             int residentialBlueCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "detached-house-riverside-blue-v07");
+                renderer.sprite.name == "detached-house-riverside-blue-v08");
             int residentialCoralCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
-                renderer.sprite.name == "detached-house-riverside-coral-v07");
+                renderer.sprite.name == "detached-house-riverside-coral-v08");
             int apartmentCount = renderers.Count(renderer =>
                 renderer.sprite != null &&
                 renderer.sprite.name == "apartment-reference-soft-v03");

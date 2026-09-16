@@ -7,6 +7,8 @@ namespace UrbanWildlife.Mobility
 {
     public static class CityNetworkRouteBuilder
     {
+        public const float VehicleBuildingClearanceUnits = 1.10f;
+
         public static float[][] Build(
             CityState city,
             CityBuilding origin,
@@ -62,6 +64,11 @@ namespace UrbanWildlife.Mobility
                     city.bounds);
             }
             AppendDistinct(route, destination.position_norm);
+            if (mode == CityTravelMode.Drive)
+            {
+                TrimVehicleEndpointFromBuilding(route, origin, city.bounds, true);
+                TrimVehicleEndpointFromBuilding(route, destination, city.bounds, false);
+            }
             float[][] result = route.ToArray();
             if (result.Length < 2)
             {
@@ -197,7 +204,128 @@ namespace UrbanWildlife.Mobility
             AppendDistinct(
                 route,
                 OutsideGatewayFrom(route[route.Count - 1], outsideMarginNorm));
+            if (mode == CityTravelMode.Drive)
+            {
+                TrimVehicleEndpointFromBuilding(route, origin, city.bounds, true);
+            }
             return route.ToArray();
+        }
+
+        private static void TrimVehicleEndpointFromBuilding(
+            List<float[]> route,
+            CityBuilding building,
+            CityBounds bounds,
+            bool trimStart)
+        {
+            if (route == null || route.Count < 2 || building?.position_norm == null ||
+                building.position_norm.Length != 2 || building.footprint_units == null ||
+                building.footprint_units.Length != 2)
+            {
+                return;
+            }
+
+            List<float[]> oriented = route.Select(ClonePoint).ToList();
+            if (!trimStart)
+            {
+                oriented.Reverse();
+            }
+            List<float[]> trimmed = TrimPolylineOutsideBuilding(
+                oriented,
+                building,
+                VehicleBuildingClearanceUnits,
+                bounds);
+            if (trimmed.Count < 2)
+            {
+                return;
+            }
+            if (!trimStart)
+            {
+                trimmed.Reverse();
+            }
+            route.Clear();
+            route.AddRange(trimmed);
+        }
+
+        private static float DistanceFromBuildingFootprint(
+            CityBuilding building,
+            float[] point,
+            CityBounds bounds)
+        {
+            float centreX = building.position_norm[0] * bounds.width_units;
+            float centreY = building.position_norm[1] * bounds.height_units;
+            float deltaX = point[0] * bounds.width_units - centreX;
+            float deltaY = point[1] * bounds.height_units - centreY;
+            double radians = building.rotation_deg * Math.PI / 180d;
+            float cosine = (float)Math.Cos(radians);
+            float sine = (float)Math.Sin(radians);
+            float localX = deltaX * cosine + deltaY * sine;
+            float localY = -deltaX * sine + deltaY * cosine;
+            float halfWidth = building.footprint_units[0] * 0.5f;
+            float halfHeight = building.footprint_units[1] * 0.5f;
+            float outsideX = Math.Max(0f, Math.Abs(localX) - halfWidth);
+            float outsideY = Math.Max(0f, Math.Abs(localY) - halfHeight);
+            return (float)Math.Sqrt(outsideX * outsideX + outsideY * outsideY);
+        }
+
+        private static List<float[]> TrimPolylineOutsideBuilding(
+            IReadOnlyList<float[]> route,
+            CityBuilding building,
+            float requiredClearanceUnits,
+            CityBounds bounds)
+        {
+            if (route == null || route.Count < 2 || requiredClearanceUnits <= 0f)
+            {
+                return route?.Select(ClonePoint).ToList() ?? new List<float[]>();
+            }
+
+            for (int index = 1; index < route.Count; index += 1)
+            {
+                if (DistanceFromBuildingFootprint(building, route[index], bounds) <
+                    requiredClearanceUnits)
+                {
+                    continue;
+                }
+
+                float low = 0f;
+                float high = 1f;
+                for (int iteration = 0; iteration < 18; iteration += 1)
+                {
+                    float middle = (low + high) * 0.5f;
+                    float[] candidate =
+                    {
+                        route[index - 1][0] +
+                        (route[index][0] - route[index - 1][0]) * middle,
+                        route[index - 1][1] +
+                        (route[index][1] - route[index - 1][1]) * middle,
+                    };
+                    if (DistanceFromBuildingFootprint(building, candidate, bounds) >=
+                        requiredClearanceUnits)
+                    {
+                        high = middle;
+                    }
+                    else
+                    {
+                        low = middle;
+                    }
+                }
+
+                List<float[]> result = new List<float[]>
+                {
+                    new[]
+                    {
+                        route[index - 1][0] +
+                        (route[index][0] - route[index - 1][0]) * high,
+                        route[index - 1][1] +
+                        (route[index][1] - route[index - 1][1]) * high,
+                    },
+                };
+                for (int remainingIndex = index; remainingIndex < route.Count; remainingIndex += 1)
+                {
+                    AppendDistinct(result, route[remainingIndex]);
+                }
+                return result;
+            }
+            return route.Select(ClonePoint).ToList();
         }
 
         public static float Length(float[][] points, CityBounds bounds)

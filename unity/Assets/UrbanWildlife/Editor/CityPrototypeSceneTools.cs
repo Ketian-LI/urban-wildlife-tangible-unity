@@ -676,6 +676,9 @@ namespace UrbanWildlife.EditorTools
                             streetCity.bounds))
                         .All(distance => distance >= 0.62f && distance <= 0.78f);
                 });
+            bool compactAccessSidewalks =
+                Mathf.Abs(CityRoadCandidateGenerator.AutomaticAccessSidewalkWidthUnits - 0.28f) <=
+                0.001f;
             CityMobilityPlan streetPlan = CityTripPlanner.CreatePlan(streetCity);
             bool walkersUseSidewalk = streetPlan.trips
                 .Where(trip => trip.mode == CityTravelMode.Walk)
@@ -698,6 +701,7 @@ namespace UrbanWildlife.EditorTools
                 prototype.WalkTripCount != 4 || !sidewalkFollowsRoad ||
                 localRoads.Length != 3 || localSidewalks.Length != 3 ||
                 !openingHomesUseLocalStreets || !accessSidewalksFollowRoads ||
+                !compactAccessSidewalks ||
                 !walkersUseSidewalk || !compactActorScale)
             {
                 throw new InvalidOperationException(
@@ -710,7 +714,7 @@ namespace UrbanWildlife.EditorTools
                 "UNITY_CITY_STREET_LIFE_SMOKE_OK humans=6 walking=4 vehicles=2 " +
                 "vehicle_sprites=3 pedestrian_links=6 dynamic_outlined_paths=8 visible_by_default=True " +
                 "existing_local_streets=3 opening_homes_use_local_streets=True " +
-                "shared_road_corridor=True symmetric_sidewalks=True pedestrians_on_sidewalk=True road_centre_separated=True " +
+                "shared_road_corridor=True symmetric_sidewalks=True compact_sidewalks=True pedestrians_on_sidewalk=True road_centre_separated=True " +
                 "human_height=0.23 vehicle_depth=0.24 wildlife_width=0.15_to_0.28 compact_actor_scale=True");
         }
 
@@ -1910,18 +1914,29 @@ namespace UrbanWildlife.EditorTools
                        RouteTouchesRoad(trip.route_points_norm, local, city.bounds) &&
                        RouteTouchesRoad(trip.route_points_norm, mainRoad, city.bounds);
             });
+            bool vehiclesClearBuildings = externalTrips.All(trip =>
+            {
+                CityBuilding origin = city.buildings.Single(building =>
+                    building.id == trip.origin_building_id);
+                return DistanceFromBuildingFootprint(
+                    trip.route_points_norm[0],
+                    origin,
+                    city.bounds) >=
+                    CityNetworkRouteBuilder.VehicleBuildingClearanceUnits - 0.05f;
+            });
             if (externalTrips.Length == 0 || longestSegment > 15f ||
-                !routesUseLocalThenMain)
+                !routesUseLocalThenMain || !vehiclesClearBuildings)
             {
                 throw new InvalidOperationException(
                     $"Vehicle route leaves the road centreline: trips={externalTrips.Length}, " +
                     $"longestSegment={longestSegment:0.00} units, " +
-                    $"localThenMain={routesUseLocalThenMain}.");
+                    $"localThenMain={routesUseLocalThenMain}, " +
+                    $"buildingClearance={vehiclesClearBuildings}.");
             }
             Debug.Log(
                 $"UNITY_CITY_VEHICLE_ROAD_FOLLOWING_SMOKE_OK external_trips={externalTrips.Length} " +
                 $"longest_segment_units={longestSegment:0.00} local_then_main=True " +
-                "projected_road_joins=True");
+                "projected_road_joins=True vehicle_building_clearance=True");
         }
 
         private static bool RouteTouchesRoad(
@@ -1938,6 +1953,27 @@ namespace UrbanWildlife.EditorTools
             float x = (first[0] - second[0]) * bounds.width_units;
             float y = (first[1] - second[1]) * bounds.height_units;
             return Mathf.Sqrt(x * x + y * y);
+        }
+
+        private static float DistanceFromBuildingFootprint(
+            float[] point,
+            CityBuilding building,
+            CityBounds bounds)
+        {
+            float deltaX = (point[0] - building.position_norm[0]) * bounds.width_units;
+            float deltaY = (point[1] - building.position_norm[1]) * bounds.height_units;
+            float radians = building.rotation_deg * Mathf.Deg2Rad;
+            float cosine = Mathf.Cos(radians);
+            float sine = Mathf.Sin(radians);
+            float localX = deltaX * cosine + deltaY * sine;
+            float localY = -deltaX * sine + deltaY * cosine;
+            float outsideX = Mathf.Max(
+                0f,
+                Mathf.Abs(localX) - building.footprint_units[0] * 0.5f);
+            float outsideY = Mathf.Max(
+                0f,
+                Mathf.Abs(localY) - building.footprint_units[1] * 0.5f);
+            return Mathf.Sqrt(outsideX * outsideX + outsideY * outsideY);
         }
 
         private static float TerminalRoadTangentDot(

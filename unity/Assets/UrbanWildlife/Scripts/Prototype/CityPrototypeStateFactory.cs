@@ -187,7 +187,7 @@ namespace UrbanWildlife.Prototype
                         targetSidewalk.points_norm,
                         bounds,
                         building.id),
-                    width_units = 0.70f,
+                    width_units = CityRoadCandidateGenerator.AutomaticAccessSidewalkWidthUnits,
                     step_free_accessible = true,
                     connected_building_ids = new[] { building.id },
                     connected_link_ids = new[] { linkNetwork },
@@ -596,8 +596,8 @@ namespace UrbanWildlife.Prototype
             string buildingId)
         {
             float side = string.CompareOrdinal(buildingId, "detached-east") <= 0
-                ? -0.98f
-                : 0.98f;
+                ? -CityRoadCandidateGenerator.AutomaticAccessSidewalkOffsetUnits
+                : CityRoadCandidateGenerator.AutomaticAccessSidewalkOffsetUnits;
             float[][] points = CityRoadCandidateGenerator.OffsetPolyline(
                 accessRoadPoints,
                 bounds,

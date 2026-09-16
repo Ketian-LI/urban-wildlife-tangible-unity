@@ -673,7 +673,7 @@ namespace UrbanWildlife.EditorTools
                             point,
                             sidewalk.points_norm[index],
                             streetCity.bounds))
-                        .All(distance => distance >= 0.90f && distance <= 1.06f);
+                        .All(distance => distance >= 0.62f && distance <= 0.78f);
                 });
             CityMobilityPlan streetPlan = CityTripPlanner.CreatePlan(streetCity);
             bool walkersUseSidewalk = streetPlan.trips
@@ -1495,7 +1495,7 @@ namespace UrbanWildlife.EditorTools
                     point,
                     automaticSidewalk.points_norm[index],
                     placedCity.bounds))
-                .All(distance => distance >= 0.90f && distance <= 1.06f);
+                .All(distance => distance >= 0.62f && distance <= 0.78f);
             if (automatic.points_norm.Length != 11 ||
                 automaticConnection.source != CityNetworkSource.ExistingMap ||
                 automaticConnection.role == CityVehicleRoadRole.BuildingAccess ||
@@ -1579,7 +1579,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_FREE_PLACEMENT_SMOKE_OK continuous_position=True road_overlap_rejected=True " +
                 "smooth_access_curve=11_points nearest_existing_local_street=True " +
-                "parallel_sidewalk=True sidewalk_tracks_route_choice=True " +
+                "integrated_sidewalk=True sidewalk_tracks_route_choice=True " +
                 "woodland_to_white=True");
         }
 

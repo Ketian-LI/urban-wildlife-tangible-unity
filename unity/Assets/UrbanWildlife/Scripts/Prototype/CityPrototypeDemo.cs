@@ -996,12 +996,18 @@ namespace UrbanWildlife.Prototype
                     continue;
                 }
                 float width = link.width_units / city.bounds.width_units * MapWidth;
+                bool isAccessSidewalk =
+                    link.type == CityPedestrianLinkType.BasicBuildingAccess;
                 CreateLine(
                     pedestrianRoot.transform,
                     link.id + " edge",
                     link.points_norm,
-                    Mathf.Max(0.105f, width + 0.045f),
-                    new Color(252f / 255f, 252f / 255f, 247f / 255f, 0.97f),
+                    isAccessSidewalk
+                        ? Mathf.Max(0.070f, width + 0.018f)
+                        : Mathf.Max(0.105f, width + 0.045f),
+                    isAccessSidewalk
+                        ? new Color(236f / 255f, 239f / 255f, 233f / 255f, 0.99f)
+                        : new Color(252f / 255f, 252f / 255f, 247f / 255f, 0.97f),
                     0.070f,
                     -5);
                 CreateLine(
@@ -1009,7 +1015,9 @@ namespace UrbanWildlife.Prototype
                     link.id + " surface",
                     link.points_norm,
                     Mathf.Max(0.070f, width),
-                    new Color(244f / 255f, 245f / 255f, 239f / 255f, 0.98f),
+                    isAccessSidewalk
+                        ? new Color(252f / 255f, 252f / 255f, 247f / 255f, 0.99f)
+                        : new Color(244f / 255f, 245f / 255f, 239f / 255f, 0.98f),
                     0.078f,
                     -4);
             }

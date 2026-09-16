@@ -292,11 +292,18 @@ namespace UrbanWildlife.Strategy
             {
                 return;
             }
-            if (!CityGridResolver.TryReleaseCell(
+            bool released = city.buildings.Any(item => item.id == targetId)
+                ? CityGridResolver.TryReleaseBuilding(
+                    city.planning_grid,
+                    targetId,
+                    city.revision + 1,
+                    out string error)
+                : CityGridResolver.TryReleaseCell(
                     city.planning_grid,
                     cellId,
                     city.revision + 1,
-                    out string error))
+                    out error);
+            if (!released)
             {
                 throw new InvalidOperationException(
                     $"Cannot demolish {targetId}: {error}");

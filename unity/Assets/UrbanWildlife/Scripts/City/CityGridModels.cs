@@ -31,6 +31,7 @@ namespace UrbanWildlife.City
         public bool buildable;
         public bool fixed_feature;
         public string occupant_id;
+        public string[] occupant_ids = Array.Empty<string>();
         public string habitat_patch_id;
         public bool was_woodland;
         public int last_changed_revision;

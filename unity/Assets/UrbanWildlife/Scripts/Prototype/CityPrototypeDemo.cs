@@ -238,7 +238,9 @@ namespace UrbanWildlife.Prototype
         public bool BuildingPlacementCardEnabled => true;
         public bool PlacementPreviewUsesValidityColours => true;
         public bool PlacementPreviewShowsBuildingGhost => true;
-        public bool PlacementPreviewShowsAffectedCells => true;
+        public bool PlacementPreviewShowsAffectedCells => false;
+        public bool PlacementPreviewUsesExactFootprintOnly => true;
+        public bool PlacementPreviewCanConfirm => planningWorkflow?.Snapshot?.CanConfirmPreview ?? false;
         public bool TraceViewSelectorEnabled => true;
         public int ActiveTraceViewIndex => traceViewIndex;
         public bool TimeControlEnabled => true;
@@ -1349,7 +1351,6 @@ namespace UrbanWildlife.Prototype
             Color edge = valid
                 ? new Color(0.20f, 0.63f, 0.42f, 0.96f)
                 : new Color(0.82f, 0.20f, 0.22f, 0.96f);
-            DrawPlanningFootprintCells(building, valid);
             CreatePolygon(
                 planningPreviewRoot.transform,
                 $"{status} {building.id}",
@@ -1376,40 +1377,6 @@ namespace UrbanWildlife.Prototype
                 status,
                 ToWorld(building.position_norm, 0.18f),
                 0.055f);
-        }
-
-        private void DrawPlanningFootprintCells(CityBuilding building, bool valid)
-        {
-            CityGridCell[] cells = CityGridResolver.GetBuildingFootprintCellsAtPosition(
-                planningWorkflow.CurrentState.planning_grid,
-                city.bounds,
-                building,
-                out _);
-            Color colour = valid
-                ? new Color(0.25f, 0.66f, 0.44f, 0.40f)
-                : new Color(0.82f, 0.24f, 0.25f, 0.40f);
-            foreach (CityGridCell cell in cells)
-            {
-                float halfWidth = cell.size_norm[0] * 0.5f;
-                float halfHeight = cell.size_norm[1] * 0.5f;
-                float[][] outline =
-                {
-                    new[] { cell.center_norm[0] - halfWidth, cell.center_norm[1] - halfHeight },
-                    new[] { cell.center_norm[0] + halfWidth, cell.center_norm[1] - halfHeight },
-                    new[] { cell.center_norm[0] + halfWidth, cell.center_norm[1] + halfHeight },
-                    new[] { cell.center_norm[0] - halfWidth, cell.center_norm[1] + halfHeight },
-                    new[] { cell.center_norm[0] - halfWidth, cell.center_norm[1] - halfHeight },
-                };
-                CreateLine(
-                    planningPreviewRoot.transform,
-                    $"{(valid ? "Valid" : "Conflict")} affected cell {cell.id}",
-                    outline,
-                    0.012f,
-                    colour,
-                    0.111f,
-                    7,
-                    true);
-            }
         }
 
         private void DrawPlanningBuildingGhost(
@@ -1786,7 +1753,7 @@ namespace UrbanWildlife.Prototype
 
         private void HandleDesktopPointerInput()
         {
-            if (planningWorkflow?.Phase != CityPlanningWorkflowPhase.ReadyToScan ||
+            if (!CanAttemptDesktopPlacement() ||
                 bottomNavigationIndex != 0 ||
                 showMainMenu || showEndScreen ||
                 !UnityEngine.Input.GetMouseButtonDown(0))
@@ -1821,6 +1788,20 @@ namespace UrbanWildlife.Prototype
             float xNorm = world.x / MapWidth + 0.5f;
             float yNorm = 0.5f - world.z / MapHeight;
             TryPlaceDesktopBuilding(desktopBuildingType, xNorm, yNorm, out _);
+        }
+
+        private bool CanAttemptDesktopPlacement()
+        {
+            if (planningWorkflow == null)
+            {
+                return false;
+            }
+            if (planningWorkflow.Phase == CityPlanningWorkflowPhase.ReadyToScan)
+            {
+                return true;
+            }
+            return planningWorkflow.Phase == CityPlanningWorkflowPhase.Preview &&
+                   !(planningWorkflow.Snapshot?.CanConfirmPreview ?? false);
         }
 
         private bool PointerOverMapChrome(Vector2 guiPoint)
@@ -1871,6 +1852,13 @@ namespace UrbanWildlife.Prototype
                 desktopInputMessage = error;
                 return false;
             }
+            if (planningWorkflow?.Phase == CityPlanningWorkflowPhase.Preview &&
+                !(planningWorkflow.Snapshot?.CanConfirmPreview ?? false))
+            {
+                // A blocked desktop preview is only a rejected attempt. Replace it
+                // immediately so the player can keep clicking until a valid site is found.
+                planningWorkflow.CancelPreview();
+            }
             if (planningWorkflow?.Phase != CityPlanningWorkflowPhase.ReadyToScan)
             {
                 error = "Finish or cancel the current preview first.";
@@ -1894,7 +1882,7 @@ namespace UrbanWildlife.Prototype
             desktopBuildingType = type;
             desktopInputMessage = planningWorkflow.Snapshot.CanConfirmPreview
                 ? "Preview ready. Confirm to build and connect it to the nearest existing street."
-                : planningWorkflow.Snapshot.message;
+                : "That position is blocked. Click another map position to try again.";
             RefreshPlanningOverlay();
             return true;
         }
@@ -4638,6 +4626,8 @@ namespace UrbanWildlife.Prototype
                     return "这次点击没有落在地图范围内。";
                 case "Preview ready. Confirm to build and connect it to the nearest existing street.":
                     return "预览已就绪。确认后将建造建筑并接入最近的既有道路。";
+                case "That position is blocked. Click another map position to try again.":
+                    return "该位置不可建造。请直接点击地图上的其他位置重试。";
                 case "Built. Choose another building and click the map.":
                     return "建造完成。请选择下一栋建筑并点击地图。";
                 case "Placement cancelled. Choose another position.":

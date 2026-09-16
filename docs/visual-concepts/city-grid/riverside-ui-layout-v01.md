@@ -13,7 +13,9 @@ This pass aligns the playable Unity interface with the supplied Riverside Park r
 - Trace mode is separate from that card: Human, Animal and Combined use a light full-map overlay with orange/red human paths and cyan/blue animal paths.
 - Chinese and English modes share the same hierarchy and spacing.
 - UI rectangles block map placement clicks so interface interaction cannot place buildings accidentally.
-- During placement, the exact building footprint and a translucent building preview are shown together: green is valid and red is blocked. Fine planning-cell outlines are secondary guidance only; the pointer remains continuously placeable rather than grid-snapped.
+- During placement, the exact building footprint and a translucent building preview are shown together: green is valid and red is blocked. Hidden planning cells are no longer outlined, so the visible shape matches the continuous gameplay footprint rather than suggesting a larger grid-sized site.
+- In desktop play, non-overlapping building footprints may share a hidden ecology cell; the cell is bookkeeping rather than extra collision space.
+- A blocked red desktop preview can be replaced immediately by clicking another map position; only a valid green preview requires explicit confirmation or cancellation. The camera workflow is unchanged in this pass.
 - The cleared warm-white ground after confirmation follows the compact building footprint and narrow access route instead of clearing whole planning cells.
 - Building density comes from adding more compact buildings, not enlarging individual icons. Detached houses retain their established size; apartments, markets and community buildings use smaller type-specific display scales matched to the mature-city reference while their gameplay footprints remain unchanged.
 - Camera-free desktop play can continue placing repeated building types up to a 72-building city; the physical-camera edition remains constrained to its real Token inventory.

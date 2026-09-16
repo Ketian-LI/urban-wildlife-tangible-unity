@@ -59,6 +59,10 @@ namespace UrbanWildlife.Construction
             List<CityGreenPatch> proposedPatches = new List<CityGreenPatch>();
             HashSet<string> removedPatchIds = new HashSet<string>(StringComparer.Ordinal);
             CityPlanningGrid previewGrid = CityGridResolver.DeepClone(CurrentState.planning_grid);
+            bool desktopPointerPlacement = string.Equals(
+                snappedScan.capture?.mode,
+                "desktop_pointer",
+                StringComparison.Ordinal);
             int activePlayerBuildings = (CurrentState.buildings ?? Array.Empty<CityBuilding>())
                 .Count(IsPlayerBuilding);
             foreach (CityTokenChange change in changes.Where(item =>
@@ -129,6 +133,7 @@ namespace UrbanWildlife.Construction
                                         CurrentState.bounds,
                                         building,
                                         CurrentState.revision + 1,
+                                        desktopPointerPlacement,
                                         out issue))
                                 {
                                     // Resolver supplies the placement issue.

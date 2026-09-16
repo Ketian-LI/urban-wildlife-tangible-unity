@@ -143,6 +143,7 @@ namespace UrbanWildlife.City
                 footprintCells,
                 revision,
                 true,
+                false,
                 out error);
         }
 
@@ -151,6 +152,23 @@ namespace UrbanWildlife.City
             CityBounds bounds,
             CityBuilding building,
             int revision,
+            out string error)
+        {
+            return TryOccupyWithBuildingAtPosition(
+                grid,
+                bounds,
+                building,
+                revision,
+                false,
+                out error);
+        }
+
+        public static bool TryOccupyWithBuildingAtPosition(
+            CityPlanningGrid grid,
+            CityBounds bounds,
+            CityBuilding building,
+            int revision,
+            bool allowSharedFootprintCells,
             out string error)
         {
             CityGridCell[] footprintCells = GetBuildingFootprintCellsAtPosition(
@@ -179,6 +197,7 @@ namespace UrbanWildlife.City
                 footprintCells,
                 revision,
                 false,
+                allowSharedFootprintCells,
                 out error);
         }
 
@@ -330,9 +349,10 @@ namespace UrbanWildlife.City
                 error = $"Grid cell {cell.id} does not allow green intervention placement.";
                 return false;
             }
-            if (!string.IsNullOrWhiteSpace(cell.occupant_id))
+            string[] buildingOccupants = BuildingOccupantIds(cell);
+            if (buildingOccupants.Length > 0)
             {
-                error = $"Grid cell {cell.id} is occupied by building {cell.occupant_id}.";
+                error = $"Grid cell {cell.id} is occupied by building {buildingOccupants[0]}.";
                 return false;
             }
             if (cell.fixed_feature && cell.habitat_patch_id != patch.id)
@@ -354,6 +374,7 @@ namespace UrbanWildlife.City
                                 cover == CityLandCover.Woodland;
             cell.current_cover = cover;
             cell.occupant_id = null;
+            cell.occupant_ids = Array.Empty<string>();
             cell.habitat_patch_id = patch.id;
             cell.last_changed_revision = revision;
             patch.planning_cell_id = cell.id;
@@ -382,11 +403,12 @@ namespace UrbanWildlife.City
                 return false;
             }
 
-            CityGridCell[] releasedCells = string.IsNullOrWhiteSpace(cell.occupant_id)
-                ? new[] { cell }
-                : grid.cells.Where(candidate => candidate != null &&
-                                                candidate.occupant_id == cell.occupant_id)
-                    .ToArray();
+            string buildingId = BuildingOccupantIds(cell).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(buildingId))
+            {
+                return TryReleaseBuilding(grid, buildingId, revision, out error);
+            }
+            CityGridCell[] releasedCells = { cell };
             if (releasedCells.Any(candidate => candidate.fixed_feature))
             {
                 error = "A fixed planning feature cannot be released.";
@@ -401,8 +423,59 @@ namespace UrbanWildlife.City
                     ? CityLandCover.Disturbed
                     : CityLandCover.OpenLand;
                 releasedCell.occupant_id = null;
+                releasedCell.occupant_ids = Array.Empty<string>();
                 releasedCell.habitat_patch_id = null;
                 releasedCell.last_changed_revision = revision;
+            }
+            return true;
+        }
+
+        public static bool TryReleaseBuilding(
+            CityPlanningGrid grid,
+            string buildingId,
+            int revision,
+            out string error)
+        {
+            error = string.Empty;
+            if (grid?.cells == null || string.IsNullOrWhiteSpace(buildingId))
+            {
+                error = "Building occupancy data is incomplete.";
+                return false;
+            }
+            CityGridCell[] releasedCells = grid.cells
+                .Where(cell => cell != null && BuildingOccupantIds(cell).Contains(buildingId))
+                .ToArray();
+            if (releasedCells.Length == 0)
+            {
+                error = $"Building '{buildingId}' does not occupy the planning grid.";
+                return false;
+            }
+            if (releasedCells.Any(cell => cell.fixed_feature))
+            {
+                error = "A fixed planning feature cannot be released.";
+                return false;
+            }
+            foreach (CityGridCell releasedCell in releasedCells)
+            {
+                string[] remaining = BuildingOccupantIds(releasedCell)
+                    .Where(id => id != buildingId)
+                    .ToArray();
+                releasedCell.occupant_ids = remaining;
+                releasedCell.occupant_id = remaining.FirstOrDefault();
+                releasedCell.last_changed_revision = revision;
+                if (remaining.Length > 0)
+                {
+                    releasedCell.current_cover = CityLandCover.Building;
+                    releasedCell.habitat_patch_id = null;
+                    continue;
+                }
+                releasedCell.was_woodland = releasedCell.was_woodland ||
+                                             releasedCell.baseline_cover == CityLandCover.Woodland ||
+                                             releasedCell.current_cover == CityLandCover.Woodland;
+                releasedCell.current_cover = releasedCell.was_woodland
+                    ? CityLandCover.Disturbed
+                    : CityLandCover.OpenLand;
+                releasedCell.habitat_patch_id = null;
             }
             return true;
         }
@@ -472,12 +545,26 @@ namespace UrbanWildlife.City
                    cover == CityLandCover.Recovering;
         }
 
+        public static string[] BuildingOccupantIds(CityGridCell cell)
+        {
+            if (cell == null)
+            {
+                return Array.Empty<string>();
+            }
+            return (cell.occupant_ids ?? Array.Empty<string>())
+                .Concat(new[] { cell.occupant_id })
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+
         private static bool OccupyBuildingCells(
             CityBuilding building,
             CityGridCell anchor,
             CityGridCell[] footprintCells,
             int revision,
             bool snapPositionToCells,
+            bool allowSharedFootprintCells,
             out string error)
         {
             error = string.Empty;
@@ -489,11 +576,11 @@ namespace UrbanWildlife.City
                 return false;
             }
             CityGridCell occupied = footprintCells.FirstOrDefault(candidate =>
-                !string.IsNullOrWhiteSpace(candidate.occupant_id) &&
-                candidate.occupant_id != building.id);
-            if (occupied != null)
+                BuildingOccupantIds(candidate).Any(id => id != building.id));
+            if (occupied != null && !allowSharedFootprintCells)
             {
-                error = $"Grid cell {occupied.id} is already occupied by {occupied.occupant_id}.";
+                error = $"Grid cell {occupied.id} is already occupied by " +
+                        $"{BuildingOccupantIds(occupied).First(id => id != building.id)}.";
                 return false;
             }
 
@@ -503,7 +590,12 @@ namespace UrbanWildlife.City
                                               footprintCell.baseline_cover == CityLandCover.Woodland ||
                                               footprintCell.current_cover == CityLandCover.Woodland;
                 footprintCell.current_cover = CityLandCover.Building;
-                footprintCell.occupant_id = building.id;
+                string[] occupants = BuildingOccupantIds(footprintCell)
+                    .Concat(new[] { building.id })
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+                footprintCell.occupant_ids = occupants;
+                footprintCell.occupant_id = occupants.FirstOrDefault();
                 footprintCell.habitat_patch_id = null;
                 footprintCell.last_changed_revision = revision;
             }
@@ -756,6 +848,7 @@ namespace UrbanWildlife.City
                 buildable = cell.buildable,
                 fixed_feature = cell.fixed_feature,
                 occupant_id = cell.occupant_id,
+                occupant_ids = (cell.occupant_ids ?? Array.Empty<string>()).ToArray(),
                 habitat_patch_id = cell.habitat_patch_id,
                 was_woodland = cell.was_woodland,
                 last_changed_revision = cell.last_changed_revision,

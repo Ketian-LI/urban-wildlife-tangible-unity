@@ -359,7 +359,7 @@ namespace UrbanWildlife.City
                         $"Building {building.id} references unknown planning cell " +
                         $"{building.planning_cell_id}.");
                 }
-                else if (anchorCell.occupant_id != building.id)
+                else if (!CityGridResolver.BuildingOccupantIds(anchorCell).Contains(building.id))
                 {
                     errors.Add(
                         $"Building {building.id} and planning cell {anchorCell.id} do not reference each other.");
@@ -395,7 +395,8 @@ namespace UrbanWildlife.City
                         errors.Add(
                             $"Building {building.id} references unknown footprint cell {occupiedCellId}.");
                     }
-                    else if (footprintCell.occupant_id != building.id)
+                    else if (!CityGridResolver.BuildingOccupantIds(footprintCell)
+                                 .Contains(building.id))
                     {
                         errors.Add(
                             $"Building {building.id} and footprint cell {footprintCell.id} do not reference each other.");
@@ -429,7 +430,8 @@ namespace UrbanWildlife.City
             HashSet<string> occupiedPatchIds,
             List<string> errors)
         {
-            bool hasBuilding = !string.IsNullOrWhiteSpace(cell.occupant_id);
+            string[] occupantIds = CityGridResolver.BuildingOccupantIds(cell);
+            bool hasBuilding = occupantIds.Length > 0;
             bool hasPatch = !string.IsNullOrWhiteSpace(cell.habitat_patch_id);
             if (hasBuilding && hasPatch)
             {
@@ -446,17 +448,20 @@ namespace UrbanWildlife.City
                     errors.Add(
                         $"Occupied planning grid cell {cell.id} must use Building land cover.");
                 }
-                if (!buildingIds.Contains(cell.occupant_id))
+                foreach (string occupantId in occupantIds)
                 {
-                    errors.Add(
-                        $"Planning grid cell {cell.id} references unknown building {cell.occupant_id}.");
-                }
-                CityBuilding building = buildings.FirstOrDefault(item =>
-                    item != null && item.id == cell.occupant_id);
-                if (building != null && !BuildingCellIds(building).Contains(cell.id))
-                {
-                    errors.Add(
-                        $"Planning grid cell {cell.id} and building {building.id} do not reference each other.");
+                    if (!buildingIds.Contains(occupantId))
+                    {
+                        errors.Add(
+                            $"Planning grid cell {cell.id} references unknown building {occupantId}.");
+                    }
+                    CityBuilding building = buildings.FirstOrDefault(item =>
+                        item != null && item.id == occupantId);
+                    if (building != null && !BuildingCellIds(building).Contains(cell.id))
+                    {
+                        errors.Add(
+                            $"Planning grid cell {cell.id} and building {building.id} do not reference each other.");
+                    }
                 }
             }
 

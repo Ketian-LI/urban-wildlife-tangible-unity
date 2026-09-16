@@ -1293,11 +1293,91 @@ namespace UrbanWildlife.EditorTools
                     "A building beyond the active-player-building cap must be rejected.");
             }
 
+            CityState sharedCellCity = CityPrototypeStateFactory.Create();
+            CityPlanningGrid sharedCellGrid = CityGridResolver.DeepClone(
+                sharedCellCity.planning_grid);
+            foreach (CityGridCell cell in sharedCellGrid.cells)
+            {
+                cell.buildable = true;
+                cell.fixed_feature = false;
+                cell.current_cover = CityLandCover.OpenLand;
+                cell.occupant_id = null;
+                cell.occupant_ids = Array.Empty<string>();
+                cell.habitat_patch_id = null;
+            }
+            CityBuilding firstExactBuilding = CityConstructionFactory.CreateBuilding(
+                new CityTokenState
+                {
+                    id = 112,
+                    type = CityPhysicalTokenType.DetachedHouse,
+                    x_norm = 20f / sharedCellCity.bounds.width_units,
+                    y_norm = 0.5f,
+                    rotation_deg = 0f,
+                    confidence = 1f,
+                },
+                CityConstructionState.Proposed);
+            CityBuilding secondExactBuilding = CityConstructionFactory.CreateBuilding(
+                new CityTokenState
+                {
+                    id = 113,
+                    type = CityPhysicalTokenType.DetachedHouse,
+                    x_norm = 25.1f / sharedCellCity.bounds.width_units,
+                    y_norm = 0.5f,
+                    rotation_deg = 0f,
+                    confidence = 1f,
+                },
+                CityConstructionState.Proposed);
+            string exactCollisionIssue = CityConstructionPlacementRules.ValidateBuilding(
+                secondExactBuilding,
+                sharedCellCity.bounds,
+                new[] { firstExactBuilding },
+                Array.Empty<CityBuilding>(),
+                Array.Empty<CityVehicleRoad>());
+            bool firstExactOccupied = CityGridResolver.TryOccupyWithBuildingAtPosition(
+                sharedCellGrid,
+                sharedCellCity.bounds,
+                firstExactBuilding,
+                sharedCellCity.revision + 1,
+                true,
+                out string firstExactError);
+            bool secondExactOccupied = CityGridResolver.TryOccupyWithBuildingAtPosition(
+                sharedCellGrid,
+                sharedCellCity.bounds,
+                secondExactBuilding,
+                sharedCellCity.revision + 1,
+                true,
+                out string secondExactError);
+            CityGridCell[] sharedCells = firstExactBuilding.planning_cell_ids
+                .Intersect(secondExactBuilding.planning_cell_ids, StringComparer.Ordinal)
+                .Select(id => CityGridResolver.GetCell(sharedCellGrid, id))
+                .Where(cell => cell != null)
+                .ToArray();
+            bool firstReleased = CityGridResolver.TryReleaseBuilding(
+                sharedCellGrid,
+                firstExactBuilding.id,
+                sharedCellCity.revision + 2,
+                out string sharedReleaseError);
+            if (!string.IsNullOrEmpty(exactCollisionIssue) ||
+                !firstExactOccupied || !secondExactOccupied || sharedCells.Length == 0 ||
+                sharedCells.Any(cell => !CityGridResolver.BuildingOccupantIds(cell)
+                    .Contains(secondExactBuilding.id)) ||
+                !firstReleased ||
+                sharedCells.Any(cell => CityGridResolver.BuildingOccupantIds(cell)
+                    .Contains(firstExactBuilding.id)))
+            {
+                throw new InvalidOperationException(
+                    "Desktop exact-footprint occupancy must allow non-overlapping buildings " +
+                    "to share ecological cells and release them independently. " +
+                    $"placement={exactCollisionIssue}/{firstExactError}/{secondExactError}, " +
+                    $"release={sharedReleaseError}");
+            }
+
             Debug.Log(
                 "UNITY_CITY_GRID_RULES_SMOKE_OK grid=18x12 cell_units=5x5 snap_radius_cm=5 same_cell_jitter=Moved " +
                 "footprints_units=detached_5x5/apartment_7x7/commercial_7.5x5/community_9x6 " +
                 "woodland_build=Building woodland_patches_removed=True " +
-                "footprint_demolition=Released synthetic_water_rule_rejected=True baseline_water_cells=0 active_building_cap_rule=True");
+                "footprint_demolition=Released shared_grid_cells_exact_collision=True " +
+                "synthetic_water_rule_rejected=True baseline_water_cells=0 active_building_cap_rule=True");
         }
 
         private static void VerifyFreePlacementAndAutomaticAccess()
@@ -1559,11 +1639,13 @@ namespace UrbanWildlife.EditorTools
         private static void VerifyDesktopPlayableFlow(CityPrototypeDemo prototype)
         {
             CityState reference = CityPrototypeStateFactory.Create();
-            CityGridCell placement = FindPlaceableDetachedCells(reference, 1).FirstOrDefault();
-            if (prototype == null || !prototype.DesktopPlayEnabled || placement == null)
+            CityGridCell[] placements = FindPlaceableDetachedCells(reference, 12);
+            CityGridCell placement = placements.FirstOrDefault();
+            if (prototype == null || !prototype.DesktopPlayEnabled ||
+                placement == null || placements.Length < 2)
             {
                 throw new InvalidOperationException(
-                    "The camera-free desktop edition did not start with a usable placement point.");
+                    "The camera-free desktop edition did not start with enough usable placement points.");
             }
             if (!prototype.TryPlaceDesktopBuilding(
                     CityPhysicalTokenType.DetachedHouse,
@@ -1587,20 +1669,20 @@ namespace UrbanWildlife.EditorTools
                                             renderer.sharedMaterial.color.r);
             bool validPreviewVisible = prototype.PlacementPreviewUsesValidityColours &&
                                        prototype.PlacementPreviewShowsBuildingGhost &&
-                                       prototype.PlacementPreviewShowsAffectedCells &&
+                                       !prototype.PlacementPreviewShowsAffectedCells &&
+                                       prototype.PlacementPreviewUsesExactFootprintOnly &&
+                                       prototype.PlacementPreviewCanConfirm &&
                                        validPreviewObjects.Any(item =>
                                            item.name.Contains("building ghost")) &&
-                                       validPreviewObjects.Any(item =>
-                                           item.name.StartsWith(
-                                               "Valid affected cell",
-                                               StringComparison.Ordinal)) &&
+                                       !validPreviewObjects.Any(item =>
+                                           item.name.Contains("affected cell")) &&
                                        validFootprint != null &&
                                        validFootprint.sharedMaterial.color.g >
                                        validFootprint.sharedMaterial.color.r;
             if (!validPreviewVisible)
             {
                 throw new InvalidOperationException(
-                    "A valid placement must show its exact green footprint, ghost building and affected cells.");
+                    "A valid placement must show only its exact green footprint and ghost building.");
             }
             if (!prototype.ConfirmDesktopPlacement(out string buildError) ||
                 prototype.GeneratedBuildingCount != 3 ||
@@ -1656,24 +1738,48 @@ namespace UrbanWildlife.EditorTools
                                             renderer.sharedMaterial.color.g);
             bool conflictPreviewVisible = conflictPreviewObjects.Any(item =>
                                               item.name.Contains("building ghost")) &&
-                                          conflictPreviewObjects.Any(item =>
-                                              item.name.StartsWith(
-                                                  "Conflict affected cell",
-                                                  StringComparison.Ordinal)) &&
+                                          !conflictPreviewObjects.Any(item =>
+                                              item.name.Contains("affected cell")) &&
                                           conflictFootprint != null &&
                                           conflictFootprint.sharedMaterial.color.r >
                                           conflictFootprint.sharedMaterial.color.g;
-            prototype.CancelPlacementPreview();
-            if (!conflictPreviewVisible ||
-                prototype.PlanningPhase != CityPlanningWorkflowPhase.ReadyToScan)
+            if (!conflictPreviewVisible || prototype.PlacementPreviewCanConfirm)
             {
                 throw new InvalidOperationException(
-                    "A road conflict must show a red footprint and return cleanly after cancellation.");
+                    "A road conflict must show only its exact red footprint and remain unconfirmable.");
+            }
+            string retryError = string.Empty;
+            bool retryAccepted = false;
+            foreach (CityGridCell retryPlacement in placements.Skip(1))
+            {
+                if (prototype.TryPlaceDesktopBuilding(
+                        CityPhysicalTokenType.DetachedHouse,
+                        retryPlacement.center_norm[0],
+                        retryPlacement.center_norm[1],
+                        out retryError) &&
+                    prototype.PlanningPhase == CityPlanningWorkflowPhase.Preview &&
+                    prototype.PlacementPreviewCanConfirm)
+                {
+                    retryAccepted = true;
+                    break;
+                }
+            }
+            if (!retryAccepted)
+            {
+                throw new InvalidOperationException(
+                    $"A blocked desktop placement did not accept the next map click: {retryError}");
+            }
+            prototype.CancelPlacementPreview();
+            if (prototype.PlanningPhase != CityPlanningWorkflowPhase.ReadyToScan)
+            {
+                throw new InvalidOperationException(
+                    "The replacement placement did not return cleanly after cancellation.");
             }
             Debug.Log(
                 "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
                 "confirm_build=True compact_site_clearings=True narrow_access=True " +
-                "valid_preview=green invalid_preview=red building_ghost=True affected_cells=True " +
+                "valid_preview=green invalid_preview=red building_ghost=True exact_footprint_only=True " +
+                "invalid_retry_without_cancel=True " +
                 "continuous_position=True responsive_sidebar=True " +
                 "camera_required=False camera_mode_retained=True");
         }

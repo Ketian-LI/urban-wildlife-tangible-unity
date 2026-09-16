@@ -196,6 +196,7 @@ namespace UrbanWildlife.Prototype
         public int GeneratedPedestrianLinkCount { get; private set; }
         public int GeneratedAccessRoadCentreDashCount { get; private set; }
         public int GeneratedAccessRoadJunctionBlendCount { get; private set; }
+        public int GeneratedAccessRoadClearingRunCount { get; private set; }
         public int GeneratedAmenityCount { get; private set; }
         public int GeneratedPlanningCellCount { get; private set; }
         public int AvailablePlanningCellCount { get; private set; }
@@ -561,6 +562,7 @@ namespace UrbanWildlife.Prototype
             boundariesRoot.transform.SetParent(root.transform, false);
             GeneratedPlanningCellCount = 0;
             AvailablePlanningCellCount = 0;
+            GeneratedAccessRoadClearingRunCount = 0;
             CityPlanningGrid grid = city.planning_grid;
             if (grid?.cells == null)
             {
@@ -797,14 +799,22 @@ namespace UrbanWildlife.Prototype
                          item.construction_state == CityConstructionState.Existing))
             {
                 float roadWidth = road.width_units / city.bounds.width_units * MapWidth;
-                CreateLine(
-                    clearingRoot.transform,
-                    road.id + " compact cleared verge",
-                    road.points_norm,
-                    Mathf.Max(0.12f, roadWidth + 0.055f),
-                    clearedGround,
-                    0.019f,
-                    -26);
+                int runIndex = 0;
+                foreach (float[][] run in WoodlandClearingRuns(road, grid))
+                {
+                    CreateLine(
+                        clearingRoot.transform,
+                        $"{road.id} compact cleared verge {runIndex}",
+                        run,
+                        Mathf.Max(0.12f, roadWidth + 0.055f),
+                        clearedGround,
+                        0.019f,
+                        -26,
+                        false,
+                        3);
+                    runIndex += 1;
+                    GeneratedAccessRoadClearingRunCount += 1;
+                }
             }
         }
 
@@ -814,6 +824,85 @@ namespace UrbanWildlife.Prototype
         {
             return (building.planning_cell_ids ?? Array.Empty<string>())
                 .Any(id => cellsById.TryGetValue(id, out CityGridCell cell) && cell.was_woodland);
+        }
+
+        private IEnumerable<float[][]> WoodlandClearingRuns(
+            CityVehicleRoad road,
+            CityPlanningGrid grid)
+        {
+            if (road?.points_norm == null || road.points_norm.Length < 2 ||
+                grid?.cells == null || city?.bounds == null)
+            {
+                yield break;
+            }
+
+            const float sampleStepUnits = 0.28f;
+            var samples = new List<float[]>();
+            for (int segmentIndex = 1; segmentIndex < road.points_norm.Length; segmentIndex += 1)
+            {
+                float[] start = road.points_norm[segmentIndex - 1];
+                float[] end = road.points_norm[segmentIndex];
+                float deltaX = (end[0] - start[0]) * city.bounds.width_units;
+                float deltaY = (end[1] - start[1]) * city.bounds.height_units;
+                float length = Mathf.Sqrt(deltaX * deltaX + deltaY * deltaY);
+                int steps = Mathf.Max(1, Mathf.CeilToInt(length / sampleStepUnits));
+                int firstStep = segmentIndex == 1 ? 0 : 1;
+                for (int step = firstStep; step <= steps; step += 1)
+                {
+                    float t = step / (float)steps;
+                    samples.Add(new[]
+                    {
+                        Mathf.Lerp(start[0], end[0], t),
+                        Mathf.Lerp(start[1], end[1], t),
+                    });
+                }
+            }
+
+            List<float[]> current = null;
+            for (int index = 0; index < samples.Count; index += 1)
+            {
+                bool woodland = PointWasWoodland(samples[index], grid);
+                if (woodland)
+                {
+                    if (current == null)
+                    {
+                        current = new List<float[]>();
+                        if (index > 0)
+                        {
+                            current.Add(samples[index - 1]);
+                        }
+                    }
+                    current.Add(samples[index]);
+                }
+                else if (current != null)
+                {
+                    current.Add(samples[index]);
+                    if (current.Count >= 2)
+                    {
+                        yield return current.ToArray();
+                    }
+                    current = null;
+                }
+            }
+            if (current != null && current.Count >= 2)
+            {
+                yield return current.ToArray();
+            }
+        }
+
+        private static bool PointWasWoodland(float[] point, CityPlanningGrid grid)
+        {
+            int col = Mathf.Clamp(
+                Mathf.FloorToInt(Mathf.Clamp01(point[0]) * grid.cols),
+                0,
+                grid.cols - 1);
+            int row = Mathf.Clamp(
+                Mathf.FloorToInt(Mathf.Clamp01(point[1]) * grid.rows),
+                0,
+                grid.rows - 1);
+            CityGridCell cell = grid.cells.FirstOrDefault(candidate =>
+                candidate != null && candidate.row == row && candidate.col == col);
+            return cell?.was_woodland == true;
         }
 
         private float[][] CompactBuildingSitePolygon(CityBuilding building)
@@ -963,6 +1052,16 @@ namespace UrbanWildlife.Prototype
                 float width = road.width_units / city.bounds.width_units * MapWidth;
                 CreateLine(
                     roadParent,
+                    road.id + " soft edge shadow",
+                    road.points_norm,
+                    width + 0.070f,
+                    new Color(216f / 255f, 220f / 255f, 214f / 255f, 0.20f),
+                    0.041f,
+                    -9,
+                    true,
+                    road.role == CityVehicleRoadRole.BuildingAccess ? 0 : 5);
+                CreateLine(
+                    roadParent,
                     road.id + " kerb",
                     road.points_norm,
                     width + 0.050f,
@@ -985,7 +1084,10 @@ namespace UrbanWildlife.Prototype
                     roadParent,
                     road.id,
                     road.points_norm,
-                    width);
+                    width,
+                    road.role == CityVehicleRoadRole.BuildingAccess
+                        ? road.width_units * 1.15f
+                        : 0f);
                 if (road.role == CityVehicleRoadRole.BuildingAccess)
                 {
                     CreateAccessRoadJunctionBlend(
@@ -1049,7 +1151,8 @@ namespace UrbanWildlife.Prototype
             Transform parent,
             string roadId,
             float[][] points,
-            float roadWidth)
+            float roadWidth,
+            float endClearanceUnits)
         {
             if (points == null || points.Length < 2 || city?.bounds == null)
             {
@@ -1059,6 +1162,15 @@ namespace UrbanWildlife.Prototype
             const float gapLengthUnits = 0.44f;
             float patternLength = dashLengthUnits + gapLengthUnits;
             float patternProgress = 0f;
+            float pathProgress = 0f;
+            float totalLengthUnits = 0f;
+            for (int index = 1; index < points.Length; index += 1)
+            {
+                float dx = (points[index][0] - points[index - 1][0]) * city.bounds.width_units;
+                float dy = (points[index][1] - points[index - 1][1]) * city.bounds.height_units;
+                totalLengthUnits += Mathf.Sqrt(dx * dx + dy * dy);
+            }
+            float drawableEndUnits = Mathf.Max(0f, totalLengthUnits - endClearanceUnits);
             int dashIndex = 0;
             for (int segmentIndex = 1; segmentIndex < points.Length; segmentIndex += 1)
             {
@@ -1087,10 +1199,14 @@ namespace UrbanWildlife.Prototype
                     float step = Mathf.Min(
                         phaseRemaining,
                         segmentLengthUnits - travelled);
-                    if (draw && step > 0.035f)
+                    float globalStart = pathProgress + travelled;
+                    float visibleStep = Mathf.Min(
+                        step,
+                        Mathf.Max(0f, drawableEndUnits - globalStart));
+                    if (draw && visibleStep > 0.035f)
                     {
                         float firstT = travelled / segmentLengthUnits;
-                        float secondT = (travelled + step) / segmentLengthUnits;
+                        float secondT = (travelled + visibleStep) / segmentLengthUnits;
                         float[][] dash =
                         {
                             new[]
@@ -1118,6 +1234,7 @@ namespace UrbanWildlife.Prototype
                     travelled += step;
                     patternProgress += step;
                 }
+                pathProgress += segmentLengthUnits;
             }
             return dashIndex;
         }

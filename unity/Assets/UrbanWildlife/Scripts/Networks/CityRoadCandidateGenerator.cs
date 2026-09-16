@@ -28,11 +28,11 @@ namespace UrbanWildlife.Networks
 
             float[][] directPoints = SmoothAccessRoute(
                 building,
-                closest.Point,
+                closest,
                 city.bounds);
             float[][] existingNetworkPoints = SmoothAccessRoute(
                 building,
-                endpoint.Point,
+                endpoint,
                 city.bounds);
             float[][] lowImpactPoints = LowImpactRoute(
                 BuildingAccessPoint(building, closest.Point, city.bounds),
@@ -88,9 +88,10 @@ namespace UrbanWildlife.Networks
 
         private static float[][] SmoothAccessRoute(
             CityBuilding building,
-            float[] end,
+            NetworkConnection connection,
             CityBounds bounds)
         {
+            float[] end = connection.Point;
             float[] start = BuildingAccessPoint(building, end, bounds);
             float startX = start[0] * bounds.width_units;
             float startY = start[1] * bounds.height_units;
@@ -111,10 +112,18 @@ namespace UrbanWildlife.Networks
             float handle = Math.Min(7f, distance * 0.32f);
             float bendSign = StableHash(building.id) % 2 == 0 ? 1f : -1f;
             float bend = Math.Min(2.4f, distance * 0.10f) * bendSign;
+            float terminalDirectionX = -connection.TangentY;
+            float terminalDirectionY = connection.TangentX;
+            if (terminalDirectionX * directionX + terminalDirectionY * directionY < 0f)
+            {
+                terminalDirectionX *= -1f;
+                terminalDirectionY *= -1f;
+            }
+            float terminalHandle = Math.Min(5.5f, distance * 0.30f);
             float controlOneX = startX + directionX * handle + perpendicularX * bend;
             float controlOneY = startY + directionY * handle + perpendicularY * bend;
-            float controlTwoX = endX - directionX * handle + perpendicularX * bend * 0.55f;
-            float controlTwoY = endY - directionY * handle + perpendicularY * bend * 0.55f;
+            float controlTwoX = endX - terminalDirectionX * terminalHandle;
+            float controlTwoY = endY - terminalDirectionY * terminalHandle;
 
             const int segmentCount = 10;
             return Enumerable.Range(0, segmentCount + 1)
@@ -409,14 +418,22 @@ namespace UrbanWildlife.Networks
             {
                 if (endpointsOnly)
                 {
-                    float[][] endpoints =
+                    (float[] point, float[] neighbour)[] endpoints =
                     {
-                        polyline.Points[0],
-                        polyline.Points[polyline.Points.Length - 1],
+                        (polyline.Points[0], polyline.Points[1]),
+                        (polyline.Points[polyline.Points.Length - 1],
+                         polyline.Points[polyline.Points.Length - 2]),
                     };
-                    foreach (float[] endpoint in endpoints)
+                    foreach (var endpoint in endpoints)
                     {
-                        best = Better(best, polyline.Id, endpoint, source, bounds);
+                        best = Better(
+                            best,
+                            polyline.Id,
+                            endpoint.point,
+                            source,
+                            bounds,
+                            endpoint.neighbour[0] - endpoint.point[0],
+                            endpoint.neighbour[1] - endpoint.point[1]);
                     }
                     continue;
                 }
@@ -428,7 +445,14 @@ namespace UrbanWildlife.Networks
                         polyline.Points[index - 1],
                         polyline.Points[index],
                         bounds);
-                    best = Better(best, polyline.Id, projected, source, bounds);
+                    best = Better(
+                        best,
+                        polyline.Id,
+                        projected,
+                        source,
+                        bounds,
+                        polyline.Points[index][0] - polyline.Points[index - 1][0],
+                        polyline.Points[index][1] - polyline.Points[index - 1][1]);
                 }
             }
             if (best == null)
@@ -443,12 +467,29 @@ namespace UrbanWildlife.Networks
             string roadId,
             float[] point,
             float[] source,
-            CityBounds bounds)
+            CityBounds bounds,
+            float tangentXNorm,
+            float tangentYNorm)
         {
             float distance = Distance(source, point, bounds);
             if (current == null || distance < current.DistanceUnits)
             {
-                return new NetworkConnection(roadId, ClonePoint(point), distance);
+                float tangentX = tangentXNorm * bounds.width_units;
+                float tangentY = tangentYNorm * bounds.height_units;
+                float tangentLength = (float)Math.Sqrt(
+                    tangentX * tangentX + tangentY * tangentY);
+                if (tangentLength <= 0.0001f)
+                {
+                    tangentX = 1f;
+                    tangentY = 0f;
+                    tangentLength = 1f;
+                }
+                return new NetworkConnection(
+                    roadId,
+                    ClonePoint(point),
+                    distance,
+                    tangentX / tangentLength,
+                    tangentY / tangentLength);
             }
             return current;
         }
@@ -616,16 +657,25 @@ namespace UrbanWildlife.Networks
 
         private sealed class NetworkConnection
         {
-            public NetworkConnection(string roadId, float[] point, float distanceUnits)
+            public NetworkConnection(
+                string roadId,
+                float[] point,
+                float distanceUnits,
+                float tangentX,
+                float tangentY)
             {
                 RoadId = roadId;
                 Point = point;
                 DistanceUnits = distanceUnits;
+                TangentX = tangentX;
+                TangentY = tangentY;
             }
 
             public string RoadId { get; }
             public float[] Point { get; }
             public float DistanceUnits { get; }
+            public float TangentX { get; }
+            public float TangentY { get; }
         }
     }
 }

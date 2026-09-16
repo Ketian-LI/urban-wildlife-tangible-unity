@@ -1491,6 +1491,10 @@ namespace UrbanWildlife.EditorTools
                     candidate.route_option == CityRoadRouteOption.Direct);
             CityVehicleRoad automaticConnection = placedCity.vehicle_roads.Single(road =>
                 road.id == automatic.connection_road_id);
+            float terminalTangentDot = TerminalRoadTangentDot(
+                automatic,
+                automaticConnection,
+                placedCity.bounds);
             CityPedestrianLink automaticSidewalk =
                 CityRoadCandidateGenerator.CreateBasicPedestrianAccess(
                     placedCity,
@@ -1509,7 +1513,8 @@ namespace UrbanWildlife.EditorTools
                 automatic.points_norm.Skip(1).Take(automatic.points_norm.Length - 2)
                     .All(point => Math.Abs(point[0] - automatic.points_norm[0][0]) < 0.0001f) ||
                 automaticSidewalk.points_norm.Length < automatic.points_norm.Length ||
-                !sidewalkTracksAutomaticRoad)
+                !sidewalkTracksAutomaticRoad ||
+                terminalTangentDot > 0.30f)
             {
                 throw new InvalidOperationException(
                     "Automatic access did not create a smooth curve to the nearest existing street.");
@@ -1586,7 +1591,7 @@ namespace UrbanWildlife.EditorTools
                 "UNITY_CITY_FREE_PLACEMENT_SMOKE_OK continuous_position=True road_overlap_rejected=True " +
                 "smooth_access_curve=11_points nearest_existing_local_street=True " +
                 "integrated_sidewalk=True sidewalk_tracks_route_choice=True " +
-                "woodland_to_white=True");
+                "perpendicular_t_junction=True woodland_to_white=True");
         }
 
         private static void VerifyDesktopGrowthCapacity(CityPrototypeDemo prototype)
@@ -1744,11 +1749,15 @@ namespace UrbanWildlife.EditorTools
                 ? 0
                 : access.GetComponentsInChildren<MeshRenderer>().Count(renderer =>
                     renderer.name.EndsWith(" junction blend", StringComparison.Ordinal));
+            LineRenderer[] accessCoreLines = accessLines.Where(line =>
+                line.name.EndsWith(" kerb", StringComparison.Ordinal) ||
+                line.name.EndsWith(" asphalt", StringComparison.Ordinal)).ToArray();
             if (access == null || accessKerbCount != 3 || accessSurfaceCount != 3 ||
                 accessDashCount < 3 || prototype.GeneratedAccessRoadCentreDashCount != accessDashCount ||
                 accessJunctionBlendCount != 3 ||
                 prototype.GeneratedAccessRoadJunctionBlendCount != accessJunctionBlendCount ||
-                accessLines.Max(line => line.startWidth) > 0.20f)
+                accessCoreLines.Length != 6 ||
+                accessCoreLines.Max(line => line.startWidth) > 0.20f)
             {
                 throw new InvalidOperationException(
                     "Desktop placement did not add an access road matching the original street style.");
@@ -1756,8 +1765,13 @@ namespace UrbanWildlife.EditorTools
             Transform clearings = prototype.transform.Find(
                 "Generated City Prototype/Planning grid/Compact development clearings");
             Transform[] generated = prototype.GetComponentsInChildren<Transform>();
+            LineRenderer[] clearingRuns = clearings == null
+                ? Array.Empty<LineRenderer>()
+                : clearings.GetComponentsInChildren<LineRenderer>();
             if (clearings == null ||
-                clearings.GetComponentsInChildren<LineRenderer>().Length != 3 ||
+                clearingRuns.Length == 0 ||
+                clearingRuns.Length != prototype.GeneratedAccessRoadClearingRunCount ||
+                clearingRuns.Any(line => !line.name.Contains("compact cleared verge")) ||
                 generated.Any(item => item.name == "Cleared white ground"))
             {
                 throw new InvalidOperationException(
@@ -1829,7 +1843,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
                 "confirm_build=True compact_site_clearings=True access_matches_original_roads=True " +
-                "seamless_t_junctions=True " +
+                "seamless_t_junctions=True woodland_only_road_clearings=True " +
                 "valid_preview=green invalid_preview=red building_ghost=True exact_footprint_only=True " +
                 "valid_reposition_without_cancel=True invalid_retry_without_cancel=True " +
                 "continuous_position=True responsive_sidebar=True " +
@@ -1892,6 +1906,52 @@ namespace UrbanWildlife.EditorTools
             float x = (first[0] - second[0]) * bounds.width_units;
             float y = (first[1] - second[1]) * bounds.height_units;
             return Mathf.Sqrt(x * x + y * y);
+        }
+
+        private static float TerminalRoadTangentDot(
+            CityRoadCandidate candidate,
+            CityVehicleRoad targetRoad,
+            CityBounds bounds)
+        {
+            if (candidate?.points_norm == null || candidate.points_norm.Length < 2 ||
+                targetRoad?.points_norm == null || targetRoad.points_norm.Length < 2)
+            {
+                return 1f;
+            }
+
+            float[] previous = candidate.points_norm[candidate.points_norm.Length - 2];
+            float[] endpoint = candidate.points_norm[candidate.points_norm.Length - 1];
+            Vector2 terminal = new Vector2(
+                (endpoint[0] - previous[0]) * bounds.width_units,
+                (endpoint[1] - previous[1]) * bounds.height_units).normalized;
+            float bestDistance = float.PositiveInfinity;
+            Vector2 nearestTangent = Vector2.right;
+            Vector2 endpointWorld = new Vector2(
+                endpoint[0] * bounds.width_units,
+                endpoint[1] * bounds.height_units);
+            for (int index = 1; index < targetRoad.points_norm.Length; index += 1)
+            {
+                Vector2 start = new Vector2(
+                    targetRoad.points_norm[index - 1][0] * bounds.width_units,
+                    targetRoad.points_norm[index - 1][1] * bounds.height_units);
+                Vector2 end = new Vector2(
+                    targetRoad.points_norm[index][0] * bounds.width_units,
+                    targetRoad.points_norm[index][1] * bounds.height_units);
+                Vector2 segment = end - start;
+                if (segment.sqrMagnitude <= 0.000001f)
+                {
+                    continue;
+                }
+                float t = Mathf.Clamp01(Vector2.Dot(endpointWorld - start, segment) /
+                                        segment.sqrMagnitude);
+                float distance = (endpointWorld - (start + segment * t)).sqrMagnitude;
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    nearestTangent = segment.normalized;
+                }
+            }
+            return Mathf.Abs(Vector2.Dot(terminal, nearestTangent));
         }
 
         private static CityTokenScanPacket ScanPacket(string id, CityTokenState[] tokens)

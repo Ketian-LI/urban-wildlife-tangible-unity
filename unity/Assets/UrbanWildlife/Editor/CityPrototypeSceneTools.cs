@@ -389,6 +389,8 @@ namespace UrbanWildlife.EditorTools
             Rect mainMenu = CityPrototypeDemo.MainMenuRectForScreen(width, height);
             Rect endScreen = CityPrototypeDemo.EndScreenRectForScreen(width, height);
             Rect heatmap = CityPrototypeDemo.HeatmapCardRectForScreen(width, height);
+            Rect sidebar = CityPrototypeDemo.RightSidebarRectForScreen(width, height);
+            Rect compactSidebar = CityPrototypeDemo.RightSidebarRectForScreen(1602, 985);
             bool initialTime = prototype.TimeControlEnabled &&
                                Math.Abs(prototype.CurrentSimulationSpeed - 2f) < 0.001f &&
                                prototype.CurrentSeasonIndex == 0;
@@ -445,6 +447,10 @@ namespace UrbanWildlife.EditorTools
                          mainMenu.y >= 0f && mainMenu.yMax <= height &&
                          endScreen.x >= 0f && endScreen.xMax < mapWidth &&
                          endScreen.y >= 0f && endScreen.yMax <= height &&
+                         Math.Abs(sidebar.x - mapWidth) < 0.001f &&
+                         Math.Abs(sidebar.xMax - width) < 0.001f &&
+                         Math.Abs(compactSidebar.xMax - 1602f) < 0.001f &&
+                         compactSidebar.width > 300f &&
                          heatmap.x >= mapWidth && heatmap.xMax <= width &&
                          heatmap.y >= height * 0.55f && heatmap.yMax <= height;
             if (!valid)
@@ -458,7 +464,8 @@ namespace UrbanWildlife.EditorTools
                 "stage_hud=True stage=early bottom_nav=build_info_trace_pause " +
                 "building_mode_card=True trace_views=normal_human_animal_combined event_popup=True " +
                 "time_control=pause_1x_2x_seasons main_menu=True end_screen=True " +
-                "building_catalog=True environment_catalog=True heatmap_bottom_right=True active_tab=buildings");
+                "building_catalog=True environment_catalog=True heatmap_bottom_right=True " +
+                "responsive_sidebar_1602x985=True active_tab=buildings");
         }
 
         private static void VerifyInformationPanel(CityPrototypeDemo prototype)
@@ -1483,6 +1490,33 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException(
                     $"Desktop click placement did not reach Preview: {placementError}");
             }
+            Transform validPreview = prototype.transform.Find(
+                "Generated City Prototype/Planning Preview Overlay");
+            Transform[] validPreviewObjects = validPreview == null
+                ? Array.Empty<Transform>()
+                : validPreview.GetComponentsInChildren<Transform>();
+            MeshRenderer validFootprint = validPreviewObjects
+                .Select(item => item.GetComponent<MeshRenderer>())
+                .FirstOrDefault(renderer => renderer != null &&
+                                            renderer.sharedMaterial.color.g >
+                                            renderer.sharedMaterial.color.r);
+            bool validPreviewVisible = prototype.PlacementPreviewUsesValidityColours &&
+                                       prototype.PlacementPreviewShowsBuildingGhost &&
+                                       prototype.PlacementPreviewShowsAffectedCells &&
+                                       validPreviewObjects.Any(item =>
+                                           item.name.Contains("building ghost")) &&
+                                       validPreviewObjects.Any(item =>
+                                           item.name.StartsWith(
+                                               "Valid affected cell",
+                                               StringComparison.Ordinal)) &&
+                                       validFootprint != null &&
+                                       validFootprint.sharedMaterial.color.g >
+                                       validFootprint.sharedMaterial.color.r;
+            if (!validPreviewVisible)
+            {
+                throw new InvalidOperationException(
+                    "A valid placement must show its exact green footprint, ghost building and affected cells.");
+            }
             if (!prototype.ConfirmDesktopPlacement(out string buildError) ||
                 prototype.GeneratedBuildingCount != 3 ||
                 prototype.PlanningPhase != CityPlanningWorkflowPhase.ReadyToScan)
@@ -1511,9 +1545,51 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException(
                     "Desktop construction must use compact site and road clearings instead of full-cell white holes.");
             }
+
+            CityVehicleRoad blockedRoad = reference.vehicle_roads.First(road =>
+                road != null && road.points_norm != null && road.points_norm.Length >= 2);
+            float[] blockedPoint = blockedRoad.points_norm[blockedRoad.points_norm.Length / 2];
+            if (!prototype.TryPlaceDesktopBuilding(
+                    CityPhysicalTokenType.Commercial,
+                    blockedPoint[0],
+                    blockedPoint[1],
+                    out string blockedError) ||
+                prototype.PlanningPhase != CityPlanningWorkflowPhase.Preview)
+            {
+                throw new InvalidOperationException(
+                    $"A road conflict did not reach visible blocked Preview: {blockedError}");
+            }
+            Transform conflictPreview = prototype.transform.Find(
+                "Generated City Prototype/Planning Preview Overlay");
+            Transform[] conflictPreviewObjects = conflictPreview == null
+                ? Array.Empty<Transform>()
+                : conflictPreview.GetComponentsInChildren<Transform>();
+            MeshRenderer conflictFootprint = conflictPreviewObjects
+                .Select(item => item.GetComponent<MeshRenderer>())
+                .FirstOrDefault(renderer => renderer != null &&
+                                            renderer.sharedMaterial.color.r >
+                                            renderer.sharedMaterial.color.g);
+            bool conflictPreviewVisible = conflictPreviewObjects.Any(item =>
+                                              item.name.Contains("building ghost")) &&
+                                          conflictPreviewObjects.Any(item =>
+                                              item.name.StartsWith(
+                                                  "Conflict affected cell",
+                                                  StringComparison.Ordinal)) &&
+                                          conflictFootprint != null &&
+                                          conflictFootprint.sharedMaterial.color.r >
+                                          conflictFootprint.sharedMaterial.color.g;
+            prototype.CancelPlacementPreview();
+            if (!conflictPreviewVisible ||
+                prototype.PlanningPhase != CityPlanningWorkflowPhase.ReadyToScan)
+            {
+                throw new InvalidOperationException(
+                    "A road conflict must show a red footprint and return cleanly after cancellation.");
+            }
             Debug.Log(
                 "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
                 "confirm_build=True compact_site_clearings=True narrow_access=True " +
+                "valid_preview=green invalid_preview=red building_ghost=True affected_cells=True " +
+                "continuous_position=True responsive_sidebar=True " +
                 "camera_required=False camera_mode_retained=True");
         }
 

@@ -13,5 +13,7 @@ This pass aligns the playable Unity interface with the supplied Riverside Park r
 - Trace mode is separate from that card: Human, Animal and Combined use a light full-map overlay with orange/red human paths and cyan/blue animal paths.
 - Chinese and English modes share the same hierarchy and spacing.
 - UI rectangles block map placement clicks so interface interaction cannot place buildings accidentally.
+- During placement, the exact building footprint and a translucent building preview are shown together: green is valid and red is blocked. Fine planning-cell outlines are secondary guidance only; the pointer remains continuously placeable rather than grid-snapped.
+- The cleared warm-white ground after confirmation follows the compact building footprint and narrow access route instead of clearing whole planning cells.
 
 `city-riverside-ui-layout-preview-v01.png` is a layout composite made from the verified Unity map capture and the verified UI layer capture. It documents the intended combined presentation; it is not presented as a single runtime screenshot.

@@ -236,6 +236,9 @@ namespace UrbanWildlife.Prototype
         public int BottomNavigationItemCount => 4;
         public int ActiveBottomNavigationIndex => bottomNavigationIndex;
         public bool BuildingPlacementCardEnabled => true;
+        public bool PlacementPreviewUsesValidityColours => true;
+        public bool PlacementPreviewShowsBuildingGhost => true;
+        public bool PlacementPreviewShowsAffectedCells => true;
         public bool TraceViewSelectorEnabled => true;
         public int ActiveTraceViewIndex => traceViewIndex;
         public bool TimeControlEnabled => true;
@@ -1014,51 +1017,17 @@ namespace UrbanWildlife.Prototype
             {
                 float width = building.footprint_units[0] / city.bounds.width_units * MapWidth;
                 float depth = building.footprint_units[1] / city.bounds.height_units * MapHeight;
-                if (building.type == CityBuildingType.DetachedHouse &&
+                if (TryGetBuildingArtworkStyle(
+                        building,
+                        out string resourcePath,
+                        out float artworkFootprintScale) &&
                     CreateBuildingArtwork(
                         root.transform,
                         building,
-                        building.source_token_id % 2 == 0
-                            ? CityResidentialLotBlueResourcePath
-                            : CityResidentialLotCoralResourcePath,
+                        resourcePath,
                         width,
                         depth,
-                        0.72f))
-                {
-                    continue;
-                }
-                if (building.type == CityBuildingType.Apartment &&
-                    CreateBuildingArtwork(
-                        root.transform,
-                        building,
-                        building.id == "apartment-court"
-                            ? CityResidentialLotBResourcePath
-                            : CityResidentialLotCResourcePath,
-                        width,
-                        depth,
-                        1.05f))
-                {
-                    continue;
-                }
-                if (building.type == CityBuildingType.Commercial &&
-                    CreateBuildingArtwork(
-                        root.transform,
-                        building,
-                        BuildingVariantResourcePath(building, CityCommercialResourcePaths),
-                        width,
-                        depth,
-                        1.00f))
-                {
-                    continue;
-                }
-                if (building.type == CityBuildingType.CommunityFacility &&
-                    CreateBuildingArtwork(
-                        root.transform,
-                        building,
-                        BuildingVariantResourcePath(building, CityCommunityResourcePaths),
-                        width,
-                        depth,
-                        0.88f))
+                        artworkFootprintScale))
                 {
                     continue;
                 }
@@ -1118,6 +1087,48 @@ namespace UrbanWildlife.Prototype
                     0.032f);
             }
             GeneratedBuildingCount = activeBuildings.Length;
+        }
+
+        private static bool TryGetBuildingArtworkStyle(
+            CityBuilding building,
+            out string resourcePath,
+            out float footprintScale)
+        {
+            resourcePath = string.Empty;
+            footprintScale = 1f;
+            if (building == null)
+            {
+                return false;
+            }
+            switch (building.type)
+            {
+                case CityBuildingType.DetachedHouse:
+                    resourcePath = building.source_token_id % 2 == 0
+                        ? CityResidentialLotBlueResourcePath
+                        : CityResidentialLotCoralResourcePath;
+                    footprintScale = 0.72f;
+                    return true;
+                case CityBuildingType.Apartment:
+                    resourcePath = building.id == "apartment-court"
+                        ? CityResidentialLotBResourcePath
+                        : CityResidentialLotCResourcePath;
+                    footprintScale = 1.05f;
+                    return true;
+                case CityBuildingType.Commercial:
+                    resourcePath = BuildingVariantResourcePath(
+                        building,
+                        CityCommercialResourcePaths);
+                    footprintScale = 1.00f;
+                    return true;
+                case CityBuildingType.CommunityFacility:
+                    resourcePath = BuildingVariantResourcePath(
+                        building,
+                        CityCommunityResourcePaths);
+                    footprintScale = 0.88f;
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private bool CreateBuildingArtwork(
@@ -1198,35 +1209,44 @@ namespace UrbanWildlife.Prototype
                 CityPlanningGrid previewGrid = CityGridResolver.DeepClone(
                     planningWorkflow.CurrentState.planning_grid);
                 foreach (CityTokenChange change in planningWorkflow.ConstructionPreview.changes
-                             .Where(item => item.change_kind == CityTokenChangeKind.New &&
-                                            !item.blocks_confirmation))
+                             .Where(item => item.change_kind == CityTokenChangeKind.New))
                 {
+                    bool valid = !change.blocks_confirmation;
+                    string status = valid
+                        ? T("AVAILABLE", "可建")
+                        : T("CONFLICT", "不可放置");
                     if (change.token_type == CityPhysicalTokenType.GreenIntervention)
                     {
                         CityGreenPatch patch = CityConstructionFactory.CreateGreenIntervention(
                             change.scanned_state,
                             city.bounds,
                             CityConstructionState.Proposed);
-                        CityGridResolver.TryOccupyWithGreenPatch(
-                            previewGrid,
-                            city.bounds,
-                            patch,
-                            city.revision + 1,
-                            out _);
-                        DrawPlanningPatch(patch, T("SCAN PREVIEW", "扫描预览"));
+                        if (valid)
+                        {
+                            CityGridResolver.TryOccupyWithGreenPatch(
+                                previewGrid,
+                                city.bounds,
+                                patch,
+                                city.revision + 1,
+                                out _);
+                        }
+                        DrawPlanningPatch(patch, status, valid);
                     }
                     else
                     {
                         CityBuilding building = CityConstructionFactory.CreateBuilding(
                             change.scanned_state,
                             CityConstructionState.Proposed);
-                        CityGridResolver.TryOccupyWithBuildingAtPosition(
-                            previewGrid,
-                            city.bounds,
-                            building,
-                            city.revision + 1,
-                            out _);
-                        DrawPlanningFootprint(building, T("SCAN PREVIEW", "扫描预览"));
+                        if (valid)
+                        {
+                            CityGridResolver.TryOccupyWithBuildingAtPosition(
+                                previewGrid,
+                                city.bounds,
+                                building,
+                                city.revision + 1,
+                                out _);
+                        }
+                        DrawPlanningFootprint(building, status, valid, true);
                     }
                 }
                 return;
@@ -1239,7 +1259,9 @@ namespace UrbanWildlife.Prototype
                     building,
                     building.construction_state == CityConstructionState.UnderConstruction
                         ? T("BUILDING", "建设中")
-                        : T("PROPOSED", "待建设"));
+                        : T("PROPOSED", "待建设"),
+                    true,
+                    false);
             }
             foreach (CityGreenPatch patch in planningWorkflow.CurrentState.green_patches.Where(item =>
                          item.construction_state != CityConstructionState.Existing))
@@ -1292,15 +1314,26 @@ namespace UrbanWildlife.Prototype
             }
         }
 
-        private void DrawPlanningFootprint(CityBuilding building, string status)
+        private void DrawPlanningFootprint(
+            CityBuilding building,
+            string status,
+            bool valid,
+            bool showBuildingGhost)
         {
             float[][] site = CompactBuildingSitePolygon(building);
+            Color fill = valid
+                ? new Color(0.40f, 0.82f, 0.60f, 0.48f)
+                : new Color(0.94f, 0.38f, 0.36f, 0.48f);
+            Color edge = valid
+                ? new Color(0.20f, 0.63f, 0.42f, 0.96f)
+                : new Color(0.82f, 0.20f, 0.22f, 0.96f);
+            DrawPlanningFootprintCells(building, valid);
             CreatePolygon(
                 planningPreviewRoot.transform,
                 $"{status} {building.id}",
                 site,
                 0.115f,
-                new Color(0.30f, 0.84f, 0.90f, 0.62f),
+                fill,
                 8,
                 true);
             CreateLine(
@@ -1308,10 +1341,14 @@ namespace UrbanWildlife.Prototype
                 $"{status} {building.id} edge",
                 site.Concat(new[] { site[0] }).ToArray(),
                 0.025f,
-                new Color(0.18f, 0.61f, 0.68f, 0.92f),
+                edge,
                 0.120f,
                 9,
                 true);
+            if (showBuildingGhost)
+            {
+                DrawPlanningBuildingGhost(building, status, valid);
+            }
             CreateLabel(
                 planningPreviewRoot.transform,
                 status,
@@ -1319,14 +1356,94 @@ namespace UrbanWildlife.Prototype
                 0.055f);
         }
 
-        private void DrawPlanningPatch(CityGreenPatch patch, string status)
+        private void DrawPlanningFootprintCells(CityBuilding building, bool valid)
+        {
+            CityGridCell[] cells = CityGridResolver.GetBuildingFootprintCellsAtPosition(
+                planningWorkflow.CurrentState.planning_grid,
+                city.bounds,
+                building,
+                out _);
+            Color colour = valid
+                ? new Color(0.25f, 0.66f, 0.44f, 0.40f)
+                : new Color(0.82f, 0.24f, 0.25f, 0.40f);
+            foreach (CityGridCell cell in cells)
+            {
+                float halfWidth = cell.size_norm[0] * 0.5f;
+                float halfHeight = cell.size_norm[1] * 0.5f;
+                float[][] outline =
+                {
+                    new[] { cell.center_norm[0] - halfWidth, cell.center_norm[1] - halfHeight },
+                    new[] { cell.center_norm[0] + halfWidth, cell.center_norm[1] - halfHeight },
+                    new[] { cell.center_norm[0] + halfWidth, cell.center_norm[1] + halfHeight },
+                    new[] { cell.center_norm[0] - halfWidth, cell.center_norm[1] + halfHeight },
+                    new[] { cell.center_norm[0] - halfWidth, cell.center_norm[1] - halfHeight },
+                };
+                CreateLine(
+                    planningPreviewRoot.transform,
+                    $"{(valid ? "Valid" : "Conflict")} affected cell {cell.id}",
+                    outline,
+                    0.012f,
+                    colour,
+                    0.111f,
+                    7,
+                    true);
+            }
+        }
+
+        private void DrawPlanningBuildingGhost(
+            CityBuilding building,
+            string status,
+            bool valid)
+        {
+            if (!TryGetBuildingArtworkStyle(
+                    building,
+                    out string resourcePath,
+                    out float footprintScale))
+            {
+                return;
+            }
+            float width = building.footprint_units[0] / city.bounds.width_units * MapWidth;
+            float depth = building.footprint_units[1] / city.bounds.height_units * MapHeight;
+            if (!CreateBuildingArtwork(
+                    planningPreviewRoot.transform,
+                    building,
+                    resourcePath,
+                    width,
+                    depth,
+                    footprintScale))
+            {
+                return;
+            }
+            Transform ghost = planningPreviewRoot.transform.Find(building.id);
+            if (ghost == null)
+            {
+                return;
+            }
+            ghost.name = $"{status} building ghost {building.id}";
+            SpriteRenderer renderer = ghost.GetComponentInChildren<SpriteRenderer>();
+            if (renderer == null)
+            {
+                return;
+            }
+            renderer.color = valid
+                ? new Color(1f, 1f, 1f, 0.82f)
+                : new Color(1f, 0.58f, 0.58f, 0.68f);
+            renderer.sortingOrder = 31;
+        }
+
+        private void DrawPlanningPatch(
+            CityGreenPatch patch,
+            string status,
+            bool valid = true)
         {
             CreatePolygon(
                 planningPreviewRoot.transform,
                 $"{status} {patch.id}",
                 patch.polygon_norm,
                 0.10f,
-                new Color(0.45f, 0.82f, 0.62f, 1f));
+                valid
+                    ? new Color(0.45f, 0.82f, 0.62f, 1f)
+                    : new Color(0.94f, 0.38f, 0.36f, 0.72f));
             float[] centre =
             {
                 patch.polygon_norm.Average(point => point[0]),
@@ -1802,6 +1919,11 @@ namespace UrbanWildlife.Prototype
             planningWorkflow?.CancelPreview();
             desktopInputMessage = "Placement cancelled. Choose another position.";
             RefreshPlanningOverlay();
+        }
+
+        public void CancelPlacementPreview()
+        {
+            CancelDesktopPlacement();
         }
 
         private void OnGUI()
@@ -2548,9 +2670,9 @@ namespace UrbanWildlife.Prototype
 
         private void DrawRightSidebar()
         {
-            float panelX = Screen.width * MapViewportWidth;
-            float panelWidth = Screen.width - panelX;
-            Rect panelRect = new Rect(panelX, 0f, panelWidth, Screen.height);
+            Rect panelRect = RightSidebarRectForScreen(Screen.width, Screen.height);
+            float panelX = panelRect.x;
+            float panelWidth = panelRect.width;
             GUI.DrawTexture(panelRect, panelStyle.normal.background, ScaleMode.StretchToFill, false);
 
             float padding = CityPrototypeUiTheme.ScaledPixel(14, uiScale);
@@ -3147,6 +3269,14 @@ namespace UrbanWildlife.Prototype
                 screenHeight - padding - CityPrototypeUiTheme.ScaledPixel(172, scale),
                 CityPrototypeUiTheme.ScaledPixel(360, scale),
                 CityPrototypeUiTheme.ScaledPixel(172, scale));
+        }
+
+        public static Rect RightSidebarRectForScreen(int screenWidth, int screenHeight)
+        {
+            float safeWidth = Mathf.Max(1f, screenWidth);
+            float safeHeight = Mathf.Max(1f, screenHeight);
+            float panelX = safeWidth * MapViewportWidth;
+            return new Rect(panelX, 0f, safeWidth - panelX, safeHeight);
         }
 
         public static Rect ToolbarRectForScreen(int screenWidth, int screenHeight)

@@ -17,6 +17,7 @@ This pass aligns the playable Unity interface with the supplied Riverside Park r
 - In desktop play, non-overlapping building footprints may share a hidden ecology cell; the cell is bookkeeping rather than extra collision space.
 - Both green and red desktop previews can be repositioned immediately by clicking another map position; construction happens only after explicit confirmation. The camera workflow is unchanged in this pass.
 - The cleared warm-white ground after confirmation follows the compact building footprint and narrow access route instead of clearing whole planning cells.
+- Automatically generated building access uses the same warm-white kerb, pale-grey surface, centre dashes and width as the baked original streets; the pedestrian strip remains offset at the road edge.
 - Building density comes from adding more compact buildings, not enlarging individual icons. Detached houses retain their established size; apartments, markets and community buildings use smaller type-specific display scales matched to the mature-city reference while their gameplay footprints remain unchanged.
 - Camera-free desktop play can continue placing repeated building types up to a 72-building city; the physical-camera edition remains constrained to its real Token inventory.
 

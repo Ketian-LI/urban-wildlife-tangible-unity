@@ -673,7 +673,7 @@ namespace UrbanWildlife.EditorTools
                             point,
                             sidewalk.points_norm[index],
                             streetCity.bounds))
-                        .All(distance => distance >= 0.40f && distance <= 0.56f);
+                        .All(distance => distance >= 0.90f && distance <= 1.06f);
                 });
             CityMobilityPlan streetPlan = CityTripPlanner.CreatePlan(streetCity);
             bool walkersUseSidewalk = streetPlan.trips
@@ -908,6 +908,24 @@ namespace UrbanWildlife.EditorTools
             Transform roads = prototype.transform.Find("Generated City Prototype/Vehicle road network");
             Transform accessRoads = prototype.transform.Find("Generated City Prototype/Visible building access roads");
             Transform footpaths = prototype.transform.Find("Generated City Prototype/Pedestrian link network");
+            LineRenderer[] accessRoadLayers = accessRoads == null
+                ? Array.Empty<LineRenderer>()
+                : accessRoads.GetComponentsInChildren<LineRenderer>();
+            int accessKerbs = accessRoadLayers.Count(line =>
+                line.name.EndsWith(" kerb", StringComparison.Ordinal));
+            int accessSurfaces = accessRoadLayers.Count(line =>
+                line.name.EndsWith(" asphalt", StringComparison.Ordinal));
+            int accessCentreDashes = accessRoadLayers.Count(line =>
+                line.name.Contains(" centre dash "));
+            bool accessPaletteMatchesExisting = accessRoadLayers
+                .Where(line => line.name.EndsWith(" asphalt", StringComparison.Ordinal))
+                .All(line =>
+                {
+                    Color colour = line.sharedMaterial.color;
+                    return Math.Abs(colour.r - 239f / 255f) < 0.01f &&
+                           Math.Abs(colour.g - 241f / 255f) < 0.01f &&
+                           Math.Abs(colour.b - 237f / 255f) < 0.01f;
+                });
             Transform wildlife = prototype.transform.Find("Generated City Prototype/City wildlife agents");
             SpriteRenderer[] wildlifeSprites = wildlife == null
                 ? Array.Empty<SpriteRenderer>()
@@ -929,7 +947,8 @@ namespace UrbanWildlife.EditorTools
                   wildlifeSprites.Min(renderer => renderer.transform.position.z);
             if (roads == null || !roads.gameObject.activeSelf ||
                 accessRoads == null || !accessRoads.gameObject.activeSelf ||
-                accessRoads.GetComponentsInChildren<LineRenderer>().Length != 4 ||
+                accessKerbs != 2 || accessSurfaces != 2 || accessCentreDashes < 2 ||
+                !accessPaletteMatchesExisting ||
                 footpaths == null || !footpaths.gameObject.activeSelf ||
                 footpaths.GetComponentsInChildren<LineRenderer>().Length != 4 ||
                 wildlife == null || wildlife.childCount != 15 ||
@@ -943,7 +962,8 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
-                "existing_street_hierarchy_visible=True two_driveways_visible=True pedestrian_paths_default_visible=True " +
+                "existing_street_hierarchy_visible=True two_access_roads_visible=True " +
+                "access_roads_match_existing_style=True centre_dashes=True pedestrian_paths_default_visible=True " +
                 $"wildlife_artwork=15 wildlife_span={wildlifeHorizontalSpan:0.0}x{wildlifeVerticalSpan:0.0} " +
                 "hedgehog_fallback=0 compact_buildings=True");
         }
@@ -1708,11 +1728,18 @@ namespace UrbanWildlife.EditorTools
             LineRenderer[] accessLines = access == null
                 ? Array.Empty<LineRenderer>()
                 : access.GetComponentsInChildren<LineRenderer>();
-            if (access == null || accessLines.Length != 6 ||
+            int accessKerbCount = accessLines.Count(line =>
+                line.name.EndsWith(" kerb", StringComparison.Ordinal));
+            int accessSurfaceCount = accessLines.Count(line =>
+                line.name.EndsWith(" asphalt", StringComparison.Ordinal));
+            int accessDashCount = accessLines.Count(line =>
+                line.name.Contains(" centre dash "));
+            if (access == null || accessKerbCount != 3 || accessSurfaceCount != 3 ||
+                accessDashCount < 3 || prototype.GeneratedAccessRoadCentreDashCount != accessDashCount ||
                 accessLines.Max(line => line.startWidth) > 0.20f)
             {
                 throw new InvalidOperationException(
-                    "Desktop placement did not add a compact visible access road.");
+                    "Desktop placement did not add an access road matching the original street style.");
             }
             Transform clearings = prototype.transform.Find(
                 "Generated City Prototype/Planning grid/Compact development clearings");
@@ -1789,7 +1816,7 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
-                "confirm_build=True compact_site_clearings=True narrow_access=True " +
+                "confirm_build=True compact_site_clearings=True access_matches_original_roads=True " +
                 "valid_preview=green invalid_preview=red building_ghost=True exact_footprint_only=True " +
                 "valid_reposition_without_cancel=True invalid_retry_without_cancel=True " +
                 "continuous_position=True responsive_sidebar=True " +

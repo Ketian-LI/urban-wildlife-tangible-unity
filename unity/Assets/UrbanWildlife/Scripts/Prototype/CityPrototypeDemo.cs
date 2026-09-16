@@ -194,6 +194,7 @@ namespace UrbanWildlife.Prototype
         public int GeneratedBuildingCount { get; private set; }
         public int GeneratedVehicleRoadCount { get; private set; }
         public int GeneratedPedestrianLinkCount { get; private set; }
+        public int GeneratedAccessRoadCentreDashCount { get; private set; }
         public int GeneratedAmenityCount { get; private set; }
         public int GeneratedPlanningCellCount { get; private set; }
         public int AvailablePlanningCellCount { get; private set; }
@@ -942,6 +943,7 @@ namespace UrbanWildlife.Prototype
         {
             vehicleRoadRoot = ChildRoot("Vehicle road network");
             buildingAccessRoadRoot = ChildRoot("Visible building access roads");
+            GeneratedAccessRoadCentreDashCount = 0;
             CityVehicleRoad[] activeRoads = city.vehicle_roads.Where(item =>
                 item.construction_state == CityConstructionState.Existing).ToArray();
             foreach (CityVehicleRoad road in activeRoads)
@@ -961,8 +963,8 @@ namespace UrbanWildlife.Prototype
                     roadParent,
                     road.id + " kerb",
                     road.points_norm,
-                    width + 0.035f,
-                    new Color(0.94f, 0.94f, 0.91f, 0.98f),
+                    width + 0.050f,
+                    new Color(252f / 255f, 252f / 255f, 247f / 255f, 0.99f),
                     0.045f,
                     -8);
                 CreateLine(
@@ -970,11 +972,14 @@ namespace UrbanWildlife.Prototype
                     road.id + " asphalt",
                     road.points_norm,
                     width,
-                    road.role == CityVehicleRoadRole.BuildingAccess
-                        ? new Color(0.90f, 0.90f, 0.88f, 0.96f)
-                        : new Color(0.88f, 0.88f, 0.88f, 0.98f),
+                    new Color(239f / 255f, 241f / 255f, 237f / 255f, 0.99f),
                     0.055f,
                     -7);
+                GeneratedAccessRoadCentreDashCount += CreateRoadCentreDashes(
+                    roadParent,
+                    road.id,
+                    road.points_norm,
+                    width);
             }
             vehicleRoadRoot.SetActive(showVehicleNetwork);
 
@@ -996,7 +1001,7 @@ namespace UrbanWildlife.Prototype
                     link.id + " edge",
                     link.points_norm,
                     Mathf.Max(0.105f, width + 0.045f),
-                    new Color(0.98f, 0.97f, 0.93f, 0.96f),
+                    new Color(252f / 255f, 252f / 255f, 247f / 255f, 0.97f),
                     0.070f,
                     -5);
                 CreateLine(
@@ -1004,13 +1009,90 @@ namespace UrbanWildlife.Prototype
                     link.id + " surface",
                     link.points_norm,
                     Mathf.Max(0.070f, width),
-                    new Color(0.89f, 0.86f, 0.77f, 0.96f),
+                    new Color(244f / 255f, 245f / 255f, 239f / 255f, 0.98f),
                     0.078f,
                     -4);
             }
             pedestrianRoot.SetActive(showPedestrianNetwork);
             GeneratedVehicleRoadCount = activeRoads.Length;
             GeneratedPedestrianLinkCount = activeLinks.Length;
+        }
+
+        private int CreateRoadCentreDashes(
+            Transform parent,
+            string roadId,
+            float[][] points,
+            float roadWidth)
+        {
+            if (points == null || points.Length < 2 || city?.bounds == null)
+            {
+                return 0;
+            }
+            const float dashLengthUnits = 0.58f;
+            const float gapLengthUnits = 0.44f;
+            float patternLength = dashLengthUnits + gapLengthUnits;
+            float patternProgress = 0f;
+            int dashIndex = 0;
+            for (int segmentIndex = 1; segmentIndex < points.Length; segmentIndex += 1)
+            {
+                float[] start = points[segmentIndex - 1];
+                float[] end = points[segmentIndex];
+                if (start == null || end == null || start.Length < 2 || end.Length < 2)
+                {
+                    continue;
+                }
+                float deltaXUnits = (end[0] - start[0]) * city.bounds.width_units;
+                float deltaYUnits = (end[1] - start[1]) * city.bounds.height_units;
+                float segmentLengthUnits = Mathf.Sqrt(
+                    deltaXUnits * deltaXUnits + deltaYUnits * deltaYUnits);
+                if (segmentLengthUnits <= 0.001f)
+                {
+                    continue;
+                }
+                float travelled = 0f;
+                while (travelled < segmentLengthUnits - 0.001f)
+                {
+                    float patternPosition = patternProgress % patternLength;
+                    bool draw = patternPosition < dashLengthUnits;
+                    float phaseRemaining = draw
+                        ? dashLengthUnits - patternPosition
+                        : patternLength - patternPosition;
+                    float step = Mathf.Min(
+                        phaseRemaining,
+                        segmentLengthUnits - travelled);
+                    if (draw && step > 0.035f)
+                    {
+                        float firstT = travelled / segmentLengthUnits;
+                        float secondT = (travelled + step) / segmentLengthUnits;
+                        float[][] dash =
+                        {
+                            new[]
+                            {
+                                Mathf.Lerp(start[0], end[0], firstT),
+                                Mathf.Lerp(start[1], end[1], firstT),
+                            },
+                            new[]
+                            {
+                                Mathf.Lerp(start[0], end[0], secondT),
+                                Mathf.Lerp(start[1], end[1], secondT),
+                            },
+                        };
+                        CreateLine(
+                            parent,
+                            $"{roadId} centre dash {dashIndex}",
+                            dash,
+                            Mathf.Clamp(roadWidth * 0.075f, 0.007f, 0.013f),
+                            new Color(229f / 255f, 232f / 255f, 229f / 255f, 0.92f),
+                            0.063f,
+                            -6,
+                            true);
+                        dashIndex += 1;
+                    }
+                    travelled += step;
+                    patternProgress += step;
+                }
+            }
+            return dashIndex;
         }
 
         private void BuildBuildings()

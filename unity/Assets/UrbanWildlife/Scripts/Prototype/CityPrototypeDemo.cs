@@ -134,6 +134,7 @@ namespace UrbanWildlife.Prototype
         private CityPhysicalTokenType desktopBuildingType = CityPhysicalTokenType.DetachedHouse;
         private string desktopInputMessage =
             "Choose a building, then click an open part of the map.";
+        private long lastDesktopPlacementTimestampMs;
         private CityTraceDisplayMode traceDisplayMode = CityTraceDisplayMode.AnimalTrace;
         private string cityScanInputMessage =
             "Camera scans remain pending until you load and confirm them.";
@@ -1800,8 +1801,7 @@ namespace UrbanWildlife.Prototype
             {
                 return true;
             }
-            return planningWorkflow.Phase == CityPlanningWorkflowPhase.Preview &&
-                   !(planningWorkflow.Snapshot?.CanConfirmPreview ?? false);
+            return planningWorkflow.Phase == CityPlanningWorkflowPhase.Preview;
         }
 
         private bool PointerOverMapChrome(Vector2 guiPoint)
@@ -1852,11 +1852,10 @@ namespace UrbanWildlife.Prototype
                 desktopInputMessage = error;
                 return false;
             }
-            if (planningWorkflow?.Phase == CityPlanningWorkflowPhase.Preview &&
-                !(planningWorkflow.Snapshot?.CanConfirmPreview ?? false))
+            if (planningWorkflow?.Phase == CityPlanningWorkflowPhase.Preview)
             {
-                // A blocked desktop preview is only a rejected attempt. Replace it
-                // immediately so the player can keep clicking until a valid site is found.
+                // A desktop preview remains movable until it is explicitly confirmed.
+                // Replace both green and red previews with the next map click.
                 planningWorkflow.CancelPreview();
             }
             if (planningWorkflow?.Phase != CityPlanningWorkflowPhase.ReadyToScan)
@@ -1865,7 +1864,10 @@ namespace UrbanWildlife.Prototype
                 desktopInputMessage = error;
                 return false;
             }
-            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            long timestamp = Math.Max(
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                lastDesktopPlacementTimestampMs + 1);
+            lastDesktopPlacementTimestampMs = timestamp;
             if (!CityPlanningDemoScanFactory.TryCreateDesktopPlacementScan(
                     city,
                     type,
@@ -1881,7 +1883,7 @@ namespace UrbanWildlife.Prototype
             }
             desktopBuildingType = type;
             desktopInputMessage = planningWorkflow.Snapshot.CanConfirmPreview
-                ? "Preview ready. Confirm to build and connect it to the nearest existing street."
+                ? "Preview ready. Click elsewhere to move it, or confirm to build."
                 : "That position is blocked. Click another map position to try again.";
             RefreshPlanningOverlay();
             return true;
@@ -4624,8 +4626,8 @@ namespace UrbanWildlife.Prototype
                     return "地图摄像机当前不可用。";
                 case "That click did not reach the map.":
                     return "这次点击没有落在地图范围内。";
-                case "Preview ready. Confirm to build and connect it to the nearest existing street.":
-                    return "预览已就绪。确认后将建造建筑并接入最近的既有道路。";
+                case "Preview ready. Click elsewhere to move it, or confirm to build.":
+                    return "预览已就绪。点击其他位置可继续移动，确认后才会建造。";
                 case "That position is blocked. Click another map position to try again.":
                     return "该位置不可建造。请直接点击地图上的其他位置重试。";
                 case "Built. Choose another building and click the map.":

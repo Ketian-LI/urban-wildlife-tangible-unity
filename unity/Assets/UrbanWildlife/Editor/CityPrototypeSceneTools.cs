@@ -1684,6 +1684,18 @@ namespace UrbanWildlife.EditorTools
                 throw new InvalidOperationException(
                     "A valid placement must show only its exact green footprint and ghost building.");
             }
+            CityGridCell movedPlacement = placements[1];
+            if (!prototype.TryPlaceDesktopBuilding(
+                    CityPhysicalTokenType.DetachedHouse,
+                    movedPlacement.center_norm[0],
+                    movedPlacement.center_norm[1],
+                    out string moveError) ||
+                prototype.PlanningPhase != CityPlanningWorkflowPhase.Preview ||
+                !prototype.PlacementPreviewCanConfirm)
+            {
+                throw new InvalidOperationException(
+                    $"A valid green desktop preview could not move on the next map click: {moveError}");
+            }
             if (!prototype.ConfirmDesktopPlacement(out string buildError) ||
                 prototype.GeneratedBuildingCount != 3 ||
                 prototype.PlanningPhase != CityPlanningWorkflowPhase.ReadyToScan)
@@ -1750,7 +1762,7 @@ namespace UrbanWildlife.EditorTools
             }
             string retryError = string.Empty;
             bool retryAccepted = false;
-            foreach (CityGridCell retryPlacement in placements.Skip(1))
+            foreach (CityGridCell retryPlacement in placements.Skip(2))
             {
                 if (prototype.TryPlaceDesktopBuilding(
                         CityPhysicalTokenType.DetachedHouse,
@@ -1779,7 +1791,7 @@ namespace UrbanWildlife.EditorTools
                 "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
                 "confirm_build=True compact_site_clearings=True narrow_access=True " +
                 "valid_preview=green invalid_preview=red building_ghost=True exact_footprint_only=True " +
-                "invalid_retry_without_cancel=True " +
+                "valid_reposition_without_cancel=True invalid_retry_without_cancel=True " +
                 "continuous_position=True responsive_sidebar=True " +
                 "camera_required=False camera_mode_retained=True");
         }

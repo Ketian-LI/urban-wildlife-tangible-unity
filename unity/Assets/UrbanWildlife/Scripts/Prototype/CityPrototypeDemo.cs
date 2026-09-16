@@ -24,7 +24,7 @@ namespace UrbanWildlife.Prototype
         private const float MapHeight = 8f;
         private const float MapViewportWidth = 0.79f;
         private const float BoardViewMargin = 0.55f;
-        private const float RuntimeSpeed = 2f;
+        private const float DefaultRuntimeSpeed = 2f;
         private const float HumanArtworkHeight = 0.23f;
         private const float VehicleArtworkDepth = 0.24f;
         private const string CityBoardUnderlayResourcePath =
@@ -182,6 +182,12 @@ namespace UrbanWildlife.Prototype
         private int traceViewIndex;
         private int selectedAnimalIndex;
         private readonly HashSet<string> dismissedEventIds = new HashSet<string>();
+        private float simulationSpeed = DefaultRuntimeSpeed;
+        private int seasonOverride = -1;
+        private bool showMainMenu;
+        private bool showEndScreen;
+        private bool showSettings;
+        private bool overlayWasPaused;
 
         public int GeneratedBuildingCount { get; private set; }
         public int GeneratedVehicleRoadCount { get; private set; }
@@ -224,6 +230,13 @@ namespace UrbanWildlife.Prototype
         public bool BuildingPlacementCardEnabled => true;
         public bool TraceViewSelectorEnabled => true;
         public int ActiveTraceViewIndex => traceViewIndex;
+        public bool TimeControlEnabled => true;
+        public float CurrentSimulationSpeed => paused ? 0f : simulationSpeed;
+        public int CurrentSeasonIndex => seasonOverride >= 0
+            ? seasonOverride
+            : DefaultSeasonIndex(DisplayStageNumber);
+        public bool MainMenuVisible => showMainMenu;
+        public bool EndScreenVisible => showEndScreen;
         public int DisplayStageNumber => StageNumberForBuildingCount(
             Mathf.Max(GeneratedBuildingCount, city?.buildings?.Length ?? 0));
         public int ActiveSidebarTab => sidebarTab;
@@ -308,15 +321,16 @@ namespace UrbanWildlife.Prototype
             {
                 SetHeatmapVisible(!showHeatmap);
             }
-            if (!Application.isPlaying || mobility == null || paused)
+            if (!Application.isPlaying || mobility == null || paused || showMainMenu || showEndScreen)
             {
                 return;
             }
-            mobility.Tick(Time.deltaTime * RuntimeSpeed);
-            simulationElapsed += Time.deltaTime * RuntimeSpeed;
-            environment?.Tick(Time.deltaTime * RuntimeSpeed, ActivityMultiplier());
+            float scaledDelta = Time.deltaTime * simulationSpeed;
+            mobility.Tick(scaledDelta);
+            simulationElapsed += scaledDelta;
+            environment?.Tick(scaledDelta, ActivityMultiplier());
             wildlife?.Tick(
-                Time.deltaTime * RuntimeSpeed,
+                scaledDelta,
                 environment.Snapshot,
                 mobility.ActiveVehicleAgents);
             CityPlanningWorkflowPhase phaseBeforeTick = planningWorkflow?.Phase ??
@@ -324,7 +338,7 @@ namespace UrbanWildlife.Prototype
             if (planningWorkflow?.Phase == CityPlanningWorkflowPhase.Construction)
             {
                 planningWorkflow.Tick(
-                    Time.deltaTime * RuntimeSpeed,
+                    scaledDelta,
                     environment.Snapshot,
                     wildlife.Snapshot);
                 strategy = planningWorkflow.Strategy;
@@ -335,10 +349,10 @@ namespace UrbanWildlife.Prototype
             }
             else
             {
-                strategy?.Tick(Time.deltaTime * RuntimeSpeed, environment.Snapshot, wildlife.Snapshot);
+                strategy?.Tick(scaledDelta, environment.Snapshot, wildlife.Snapshot);
             }
             observation?.Capture(
-                Time.deltaTime * RuntimeSpeed,
+                scaledDelta,
                 mobility,
                 environment.Snapshot,
                 wildlife.Snapshot,
@@ -1627,6 +1641,7 @@ namespace UrbanWildlife.Prototype
         {
             if (planningWorkflow?.Phase != CityPlanningWorkflowPhase.ReadyToScan ||
                 bottomNavigationIndex != 0 ||
+                showMainMenu || showEndScreen ||
                 !UnityEngine.Input.GetMouseButtonDown(0))
             {
                 return;
@@ -1684,6 +1699,7 @@ namespace UrbanWildlife.Prototype
                 CityPrototypeUiTheme.ScaledPixel(54, scale));
             return header.Contains(guiPoint) ||
                    status.Contains(guiPoint) ||
+                   TimeControlRectForScreen(Screen.width, Screen.height).Contains(guiPoint) ||
                    CityStatusRectForScreen(Screen.width, Screen.height).Contains(guiPoint) ||
                    ToolbarRectForScreen(Screen.width, Screen.height).Contains(guiPoint) ||
                    (bottomNavigationIndex == 0 &&
@@ -1788,9 +1804,20 @@ namespace UrbanWildlife.Prototype
 
             EnsureStyles();
             GUI.depth = -20;
+            bool overlayActive = showMainMenu || showEndScreen;
+            GUI.enabled = !overlayActive;
             DrawMapChrome();
             DrawRightSidebar();
             DrawCriticalEventPopup();
+            GUI.enabled = true;
+            if (showEndScreen)
+            {
+                DrawEndScreenOverlay();
+            }
+            else if (showMainMenu)
+            {
+                DrawMainMenuOverlay();
+            }
         }
 
         private void DrawMapChrome()
@@ -1810,7 +1837,10 @@ namespace UrbanWildlife.Prototype
                 headerRect.center.y - backSize * 0.5f,
                 backSize,
                 backSize);
-            GUI.Button(backRect, "←", backButtonStyle);
+            if (GUI.Button(backRect, "←", backButtonStyle))
+            {
+                OpenMainMenu();
+            }
 
             float textX = backRect.xMax + CityPrototypeUiTheme.ScaledPixel(12, uiScale);
             float languageWidth = CityPrototypeUiTheme.ScaledPixel(72, uiScale);
@@ -1857,8 +1887,8 @@ namespace UrbanWildlife.Prototype
             DrawShadowedCard(statusRect);
             string[] statusItems =
             {
-                T($"YEAR {DisplayYear}  ·  {SeasonName(DisplayStageNumber)}",
-                    $"第 {DisplayYear} 年  ·  {SeasonName(DisplayStageNumber)}"),
+                T($"YEAR {DisplayYear}  ·  {SeasonName(CurrentSeasonIndex)}",
+                    $"第 {DisplayYear} 年  ·  {SeasonName(CurrentSeasonIndex)}"),
                 $"{T("PEOPLE", "人口")}  {plan.RepresentedPopulation}",
                 $"{T("NATURE", "自然")}  {Mathf.Clamp(Mathf.RoundToInt(CityBalanceTotal), 0, 99)}",
                 $"{T("WELLBEING", "幸福")}  72",
@@ -1880,6 +1910,8 @@ namespace UrbanWildlife.Prototype
                         progressTrackStyle.normal.background);
                 }
             }
+
+            DrawTimeControlCard(TimeControlRectForScreen(Screen.width, Screen.height));
 
             DrawCityStatusCard(CityStatusRectForScreen(Screen.width, Screen.height));
             DrawBottomToolbar(ToolbarRectForScreen(Screen.width, Screen.height));
@@ -2016,6 +2048,189 @@ namespace UrbanWildlife.Prototype
             {
                 dismissedEventIds.Add(EventKey(entry));
             }
+        }
+
+        private void DrawTimeControlCard(Rect rect)
+        {
+            DrawShadowedCard(rect);
+            string[] labels =
+            {
+                paused ? T("RESUME", "继续") : T("PAUSE", "暂停"),
+                "1×",
+                "2×",
+                SeasonName(CurrentSeasonIndex),
+            };
+            float padding = CityPrototypeUiTheme.ScaledPixel(6, uiScale);
+            float gap = CityPrototypeUiTheme.ScaledPixel(4, uiScale);
+            float width = (rect.width - padding * 2f - gap * 3f) / 4f;
+            for (int index = 0; index < labels.Length; index += 1)
+            {
+                Rect buttonRect = new Rect(
+                    rect.x + padding + index * (width + gap),
+                    rect.y + padding,
+                    width,
+                    rect.height - padding * 2f);
+                bool active = index == 0 && paused ||
+                              index == 1 && !paused && Mathf.Approximately(simulationSpeed, 1f) ||
+                              index == 2 && !paused && Mathf.Approximately(simulationSpeed, 2f);
+                if (!GUI.Button(buttonRect, labels[index],
+                        active ? activeTabStyle : toolbarButtonStyle))
+                {
+                    continue;
+                }
+                switch (index)
+                {
+                    case 0:
+                        SetSimulationSpeed(paused ? simulationSpeed : 0f);
+                        break;
+                    case 1:
+                        SetSimulationSpeed(1f);
+                        break;
+                    case 2:
+                        SetSimulationSpeed(2f);
+                        break;
+                    default:
+                        CycleSeason();
+                        break;
+                }
+            }
+        }
+
+        private void DrawMainMenuOverlay()
+        {
+            DrawMapDimmer();
+            Rect rect = MainMenuRectForScreen(Screen.width, Screen.height);
+            DrawShadowedCard(rect);
+            float padding = CityPrototypeUiTheme.ScaledPixel(24, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding,
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(42, uiScale)),
+                T("Riverside Park", "河畔公园"),
+                titleStyle);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + CityPrototypeUiTheme.ScaledPixel(62, uiScale),
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(28, uiScale)),
+                T("A city for people and wildlife", "人与野生动物共生的城市"),
+                mapSubtitleStyle);
+
+            float buttonWidth = rect.width - padding * 2f;
+            float buttonHeight = CityPrototypeUiTheme.ScaledPixel(42, uiScale);
+            float gap = CityPrototypeUiTheme.ScaledPixel(9, uiScale);
+            float top = rect.y + CityPrototypeUiTheme.ScaledPixel(108, uiScale);
+            if (showSettings)
+            {
+                GUI.Label(new Rect(rect.x + padding, top, buttonWidth, buttonHeight),
+                    T("LANGUAGE", "语言"), headingStyle);
+                DrawLanguagePill(new Rect(rect.x + padding,
+                    top + buttonHeight, buttonWidth, buttonHeight));
+                if (GUI.Button(new Rect(rect.x + padding,
+                        top + buttonHeight * 2f + gap, buttonWidth, buttonHeight),
+                        T("BACK", "返回"), buttonStyle))
+                {
+                    showSettings = false;
+                }
+                return;
+            }
+            if (GUI.Button(new Rect(rect.x + padding, top, buttonWidth, buttonHeight),
+                    T("CONTINUE", "继续游戏"), buttonStyle))
+            {
+                ResumeFromMainMenu();
+            }
+            top += buttonHeight + gap;
+            if (GUI.Button(new Rect(rect.x + padding, top, buttonWidth, buttonHeight),
+                    T("NEW GAME", "新游戏"), buttonStyle))
+            {
+                StartNewGame();
+            }
+            top += buttonHeight + gap;
+            if (GUI.Button(new Rect(rect.x + padding, top, buttonWidth, buttonHeight),
+                    T("SETTINGS", "设置"), buttonStyle))
+            {
+                showSettings = true;
+            }
+            top += buttonHeight + gap;
+            if (GUI.Button(new Rect(rect.x + padding, top, buttonWidth, buttonHeight),
+                    T("QUIT", "退出"), buttonStyle))
+            {
+                if (Application.isEditor)
+                {
+                    desktopInputMessage = T("Quit is available in a player build.",
+                        "退出功能可在构建后的游戏中使用。");
+                }
+                else
+                {
+                    Application.Quit();
+                }
+            }
+        }
+
+        private void DrawEndScreenOverlay()
+        {
+            DrawMapDimmer();
+            Rect rect = EndScreenRectForScreen(Screen.width, Screen.height);
+            DrawShadowedCard(rect);
+            float padding = CityPrototypeUiTheme.ScaledPixel(24, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding,
+                    rect.width * 0.62f, CityPrototypeUiTheme.ScaledPixel(42, uiScale)),
+                T("A Shared Home", "共同家园"),
+                titleStyle);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + CityPrototypeUiTheme.ScaledPixel(60, uiScale),
+                    rect.width * 0.62f, CityPrototypeUiTheme.ScaledPixel(48, uiScale)),
+                T("People and wildlife live together. Every choice shapes the city.",
+                    "人与野生动物共同生活，每一个选择都在塑造城市。"),
+                bodyStyle);
+            GUI.Label(
+                new Rect(rect.xMax - CityPrototypeUiTheme.ScaledPixel(180, uiScale),
+                    rect.y + padding,
+                    CityPrototypeUiTheme.ScaledPixel(150, uiScale),
+                    CityPrototypeUiTheme.ScaledPixel(68, uiScale)),
+                $"{T("FINAL SCORE", "最终得分")}\n{FinalScore()}",
+                mapTitleStyle);
+
+            float firstY = rect.y + CityPrototypeUiTheme.ScaledPixel(132, uiScale);
+            float rowHeight = CityPrototypeUiTheme.ScaledPixel(34, uiScale);
+            DrawStatusBar(rect, firstY, T("Development", "城市发展"),
+                Mathf.Clamp(58 + DisplayStageNumber * 10, 0, 100), progressGreenStyle);
+            DrawStatusBar(rect, firstY + rowHeight, T("Accessibility", "出行便利"),
+                Mathf.Clamp(60 + GeneratedVehicleRoadCount * 3, 0, 100), progressBlueStyle);
+            DrawStatusBar(rect, firstY + rowHeight * 2f, T("Waste Management", "垃圾管理"),
+                environment?.Snapshot?.overflow_active == true ? 52 : 78, progressOrangeStyle);
+            DrawStatusBar(rect, firstY + rowHeight * 3f, T("Green Connectivity", "绿地连通"),
+                Mathf.Clamp(Mathf.RoundToInt(CityBalanceTotal), 0, 100), progressGreenStyle);
+            DrawStatusBar(rect, firstY + rowHeight * 4f, T("Wildlife Safety", "动物安全"),
+                Mathf.Clamp(70 + WildlifeSpeciesCount * 3, 0, 100), progressPurpleStyle);
+
+            float gap = CityPrototypeUiTheme.ScaledPixel(10, uiScale);
+            float buttonWidth = (rect.width - padding * 2f - gap) * 0.5f;
+            Rect buttons = new Rect(
+                rect.x + padding,
+                rect.yMax - padding - CityPrototypeUiTheme.ScaledPixel(44, uiScale),
+                rect.width - padding * 2f,
+                CityPrototypeUiTheme.ScaledPixel(44, uiScale));
+            if (GUI.Button(new Rect(buttons.x, buttons.y, buttonWidth, buttons.height),
+                    T("VIEW MAP", "查看地图"), buttonStyle))
+            {
+                ReturnToMapFromEndScreen();
+            }
+            if (GUI.Button(new Rect(buttons.x + buttonWidth + gap, buttons.y,
+                    buttonWidth, buttons.height), T("PLAY AGAIN", "再玩一次"), buttonStyle))
+            {
+                StartNewGame();
+            }
+        }
+
+        private void DrawMapDimmer()
+        {
+            Color previous = GUI.color;
+            GUI.color = new Color(0.18f, 0.28f, 0.24f, 0.62f);
+            GUI.DrawTexture(
+                new Rect(0f, 0f, Screen.width, Screen.height),
+                Texture2D.whiteTexture,
+                ScaleMode.StretchToFill,
+                false);
+            GUI.color = previous;
         }
 
         private void DrawCityStatusCard(Rect rect)
@@ -2480,6 +2695,17 @@ namespace UrbanWildlife.Prototype
                 showPedestrianNetwork = !showPedestrianNetwork;
                 pedestrianRoot?.SetActive(showPedestrianNetwork);
             }
+            top += height + gap;
+            if (GUI.Button(new Rect(rect.x + padding, top, width, height),
+                    T("View results", "查看结算"), buttonStyle))
+            {
+                OpenEndScreen();
+            }
+            if (GUI.Button(new Rect(rect.x + padding + width + gap, top, width, height),
+                    T("Main menu", "主菜单"), buttonStyle))
+            {
+                OpenMainMenu();
+            }
             top += height + CityPrototypeUiTheme.ScaledPixel(18, uiScale);
             GUI.Label(
                 new Rect(rect.x + padding, top, rect.width - padding * 2f,
@@ -2605,6 +2831,47 @@ namespace UrbanWildlife.Prototype
                 CityPrototypeUiTheme.ScaledPixel(390, scale),
                 mapWidth * 0.40f);
             float height = CityPrototypeUiTheme.ScaledPixel(260, scale);
+            return new Rect(
+                mapWidth * 0.5f - width * 0.5f,
+                screenHeight * 0.5f - height * 0.5f,
+                width,
+                height);
+        }
+
+        public static Rect TimeControlRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            float mapWidth = screenWidth * MapViewportWidth;
+            float padding = CityPrototypeUiTheme.ScaledPixel(18, scale);
+            float width = CityPrototypeUiTheme.ScaledPixel(310, scale);
+            return new Rect(
+                mapWidth - padding - width,
+                padding + CityPrototypeUiTheme.ScaledPixel(62, scale),
+                width,
+                CityPrototypeUiTheme.ScaledPixel(46, scale));
+        }
+
+        public static Rect MainMenuRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            float mapWidth = screenWidth * MapViewportWidth;
+            float width = CityPrototypeUiTheme.ScaledPixel(430, scale);
+            float height = CityPrototypeUiTheme.ScaledPixel(380, scale);
+            return new Rect(
+                mapWidth * 0.5f - width * 0.5f,
+                screenHeight * 0.5f - height * 0.5f,
+                width,
+                height);
+        }
+
+        public static Rect EndScreenRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            float mapWidth = screenWidth * MapViewportWidth;
+            float width = Mathf.Min(
+                CityPrototypeUiTheme.ScaledPixel(680, scale),
+                mapWidth * 0.72f);
+            float height = CityPrototypeUiTheme.ScaledPixel(470, scale);
             return new Rect(
                 mapWidth * 0.5f - width * 0.5f,
                 screenHeight * 0.5f - height * 0.5f,
@@ -3433,6 +3700,75 @@ namespace UrbanWildlife.Prototype
             traceVisualizer?.SetVisible(showHeatmap);
         }
 
+        public void SetSimulationSpeed(float speed)
+        {
+            if (speed <= 0f)
+            {
+                paused = true;
+                return;
+            }
+            simulationSpeed = speed < 1.5f ? 1f : 2f;
+            paused = false;
+        }
+
+        public void CycleSeason()
+        {
+            seasonOverride = (CurrentSeasonIndex + 1) % 4;
+        }
+
+        public void OpenMainMenu()
+        {
+            if (!showMainMenu)
+            {
+                overlayWasPaused = paused;
+            }
+            showEndScreen = false;
+            showMainMenu = true;
+            showSettings = false;
+            paused = true;
+        }
+
+        public void ResumeFromMainMenu()
+        {
+            showMainMenu = false;
+            showSettings = false;
+            paused = overlayWasPaused;
+        }
+
+        public void OpenEndScreen()
+        {
+            if (!showEndScreen)
+            {
+                overlayWasPaused = paused;
+            }
+            showMainMenu = false;
+            showEndScreen = true;
+            paused = true;
+        }
+
+        public void ReturnToMapFromEndScreen()
+        {
+            showEndScreen = false;
+            paused = overlayWasPaused;
+        }
+
+        public void StartNewGame()
+        {
+            showMainMenu = false;
+            showEndScreen = false;
+            showSettings = false;
+            paused = false;
+            simulationSpeed = DefaultRuntimeSpeed;
+            seasonOverride = -1;
+            bottomNavigationIndex = 0;
+            traceViewIndex = 0;
+            sidebarTab = 1;
+            dismissedEventIds.Clear();
+            planningWorkflow = null;
+            observation = null;
+            InitializePrototype(false);
+        }
+
         private void UpdateTraceVisuals()
         {
             if (traceVisualizer == null || observation?.Snapshot?.trace_points == null)
@@ -3641,6 +3977,15 @@ namespace UrbanWildlife.Prototype
             return 3;
         }
 
+        private static int DefaultSeasonIndex(int stageNumber)
+        {
+            if (stageNumber == 1)
+            {
+                return 0;
+            }
+            return stageNumber == 2 ? 2 : 3;
+        }
+
         private string StageName(int stageNumber)
         {
             switch (stageNumber)
@@ -3651,14 +3996,24 @@ namespace UrbanWildlife.Prototype
             }
         }
 
-        private string SeasonName(int stageNumber)
+        private string SeasonName(int seasonIndex)
         {
-            switch (stageNumber)
+            switch (seasonIndex)
             {
-                case 1: return T("SPRING", "春季");
+                case 0: return T("SPRING", "春季");
+                case 1: return T("SUMMER", "夏季");
                 case 2: return T("AUTUMN", "秋季");
                 default: return T("WINTER", "冬季");
             }
+        }
+
+        private int FinalScore()
+        {
+            float nature = Mathf.Clamp(CityBalanceTotal, 0f, 100f);
+            float wildlifeScore = Mathf.Clamp(68f + WildlifeSpeciesCount * 4f, 0f, 100f);
+            float development = Mathf.Clamp(56f + DisplayStageNumber * 11f, 0f, 100f);
+            float waste = environment?.Snapshot?.overflow_active == true ? 52f : 80f;
+            return Mathf.RoundToInt((nature + wildlifeScore + development + waste) * 0.25f);
         }
 
         private string DevelopmentPhaseLabel(CityDevelopmentPhase phase)

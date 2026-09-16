@@ -383,7 +383,35 @@ namespace UrbanWildlife.EditorTools
             Rect buildingMode = CityPrototypeDemo.BuildingModeRectForScreen(width, height);
             Rect traceMode = CityPrototypeDemo.TraceModeRectForScreen(width, height);
             Rect eventPopup = CityPrototypeDemo.EventPopupRectForScreen(width, height);
+            Rect timeControl = CityPrototypeDemo.TimeControlRectForScreen(width, height);
+            Rect mainMenu = CityPrototypeDemo.MainMenuRectForScreen(width, height);
+            Rect endScreen = CityPrototypeDemo.EndScreenRectForScreen(width, height);
             Rect heatmap = CityPrototypeDemo.HeatmapCardRectForScreen(width, height);
+            bool initialTime = prototype.TimeControlEnabled &&
+                               Math.Abs(prototype.CurrentSimulationSpeed - 2f) < 0.001f &&
+                               prototype.CurrentSeasonIndex == 0;
+            prototype.SetSimulationSpeed(1f);
+            bool normalSpeed = Math.Abs(prototype.CurrentSimulationSpeed - 1f) < 0.001f;
+            prototype.SetSimulationSpeed(0f);
+            bool pausedSpeed = Math.Abs(prototype.CurrentSimulationSpeed) < 0.001f;
+            prototype.SetSimulationSpeed(2f);
+            prototype.CycleSeason();
+            bool seasonAdvanced = prototype.CurrentSeasonIndex == 1;
+            prototype.CycleSeason();
+            prototype.CycleSeason();
+            prototype.CycleSeason();
+            prototype.OpenMainMenu();
+            bool mainMenuFlow = prototype.MainMenuVisible &&
+                                Math.Abs(prototype.CurrentSimulationSpeed) < 0.001f;
+            prototype.ResumeFromMainMenu();
+            mainMenuFlow = mainMenuFlow && !prototype.MainMenuVisible &&
+                           Math.Abs(prototype.CurrentSimulationSpeed - 2f) < 0.001f;
+            prototype.OpenEndScreen();
+            bool endScreenFlow = prototype.EndScreenVisible &&
+                                 Math.Abs(prototype.CurrentSimulationSpeed) < 0.001f;
+            prototype.ReturnToMapFromEndScreen();
+            endScreenFlow = endScreenFlow && !prototype.EndScreenVisible &&
+                            Math.Abs(prototype.CurrentSimulationSpeed - 2f) < 0.001f;
             bool valid = prototype.RiversideUiLayoutEnabled &&
                          prototype.ReferenceStageHudEnabled &&
                          prototype.BottomNavigationItemCount == 4 &&
@@ -391,6 +419,8 @@ namespace UrbanWildlife.EditorTools
                          prototype.BuildingPlacementCardEnabled &&
                          prototype.TraceViewSelectorEnabled &&
                          prototype.ActiveTraceViewIndex == 0 &&
+                         initialTime && normalSpeed && pausedSpeed && seasonAdvanced &&
+                         mainMenuFlow && endScreenFlow &&
                          prototype.DisplayStageNumber == 1 &&
                          prototype.ActiveSidebarTab == 1 &&
                          Math.Abs(CityPrototypeDemo.MapViewportFraction - 0.79f) < 0.001f &&
@@ -403,6 +433,12 @@ namespace UrbanWildlife.EditorTools
                          traceMode.x == toolbar.x && traceMode.xMax == toolbar.xMax &&
                          traceMode.yMax < toolbar.y &&
                          eventPopup.x >= 0f && eventPopup.xMax < mapWidth &&
+                         timeControl.x >= 0f && timeControl.xMax < mapWidth &&
+                         timeControl.y >= 0f && timeControl.yMax < height * 0.25f &&
+                         mainMenu.x >= 0f && mainMenu.xMax < mapWidth &&
+                         mainMenu.y >= 0f && mainMenu.yMax <= height &&
+                         endScreen.x >= 0f && endScreen.xMax < mapWidth &&
+                         endScreen.y >= 0f && endScreen.yMax <= height &&
                          heatmap.x >= mapWidth && heatmap.xMax <= width &&
                          heatmap.y >= height * 0.55f && heatmap.yMax <= height;
             if (!valid)
@@ -415,6 +451,7 @@ namespace UrbanWildlife.EditorTools
                 "top_header=True top_metrics=True city_status_bottom_left=True toolbar_bottom_center=True " +
                 "stage_hud=True stage=early bottom_nav=build_info_trace_pause " +
                 "building_mode_card=True trace_views=normal_human_animal_combined event_popup=True " +
+                "time_control=pause_1x_2x_seasons main_menu=True end_screen=True " +
                 "building_catalog=True environment_catalog=True heatmap_bottom_right=True active_tab=buildings");
         }
 

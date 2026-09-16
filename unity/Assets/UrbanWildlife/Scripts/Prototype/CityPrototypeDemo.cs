@@ -119,6 +119,7 @@ namespace UrbanWildlife.Prototype
         private GameObject generatedRoot;
         private GameObject vehicleRoadRoot;
         private GameObject buildingAccessRoadRoot;
+        private GameObject fixedStreetMarkingRoot;
         private GameObject pedestrianRoot;
         private GameObject planningPreviewRoot;
         private bool paused;
@@ -1033,6 +1034,7 @@ namespace UrbanWildlife.Prototype
         {
             vehicleRoadRoot = ChildRoot("Vehicle road network");
             buildingAccessRoadRoot = ChildRoot("Visible building access roads");
+            fixedStreetMarkingRoot = ChildRoot("Baked street centre markings");
             GeneratedAccessRoadCentreDashCount = 0;
             GeneratedAccessRoadJunctionBlendCount = 0;
             CityVehicleRoad[] activeRoads = city.vehicle_roads.Where(item =>
@@ -1044,6 +1046,20 @@ namespace UrbanWildlife.Prototype
                 if (road.source == CityNetworkSource.ExistingMap &&
                     road.role != CityVehicleRoadRole.BuildingAccess)
                 {
+                    // The main street centre line is baked into the underlay. Add the same
+                    // restrained marking to every local street so the whole network follows
+                    // one consistent convention.
+                    if (road.role == CityVehicleRoadRole.Local)
+                    {
+                        float bakedWidth = road.width_units / city.bounds.width_units * MapWidth;
+                        CreateRoadCentreDashes(
+                            fixedStreetMarkingRoot.transform,
+                            road.id,
+                            road.points_norm,
+                            bakedWidth,
+                            road.width_units * 1.15f,
+                            road.width_units * 1.15f);
+                    }
                     continue;
                 }
                 Transform roadParent = road.role == CityVehicleRoadRole.BuildingAccess
@@ -1085,6 +1101,7 @@ namespace UrbanWildlife.Prototype
                     road.id,
                     road.points_norm,
                     width,
+                    0f,
                     road.role == CityVehicleRoadRole.BuildingAccess
                         ? road.width_units * 1.15f
                         : 0f);
@@ -1115,6 +1132,22 @@ namespace UrbanWildlife.Prototype
                 float width = link.width_units / city.bounds.width_units * MapWidth;
                 bool isAccessSidewalk =
                     link.type == CityPedestrianLinkType.BasicBuildingAccess;
+                if (isAccessSidewalk)
+                {
+                    string buildingId = (link.connected_building_ids ?? Array.Empty<string>())
+                        .FirstOrDefault();
+                    CityVehicleRoad accessRoad = activeRoads.FirstOrDefault(road =>
+                        road.role == CityVehicleRoadRole.BuildingAccess &&
+                        (road.connected_building_ids ?? Array.Empty<string>()).Contains(buildingId));
+                    if (accessRoad != null)
+                    {
+                        CreateSymmetricAccessSidewalks(
+                            pedestrianRoot.transform,
+                            link,
+                            accessRoad);
+                        continue;
+                    }
+                }
                 CreateLine(
                     pedestrianRoot.transform,
                     link.id + " edge",
@@ -1152,25 +1185,31 @@ namespace UrbanWildlife.Prototype
             string roadId,
             float[][] points,
             float roadWidth,
+            float startClearanceUnits,
             float endClearanceUnits)
         {
             if (points == null || points.Length < 2 || city?.bounds == null)
             {
                 return 0;
             }
-            const float dashLengthUnits = 0.58f;
-            const float gapLengthUnits = 0.44f;
-            float patternLength = dashLengthUnits + gapLengthUnits;
-            float patternProgress = 0f;
-            float pathProgress = 0f;
-            float totalLengthUnits = 0f;
+            const double dashLengthUnits = 0.58;
+            const double gapLengthUnits = 0.44;
+            double patternLength = dashLengthUnits + gapLengthUnits;
+            double patternProgress = 0d;
+            double pathProgress = 0d;
+            double totalLengthUnits = 0d;
             for (int index = 1; index < points.Length; index += 1)
             {
                 float dx = (points[index][0] - points[index - 1][0]) * city.bounds.width_units;
                 float dy = (points[index][1] - points[index - 1][1]) * city.bounds.height_units;
-                totalLengthUnits += Mathf.Sqrt(dx * dx + dy * dy);
+                totalLengthUnits += Math.Sqrt(dx * dx + dy * dy);
             }
-            float drawableEndUnits = Mathf.Max(0f, totalLengthUnits - endClearanceUnits);
+            double drawableStartUnits = Math.Max(
+                0d,
+                Math.Min(startClearanceUnits, totalLengthUnits));
+            double drawableEndUnits = Math.Max(
+                drawableStartUnits,
+                totalLengthUnits - endClearanceUnits);
             int dashIndex = 0;
             for (int segmentIndex = 1; segmentIndex < points.Length; segmentIndex += 1)
             {
@@ -1182,31 +1221,38 @@ namespace UrbanWildlife.Prototype
                 }
                 float deltaXUnits = (end[0] - start[0]) * city.bounds.width_units;
                 float deltaYUnits = (end[1] - start[1]) * city.bounds.height_units;
-                float segmentLengthUnits = Mathf.Sqrt(
+                double segmentLengthUnits = Math.Sqrt(
                     deltaXUnits * deltaXUnits + deltaYUnits * deltaYUnits);
                 if (segmentLengthUnits <= 0.001f)
                 {
                     continue;
                 }
-                float travelled = 0f;
+                double travelled = 0d;
                 while (travelled < segmentLengthUnits - 0.001f)
                 {
-                    float patternPosition = patternProgress % patternLength;
+                    double patternPosition = patternProgress % patternLength;
                     bool draw = patternPosition < dashLengthUnits;
-                    float phaseRemaining = draw
+                    double phaseRemaining = draw
                         ? dashLengthUnits - patternPosition
                         : patternLength - patternPosition;
-                    float step = Mathf.Min(
+                    double step = Math.Min(
                         phaseRemaining,
                         segmentLengthUnits - travelled);
-                    float globalStart = pathProgress + travelled;
-                    float visibleStep = Mathf.Min(
-                        step,
-                        Mathf.Max(0f, drawableEndUnits - globalStart));
+                    if (step <= 0.000001d)
+                    {
+                        patternProgress += 0.000001d;
+                        continue;
+                    }
+                    double globalStart = pathProgress + travelled;
+                    double visibleStart = Math.Max(globalStart, drawableStartUnits);
+                    double visibleEnd = Math.Min(globalStart + step, drawableEndUnits);
+                    double visibleStep = Math.Max(0d, visibleEnd - visibleStart);
                     if (draw && visibleStep > 0.035f)
                     {
-                        float firstT = travelled / segmentLengthUnits;
-                        float secondT = (travelled + visibleStep) / segmentLengthUnits;
+                        float firstT = (float)((travelled + visibleStart - globalStart) /
+                                               segmentLengthUnits);
+                        float secondT = (float)((travelled + visibleEnd - globalStart) /
+                                                segmentLengthUnits);
                         float[][] dash =
                         {
                             new[]
@@ -1237,6 +1283,47 @@ namespace UrbanWildlife.Prototype
                 pathProgress += segmentLengthUnits;
             }
             return dashIndex;
+        }
+
+        private void CreateSymmetricAccessSidewalks(
+            Transform parent,
+            CityPedestrianLink link,
+            CityVehicleRoad accessRoad)
+        {
+            float width = link.width_units / city.bounds.width_units * MapWidth;
+            float[][] left = CityRoadCandidateGenerator.OffsetPolyline(
+                accessRoad.points_norm,
+                city.bounds,
+                CityRoadCandidateGenerator.AutomaticAccessSidewalkOffsetUnits);
+            float[][] right = CityRoadCandidateGenerator.OffsetPolyline(
+                accessRoad.points_norm,
+                city.bounds,
+                -CityRoadCandidateGenerator.AutomaticAccessSidewalkOffsetUnits);
+            float[][][] sides = { left, right };
+            for (int sideIndex = 0; sideIndex < sides.Length; sideIndex += 1)
+            {
+                string sideName = sideIndex == 0 ? "left" : "right";
+                CreateLine(
+                    parent,
+                    $"{link.id} {sideName} edge",
+                    sides[sideIndex],
+                    Mathf.Max(0.070f, width + 0.018f),
+                    new Color(236f / 255f, 238f / 255f, 232f / 255f, 0.99f),
+                    0.070f,
+                    -5,
+                    false,
+                    0);
+                CreateLine(
+                    parent,
+                    $"{link.id} {sideName} surface",
+                    sides[sideIndex],
+                    Mathf.Max(0.070f, width),
+                    new Color(248f / 255f, 249f / 255f, 243f / 255f, 0.99f),
+                    0.078f,
+                    -4,
+                    false,
+                    0);
+            }
         }
 
         private void CreateAccessRoadJunctionBlend(

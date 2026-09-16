@@ -310,6 +310,7 @@ namespace UrbanWildlife.EditorTools
                 "Generated City Prototype/Buildings",
                 "Generated City Prototype/Vehicle road network",
                 "Generated City Prototype/Visible building access roads",
+                "Generated City Prototype/Baked street centre markings",
                 "Generated City Prototype/Pedestrian link network",
                 "Generated City Prototype/Digital amenities",
                 "Generated City Prototype/City wildlife agents",
@@ -347,7 +348,7 @@ namespace UrbanWildlife.EditorTools
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
                 "human_animal_combined_trace=True full_map_activity_views=True city_feed=True phase_report=True " +
                 "representative_agents=6 represented_population=24 walk_trips=4 vehicle_trips=2 " +
-                "external_return_routes=True live_vehicle_agents=True visible_pedestrian_paths=True shared_road_corridor=True pedestrians_on_sidewalk=True max_speed=2x no_questionnaire=True " +
+                "external_return_routes=True live_vehicle_agents=True visible_pedestrian_paths=True shared_road_corridor=True symmetric_sidewalks=True all_roads_dashed=True pedestrians_on_sidewalk=True max_speed=2x no_questionnaire=True " +
                 "animal_activity_heatmap=True heatmap_hotkey_h=True heatmap_sidebar_bottom_right=True heatmap_world_overlay=False footprints_removed=True info_tabs=city_animals_events city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
@@ -693,7 +694,7 @@ namespace UrbanWildlife.EditorTools
                     SpriteDisplaySize(renderer, true) >= 0.14f &&
                     SpriteDisplaySize(renderer, true) <= 0.29f);
             if (!resourcesLoad || humanArtworkCount != 6 || vehicleArtworkCount != 2 ||
-                visiblePathLayers != 4 || !prototype.PedestrianNetworkVisible ||
+                visiblePathLayers != 8 || !prototype.PedestrianNetworkVisible ||
                 prototype.WalkTripCount != 4 || !sidewalkFollowsRoad ||
                 localRoads.Length != 3 || localSidewalks.Length != 3 ||
                 !openingHomesUseLocalStreets || !accessSidewalksFollowRoads ||
@@ -707,9 +708,9 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_STREET_LIFE_SMOKE_OK humans=6 walking=4 vehicles=2 " +
-                "vehicle_sprites=3 pedestrian_links=6 dynamic_outlined_paths=4 visible_by_default=True " +
+                "vehicle_sprites=3 pedestrian_links=6 dynamic_outlined_paths=8 visible_by_default=True " +
                 "existing_local_streets=3 opening_homes_use_local_streets=True " +
-                "shared_road_corridor=True pedestrians_on_sidewalk=True road_centre_separated=True " +
+                "shared_road_corridor=True symmetric_sidewalks=True pedestrians_on_sidewalk=True road_centre_separated=True " +
                 "human_height=0.23 vehicle_depth=0.24 wildlife_width=0.15_to_0.28 compact_actor_scale=True");
         }
 
@@ -907,6 +908,8 @@ namespace UrbanWildlife.EditorTools
         {
             Transform roads = prototype.transform.Find("Generated City Prototype/Vehicle road network");
             Transform accessRoads = prototype.transform.Find("Generated City Prototype/Visible building access roads");
+            Transform fixedMarkings = prototype.transform.Find(
+                "Generated City Prototype/Baked street centre markings");
             Transform footpaths = prototype.transform.Find("Generated City Prototype/Pedestrian link network");
             LineRenderer[] accessRoadLayers = accessRoads == null
                 ? Array.Empty<LineRenderer>()
@@ -930,6 +933,34 @@ namespace UrbanWildlife.EditorTools
                            Math.Abs(colour.g - 239f / 255f) < 0.01f &&
                            Math.Abs(colour.b - 235f / 255f) < 0.01f;
                 });
+            LineRenderer[] fixedDashLines = fixedMarkings == null
+                ? Array.Empty<LineRenderer>()
+                : fixedMarkings.GetComponentsInChildren<LineRenderer>();
+            string[] localRoadIds =
+            {
+                "vehicle-local-west-loop",
+                "vehicle-local-east-loop",
+                "vehicle-local-south-arc",
+            };
+            bool everyLocalRoadHasCentreDashes = localRoadIds.All(id =>
+                fixedDashLines.Any(line =>
+                    line.name.StartsWith(id + " centre dash ", StringComparison.Ordinal)));
+            LineRenderer[] footpathLines = footpaths == null
+                ? Array.Empty<LineRenderer>()
+                : footpaths.GetComponentsInChildren<LineRenderer>();
+            int leftSidewalkSurfaces = footpathLines.Count(line =>
+                line.name.EndsWith("left surface", StringComparison.Ordinal));
+            int rightSidewalkSurfaces = footpathLines.Count(line =>
+                line.name.EndsWith("right surface", StringComparison.Ordinal));
+            bool symmetricAccessSidewalks = leftSidewalkSurfaces == 2 &&
+                                            rightSidewalkSurfaces == 2 &&
+                                            footpathLines
+                                                .Where(line => line.name.EndsWith(
+                                                    "surface",
+                                                    StringComparison.Ordinal))
+                                                .Select(line => line.startWidth)
+                                                .Distinct()
+                                                .Count() == 1;
             Transform wildlife = prototype.transform.Find("Generated City Prototype/City wildlife agents");
             SpriteRenderer[] wildlifeSprites = wildlife == null
                 ? Array.Empty<SpriteRenderer>()
@@ -954,8 +985,9 @@ namespace UrbanWildlife.EditorTools
                 accessKerbs != 2 || accessSurfaces != 2 || accessCentreDashes < 2 ||
                 accessJunctionBlends != 2 ||
                 !accessPaletteMatchesExisting ||
+                fixedMarkings == null || !everyLocalRoadHasCentreDashes ||
                 footpaths == null || !footpaths.gameObject.activeSelf ||
-                footpaths.GetComponentsInChildren<LineRenderer>().Length != 4 ||
+                footpathLines.Length != 8 || !symmetricAccessSidewalks ||
                 wildlife == null || wildlife.childCount != 15 ||
                 wildlifeSprites.Length != 15 ||
                 wildlifeHorizontalSpan < 5f || wildlifeVerticalSpan < 3f ||
@@ -968,8 +1000,8 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
                 "existing_street_hierarchy_visible=True two_access_roads_visible=True " +
-                "access_roads_match_existing_style=True centre_dashes=True seamless_junctions=True " +
-                "pedestrian_paths_default_visible=True " +
+                "access_roads_match_existing_style=True all_roads_dashed=True seamless_junctions=True " +
+                "pedestrian_paths_default_visible=True symmetric_access_sidewalks=True " +
                 $"wildlife_artwork=15 wildlife_span={wildlifeHorizontalSpan:0.0}x{wildlifeVerticalSpan:0.0} " +
                 "hedgehog_fallback=0 compact_buildings=True");
         }

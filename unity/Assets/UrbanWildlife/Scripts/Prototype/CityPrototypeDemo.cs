@@ -179,6 +179,9 @@ namespace UrbanWildlife.Prototype
         private int configuredScreenHeight = -1;
         private int sidebarTab = 1;
         private int bottomNavigationIndex;
+        private int traceViewIndex;
+        private int selectedAnimalIndex;
+        private readonly HashSet<string> dismissedEventIds = new HashSet<string>();
 
         public int GeneratedBuildingCount { get; private set; }
         public int GeneratedVehicleRoadCount { get; private set; }
@@ -218,6 +221,9 @@ namespace UrbanWildlife.Prototype
         public bool ReferenceStageHudEnabled => true;
         public int BottomNavigationItemCount => 4;
         public int ActiveBottomNavigationIndex => bottomNavigationIndex;
+        public bool BuildingPlacementCardEnabled => true;
+        public bool TraceViewSelectorEnabled => true;
+        public int ActiveTraceViewIndex => traceViewIndex;
         public int DisplayStageNumber => StageNumberForBuildingCount(
             Mathf.Max(GeneratedBuildingCount, city?.buildings?.Length ?? 0));
         public int ActiveSidebarTab => sidebarTab;
@@ -1620,6 +1626,7 @@ namespace UrbanWildlife.Prototype
         private void HandleDesktopPointerInput()
         {
             if (planningWorkflow?.Phase != CityPlanningWorkflowPhase.ReadyToScan ||
+                bottomNavigationIndex != 0 ||
                 !UnityEngine.Input.GetMouseButtonDown(0))
             {
                 return;
@@ -1654,7 +1661,7 @@ namespace UrbanWildlife.Prototype
             TryPlaceDesktopBuilding(desktopBuildingType, xNorm, yNorm, out _);
         }
 
-        private static bool PointerOverMapChrome(Vector2 guiPoint)
+        private bool PointerOverMapChrome(Vector2 guiPoint)
         {
             float scale = CityPrototypeUiTheme.ScaleForScreen(Screen.height);
             float mapWidth = Screen.width * MapViewportWidth;
@@ -1678,7 +1685,13 @@ namespace UrbanWildlife.Prototype
             return header.Contains(guiPoint) ||
                    status.Contains(guiPoint) ||
                    CityStatusRectForScreen(Screen.width, Screen.height).Contains(guiPoint) ||
-                   ToolbarRectForScreen(Screen.width, Screen.height).Contains(guiPoint);
+                   ToolbarRectForScreen(Screen.width, Screen.height).Contains(guiPoint) ||
+                   (bottomNavigationIndex == 0 &&
+                    BuildingModeRectForScreen(Screen.width, Screen.height).Contains(guiPoint)) ||
+                   (bottomNavigationIndex == 2 &&
+                    TraceModeRectForScreen(Screen.width, Screen.height).Contains(guiPoint)) ||
+                   (LatestCriticalEvent() != null &&
+                    EventPopupRectForScreen(Screen.width, Screen.height).Contains(guiPoint));
         }
 
         public bool TryPlaceDesktopBuilding(
@@ -1777,6 +1790,7 @@ namespace UrbanWildlife.Prototype
             GUI.depth = -20;
             DrawMapChrome();
             DrawRightSidebar();
+            DrawCriticalEventPopup();
         }
 
         private void DrawMapChrome()
@@ -1869,6 +1883,139 @@ namespace UrbanWildlife.Prototype
 
             DrawCityStatusCard(CityStatusRectForScreen(Screen.width, Screen.height));
             DrawBottomToolbar(ToolbarRectForScreen(Screen.width, Screen.height));
+            if (bottomNavigationIndex == 0)
+            {
+                DrawBuildingModeCard(BuildingModeRectForScreen(Screen.width, Screen.height));
+            }
+            else if (bottomNavigationIndex == 2)
+            {
+                DrawTraceModeBar(TraceModeRectForScreen(Screen.width, Screen.height));
+            }
+        }
+
+        private void DrawBuildingModeCard(Rect rect)
+        {
+            DrawShadowedCard(rect);
+            float padding = CityPrototypeUiTheme.ScaledPixel(14, uiScale);
+            float line = CityPrototypeUiTheme.ScaledPixel(24, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding * 0.65f,
+                    rect.width - padding * 2f, line),
+                T("PLACE BUILDING", "放置建筑"),
+                headingStyle);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding + line,
+                    rect.width - padding * 2f, line),
+                DesktopBuildingLabel(desktopBuildingType),
+                metricStyle);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding + line * 2f,
+                    rect.width - padding * 2f, line * 2f),
+                BuildingDescription(desktopBuildingType),
+                captionStyle);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding + line * 4.15f,
+                    rect.width - padding * 2f, line * 2.6f),
+                BuildingImpactSummary(desktopBuildingType),
+                bodyStyle);
+
+            Rect actionRect = new Rect(
+                rect.x + padding,
+                rect.yMax - padding - CityPrototypeUiTheme.ScaledPixel(36, uiScale),
+                rect.width - padding * 2f,
+                CityPrototypeUiTheme.ScaledPixel(36, uiScale));
+            if (planningWorkflow?.Phase == CityPlanningWorkflowPhase.Preview)
+            {
+                float gap = CityPrototypeUiTheme.ScaledPixel(7, uiScale);
+                float width = (actionRect.width - gap) * 0.5f;
+                bool previousEnabled = GUI.enabled;
+                GUI.enabled = previousEnabled && planningWorkflow.Snapshot.CanConfirmPreview;
+                if (GUI.Button(new Rect(actionRect.x, actionRect.y, width, actionRect.height),
+                        T("CONFIRM", "确认"), buttonStyle))
+                {
+                    ConfirmDesktopPlacement(out _);
+                }
+                GUI.enabled = previousEnabled;
+                if (GUI.Button(new Rect(actionRect.x + width + gap, actionRect.y, width,
+                        actionRect.height), T("CANCEL", "取消"), buttonStyle))
+                {
+                    CancelDesktopPlacement();
+                }
+            }
+            else
+            {
+                GUI.Label(actionRect,
+                    T("Click open ground to preview", "点击空地进行预览"), captionStyle);
+            }
+        }
+
+        private void DrawTraceModeBar(Rect rect)
+        {
+            DrawShadowedCard(rect);
+            string[] labels =
+            {
+                T("NORMAL", "普通"),
+                T("HUMAN", "人类"),
+                T("ANIMAL", "动物"),
+                T("COMBINED", "综合"),
+            };
+            float padding = CityPrototypeUiTheme.ScaledPixel(7, uiScale);
+            float gap = CityPrototypeUiTheme.ScaledPixel(5, uiScale);
+            float width = (rect.width - padding * 2f - gap * 3f) / 4f;
+            for (int index = 0; index < labels.Length; index += 1)
+            {
+                Rect buttonRect = new Rect(
+                    rect.x + padding + index * (width + gap),
+                    rect.y + padding,
+                    width,
+                    rect.height - padding * 2f);
+                if (GUI.Button(buttonRect, labels[index],
+                        traceViewIndex == index ? activeTabStyle : toolbarButtonStyle))
+                {
+                    SetTraceView(index);
+                }
+            }
+        }
+
+        private void DrawCriticalEventPopup()
+        {
+            CityFeedEntry entry = LatestCriticalEvent();
+            if (entry == null)
+            {
+                return;
+            }
+            Rect rect = EventPopupRectForScreen(Screen.width, Screen.height);
+            DrawShadowedCard(rect);
+            float padding = CityPrototypeUiTheme.ScaledPixel(16, uiScale);
+            GUI.Label(
+                new Rect(rect.x + padding, rect.y + padding,
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(30, uiScale)),
+                entry.type == CityFeedEventType.Roadkill
+                    ? T("ROADKILL DETECTED", "发现道路伤亡")
+                    : T("WASTE ALERT", "垃圾警报"),
+                headingStyle);
+            GUI.Label(
+                new Rect(rect.x + padding,
+                    rect.y + CityPrototypeUiTheme.ScaledPixel(48, uiScale),
+                    rect.width - padding * 2f,
+                    CityPrototypeUiTheme.ScaledPixel(54, uiScale)),
+                LocaliseFeedMessage(entry),
+                bodyStyle);
+            Rect previewRect = new Rect(
+                rect.x + padding,
+                rect.y + CityPrototypeUiTheme.ScaledPixel(104, uiScale),
+                rect.width - padding * 2f,
+                CityPrototypeUiTheme.ScaledPixel(86, uiScale));
+            DrawHeatmapMapBase(previewRect);
+            if (GUI.Button(
+                    new Rect(rect.x + padding,
+                        rect.yMax - padding - CityPrototypeUiTheme.ScaledPixel(36, uiScale),
+                        rect.width - padding * 2f,
+                        CityPrototypeUiTheme.ScaledPixel(36, uiScale)),
+                    T("OK", "确定"), buttonStyle))
+            {
+                dismissedEventIds.Add(EventKey(entry));
+            }
         }
 
         private void DrawCityStatusCard(Rect rect)
@@ -1962,7 +2109,10 @@ namespace UrbanWildlife.Prototype
                         break;
                     case 2:
                         sidebarTab = 0;
-                        SetHeatmapVisible(!showHeatmap);
+                        if (traceViewIndex == 0)
+                        {
+                            SetTraceView(2);
+                        }
                         break;
                     default:
                         paused = !paused;
@@ -2260,7 +2410,11 @@ namespace UrbanWildlife.Prototype
                     top + row * (cellHeight + gap),
                     cellWidth,
                     cellHeight);
-                GUI.Box(cell, GUIContent.none, catalogItemStyle);
+                if (GUI.Button(cell, GUIContent.none,
+                        selectedAnimalIndex == index ? selectedCatalogItemStyle : catalogItemStyle))
+                {
+                    selectedAnimalIndex = index;
+                }
                 DrawSpriteInRect(
                     Resources.Load<Sprite>(paths[index]),
                     new Rect(cell.x + cell.width * 0.10f, cell.y + cell.height * 0.08f,
@@ -2271,13 +2425,20 @@ namespace UrbanWildlife.Prototype
                     names[index],
                     catalogLabelStyle);
             }
+            float detailTop = top + cellHeight * 2f + gap * 2f;
+            GUI.Label(
+                new Rect(rect.x + padding, detailTop,
+                    rect.width - padding * 2f, CityPrototypeUiTheme.ScaledPixel(24, uiScale)),
+                names[Mathf.Clamp(selectedAnimalIndex, 0, names.Length - 1)] + "  ·  " +
+                AnimalTag(selectedAnimalIndex),
+                metricStyle);
             GUI.Label(
                 new Rect(rect.x + padding,
-                    top + cellHeight * 2f + gap * 2f,
+                    detailTop + CityPrototypeUiTheme.ScaledPixel(27, uiScale),
                     rect.width - padding * 2f,
-                    CityPrototypeUiTheme.ScaledPixel(60, uiScale)),
-                T("Press H to display animal activity hotspots in the card below.",
-                    "按 H 键可在下方卡片中显示动物活动热点。"),
+                    CityPrototypeUiTheme.ScaledPixel(76, uiScale)),
+                AnimalDescription(selectedAnimalIndex) + "\n" +
+                T("Press H for animal hotspots.", "按 H 查看动物热点。"),
                 bodyStyle);
         }
 
@@ -2409,6 +2570,44 @@ namespace UrbanWildlife.Prototype
             return new Rect(
                 mapWidth * 0.5f - width * 0.5f,
                 screenHeight - CityPrototypeUiTheme.ScaledPixel(18, scale) - height,
+                width,
+                height);
+        }
+
+        public static Rect BuildingModeRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            float padding = CityPrototypeUiTheme.ScaledPixel(18, scale);
+            return new Rect(
+                padding,
+                padding + CityPrototypeUiTheme.ScaledPixel(112, scale),
+                CityPrototypeUiTheme.ScaledPixel(270, scale),
+                CityPrototypeUiTheme.ScaledPixel(228, scale));
+        }
+
+        public static Rect TraceModeRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            Rect toolbar = ToolbarRectForScreen(screenWidth, screenHeight);
+            float height = CityPrototypeUiTheme.ScaledPixel(48, scale);
+            return new Rect(
+                toolbar.x,
+                toolbar.y - CityPrototypeUiTheme.ScaledPixel(10, scale) - height,
+                toolbar.width,
+                height);
+        }
+
+        public static Rect EventPopupRectForScreen(int screenWidth, int screenHeight)
+        {
+            float scale = CityPrototypeUiTheme.ScaleForScreen(screenHeight);
+            float mapWidth = screenWidth * MapViewportWidth;
+            float width = Mathf.Min(
+                CityPrototypeUiTheme.ScaledPixel(390, scale),
+                mapWidth * 0.40f);
+            float height = CityPrototypeUiTheme.ScaledPixel(260, scale);
+            return new Rect(
+                mapWidth * 0.5f - width * 0.5f,
+                screenHeight * 0.5f - height * 0.5f,
                 width,
                 height);
         }
@@ -2631,7 +2830,7 @@ namespace UrbanWildlife.Prototype
                 cardRect.y + padding * 0.65f,
                 cardRect.width - padding * 2f,
                 headerHeight);
-            GUI.Label(titleRect, T("Animal Hotspots", "动物热点图"), headingStyle);
+            GUI.Label(titleRect, TraceViewTitle(), headingStyle);
 
             float toggleWidth = CityPrototypeUiTheme.ScaledPixel(88, uiScale);
             Rect toggleRect = new Rect(
@@ -2658,7 +2857,7 @@ namespace UrbanWildlife.Prototype
             DrawHeatmapMapBase(mapRect);
             if (showHeatmap)
             {
-                DrawAnimalHeatDots(mapRect);
+                DrawActivityHeatDots(mapRect);
             }
             else
             {
@@ -2668,7 +2867,7 @@ namespace UrbanWildlife.Prototype
                 GUI.color = previousColour;
                 GUI.Label(
                     mapRect,
-                    T("Press H to show hotspots", "按 H 显示动物热点"),
+                    T("Choose a trace view below", "请在下方选择活动视图"),
                     heatmapEmptyStyle);
             }
 
@@ -2703,7 +2902,7 @@ namespace UrbanWildlife.Prototype
             {
                 GUI.Label(
                     footerRect,
-                    $"{T("Animal samples", "动物样本")}  {AnimalTracePointCount}  ·  " +
+                    $"{T("Activity samples", "活动样本")}  {TraceSampleCount()}  ·  " +
                     $"{T("Active areas", "活跃区域")}  {VisibleHeatCellCount}",
                     captionStyle);
             }
@@ -2730,7 +2929,7 @@ namespace UrbanWildlife.Prototype
             GUI.DrawTextureWithTexCoords(mapRect, texture, uv, true);
         }
 
-        private void DrawAnimalHeatDots(Rect mapRect)
+        private void DrawActivityHeatDots(Rect mapRect)
         {
             if (traceVisualizer == null || heatmapDotTexture == null)
             {
@@ -2752,7 +2951,7 @@ namespace UrbanWildlife.Prototype
                                      Mathf.Lerp(2.0f, 3.5f, intensity);
                     float centreX = mapRect.x + (column + 0.5f) * cellWidth;
                     float centreY = mapRect.y + (row + 0.5f) * cellHeight;
-                    GUI.color = HeatmapColour(intensity);
+                    GUI.color = TraceHeatmapColour(intensity);
                     GUI.DrawTexture(
                         new Rect(
                             centreX - diameter * 0.5f,
@@ -2765,6 +2964,45 @@ namespace UrbanWildlife.Prototype
                 }
             }
             GUI.color = previousColour;
+        }
+
+        private string TraceViewTitle()
+        {
+            switch (traceViewIndex)
+            {
+                case 1: return T("Human Activity", "人类活动");
+                case 3: return T("Combined Activity", "综合活动");
+                default: return T("Animal Activity", "动物活动");
+            }
+        }
+
+        private int TraceSampleCount()
+        {
+            switch (traceViewIndex)
+            {
+                case 1: return HumanTracePointCount;
+                case 3: return HumanTracePointCount + AnimalTracePointCount;
+                default: return AnimalTracePointCount;
+            }
+        }
+
+        private Color TraceHeatmapColour(float intensity)
+        {
+            if (traceViewIndex == 1)
+            {
+                Color low = new Color(1f, 0.72f, 0.24f, 0.68f);
+                Color high = new Color(0.94f, 0.24f, 0.18f, 0.90f);
+                return Color.Lerp(low, high, intensity);
+            }
+            if (traceViewIndex == 3)
+            {
+                Color low = new Color(0.23f, 0.68f, 0.76f, 0.70f);
+                Color high = new Color(0.60f, 0.33f, 0.80f, 0.88f);
+                return Color.Lerp(low, high, intensity);
+            }
+            Color animalLow = new Color(0.22f, 0.72f, 0.84f, 0.70f);
+            Color animalHigh = new Color(0.05f, 0.46f, 0.66f, 0.90f);
+            return Color.Lerp(animalLow, animalHigh, intensity);
         }
 
         private static Color HeatmapColour(float intensity)
@@ -3172,10 +3410,27 @@ namespace UrbanWildlife.Prototype
 
         public void SetHeatmapVisible(bool visible)
         {
-            traceDisplayMode = CityTraceDisplayMode.AnimalTrace;
-            showHeatmap = visible;
-            traceVisualizer?.SetMode(CityTraceDisplayMode.AnimalTrace);
-            traceVisualizer?.SetVisible(visible);
+            SetTraceView(visible ? 2 : 0);
+        }
+
+        public void SetTraceView(int viewIndex)
+        {
+            traceViewIndex = Mathf.Clamp(viewIndex, 0, 3);
+            showHeatmap = traceViewIndex != 0;
+            switch (traceViewIndex)
+            {
+                case 1:
+                    traceDisplayMode = CityTraceDisplayMode.HumanTrace;
+                    break;
+                case 3:
+                    traceDisplayMode = CityTraceDisplayMode.CombinedTrace;
+                    break;
+                default:
+                    traceDisplayMode = CityTraceDisplayMode.AnimalTrace;
+                    break;
+            }
+            traceVisualizer?.SetMode(traceDisplayMode);
+            traceVisualizer?.SetVisible(showHeatmap);
         }
 
         private void UpdateTraceVisuals()
@@ -3277,6 +3532,94 @@ namespace UrbanWildlife.Prototype
         private string T(string english, string chinese)
         {
             return useChineseUi ? chinese : english;
+        }
+
+        private string BuildingDescription(CityPhysicalTokenType type)
+        {
+            switch (type)
+            {
+                case CityPhysicalTokenType.Apartment:
+                    return T("Medium-high density housing. Generates people and vehicles.",
+                        "中高密度住宅，会增加居民与车辆活动。");
+                case CityPhysicalTokenType.Commercial:
+                    return T("A daily destination that attracts residents and creates waste.",
+                        "吸引居民前往的日常目的地，也会产生垃圾。");
+                case CityPhysicalTokenType.CommunityFacility:
+                    return T("A shared civic destination that improves local wellbeing.",
+                        "提升社区福祉的公共服务目的地。");
+                default:
+                    return T("Low-density housing with a smaller traffic footprint.",
+                        "低密度住宅，交通影响相对较小。");
+            }
+        }
+
+        private string BuildingImpactSummary(CityPhysicalTokenType type)
+        {
+            switch (type)
+            {
+                case CityPhysicalTokenType.Apartment:
+                    return T("Housing  +30\nTraffic  ++\nWaste  +", "住房  +30\n交通  ++\n垃圾  +");
+                case CityPhysicalTokenType.Commercial:
+                    return T("Activity  +20\nTraffic  ++\nWaste  ++", "活力  +20\n交通  ++\n垃圾  ++");
+                case CityPhysicalTokenType.CommunityFacility:
+                    return T("Wellbeing  +18\nVisits  +\nWaste  +", "福祉  +18\n到访  +\n垃圾  +");
+                default:
+                    return T("Housing  +8\nTraffic  +\nWaste  +", "住房  +8\n交通  +\n垃圾  +");
+            }
+        }
+
+        private string AnimalTag(int animalIndex)
+        {
+            switch (animalIndex)
+            {
+                case 1: return T("COMMON · CAUTIOUS", "常见 · 谨慎");
+                case 2: return T("UNCOMMON · NOCTURNAL", "少见 · 夜行");
+                case 3: return T("UNCOMMON · NOCTURNAL", "少见 · 夜行");
+                default: return T("COMMON · ADAPTIVE", "常见 · 适应力强");
+            }
+        }
+
+        private string AnimalDescription(int animalIndex)
+        {
+            switch (animalIndex)
+            {
+                case 1:
+                    return T("Often found near trees and quieter food sources.",
+                        "常在树木附近和较安静的食物点活动。");
+                case 2:
+                    return T("Uses connected green space and avoids busy roads.",
+                        "依赖连续绿地，并会回避繁忙道路。");
+                case 3:
+                    return T("Forages after dark and is vulnerable at road crossings.",
+                        "夜间觅食，穿越道路时较为脆弱。");
+                default:
+                    return T("Often found in plazas and near food sources.",
+                        "常见于广场及食物来源附近。");
+            }
+        }
+
+        private CityFeedEntry LatestCriticalEvent()
+        {
+            CityFeedEntry[] feed = observation?.Snapshot?.city_feed;
+            if (feed == null)
+            {
+                return null;
+            }
+            return feed.Reverse().FirstOrDefault(entry =>
+            {
+                if (entry == null ||
+                    (entry.type != CityFeedEventType.Roadkill &&
+                     entry.type != CityFeedEventType.WasteOverflow))
+                {
+                    return false;
+                }
+                return !dismissedEventIds.Contains(EventKey(entry));
+            });
+        }
+
+        private static string EventKey(CityFeedEntry entry)
+        {
+            return entry?.id ?? entry?.message ?? string.Empty;
         }
 
         private int DisplayYear => DisplayStageNumber == 1

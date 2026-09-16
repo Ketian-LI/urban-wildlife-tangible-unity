@@ -380,11 +380,17 @@ namespace UrbanWildlife.EditorTools
             float mapWidth = width * CityPrototypeDemo.MapViewportFraction;
             Rect cityStatus = CityPrototypeDemo.CityStatusRectForScreen(width, height);
             Rect toolbar = CityPrototypeDemo.ToolbarRectForScreen(width, height);
+            Rect buildingMode = CityPrototypeDemo.BuildingModeRectForScreen(width, height);
+            Rect traceMode = CityPrototypeDemo.TraceModeRectForScreen(width, height);
+            Rect eventPopup = CityPrototypeDemo.EventPopupRectForScreen(width, height);
             Rect heatmap = CityPrototypeDemo.HeatmapCardRectForScreen(width, height);
             bool valid = prototype.RiversideUiLayoutEnabled &&
                          prototype.ReferenceStageHudEnabled &&
                          prototype.BottomNavigationItemCount == 4 &&
                          prototype.ActiveBottomNavigationIndex == 0 &&
+                         prototype.BuildingPlacementCardEnabled &&
+                         prototype.TraceViewSelectorEnabled &&
+                         prototype.ActiveTraceViewIndex == 0 &&
                          prototype.DisplayStageNumber == 1 &&
                          prototype.ActiveSidebarTab == 1 &&
                          Math.Abs(CityPrototypeDemo.MapViewportFraction - 0.79f) < 0.001f &&
@@ -392,6 +398,11 @@ namespace UrbanWildlife.EditorTools
                          cityStatus.y >= height * 0.70f && cityStatus.yMax <= height &&
                          toolbar.x >= cityStatus.xMax && toolbar.xMax < mapWidth &&
                          toolbar.y >= height * 0.80f && toolbar.yMax <= height &&
+                         buildingMode.x >= 0f && buildingMode.xMax < mapWidth &&
+                         buildingMode.y > 100f && buildingMode.yMax < toolbar.y &&
+                         traceMode.x == toolbar.x && traceMode.xMax == toolbar.xMax &&
+                         traceMode.yMax < toolbar.y &&
+                         eventPopup.x >= 0f && eventPopup.xMax < mapWidth &&
                          heatmap.x >= mapWidth && heatmap.xMax <= width &&
                          heatmap.y >= height * 0.55f && heatmap.yMax <= height;
             if (!valid)
@@ -403,6 +414,7 @@ namespace UrbanWildlife.EditorTools
                 "UNITY_CITY_RIVERSIDE_UI_SMOKE_OK map_width=79_percent sidebar_width=21_percent " +
                 "top_header=True top_metrics=True city_status_bottom_left=True toolbar_bottom_center=True " +
                 "stage_hud=True stage=early bottom_nav=build_info_trace_pause " +
+                "building_mode_card=True trace_views=normal_human_animal_combined event_popup=True " +
                 "building_catalog=True environment_catalog=True heatmap_bottom_right=True active_tab=buildings");
         }
 
@@ -411,6 +423,20 @@ namespace UrbanWildlife.EditorTools
             if (prototype.HeatmapVisible)
             {
                 throw new InvalidOperationException("The activity heatmap must start hidden.");
+            }
+            prototype.SetTraceView(1);
+            bool humanView = prototype.HeatmapVisible &&
+                             !prototype.HeatmapUsesAnimalData &&
+                             prototype.ActiveTraceViewIndex == 1;
+            prototype.SetTraceView(3);
+            bool combinedView = prototype.HeatmapVisible &&
+                                !prototype.HeatmapUsesAnimalData &&
+                                prototype.ActiveTraceViewIndex == 3;
+            prototype.SetTraceView(0);
+            if (!humanView || !combinedView || prototype.HeatmapVisible)
+            {
+                throw new InvalidOperationException(
+                    "Human, animal and combined activity views must share the trace selector.");
             }
             prototype.SetHeatmapVisible(true);
             Rect sidebarCard = CityPrototypeDemo.HeatmapCardRectForScreen(1920, 1080);
@@ -461,6 +487,7 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_ACTIVITY_HEATMAP_SMOKE_OK default_hidden=True h_toggle=True " +
+                "views=normal_human_animal_combined " +
                 "animal_only=True animal_cells=1 human_samples_excluded=True individual_marks=False " +
                 "sidebar_bottom_right=True world_map_overlay=False");
         }

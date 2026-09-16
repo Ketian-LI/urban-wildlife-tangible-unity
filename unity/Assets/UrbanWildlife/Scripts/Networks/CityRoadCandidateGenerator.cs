@@ -8,8 +8,9 @@ namespace UrbanWildlife.Networks
     public static class CityRoadCandidateGenerator
     {
         private const float LowImpactDetourNorm = 0.1f;
-        public const float AutomaticAccessSidewalkOffsetUnits = 0.66f;
-        public const float AutomaticAccessSidewalkWidthUnits = 0.28f;
+        public const float AutomaticAccessVehicleLaneWidthUnits = 0.73f;
+        public const float AutomaticAccessSidewalkOffsetUnits = 0.445f;
+        public const float AutomaticAccessSidewalkWidthUnits = 0.16f;
 
         public static CityRoadChoiceSet Generate(CityState city, CityBuilding building)
         {

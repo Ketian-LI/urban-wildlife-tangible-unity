@@ -674,10 +674,10 @@ namespace UrbanWildlife.EditorTools
                             point,
                             sidewalk.points_norm[index],
                             streetCity.bounds))
-                        .All(distance => distance >= 0.62f && distance <= 0.78f);
+                        .All(distance => distance >= 0.42f && distance <= 0.47f);
                 });
             bool compactAccessSidewalks =
-                Mathf.Abs(CityRoadCandidateGenerator.AutomaticAccessSidewalkWidthUnits - 0.28f) <=
+                Mathf.Abs(CityRoadCandidateGenerator.AutomaticAccessSidewalkWidthUnits - 0.16f) <=
                 0.001f;
             CityMobilityPlan streetPlan = CityTripPlanner.CreatePlan(streetCity);
             bool walkersUseSidewalk = streetPlan.trips
@@ -910,6 +910,7 @@ namespace UrbanWildlife.EditorTools
 
         private static void VerifyCompactNeighbourhoodPresentation(CityPrototypeDemo prototype)
         {
+            CityState presentationCity = CityPrototypeStateFactory.Create();
             Transform roads = prototype.transform.Find("Generated City Prototype/Vehicle road network");
             Transform accessRoads = prototype.transform.Find("Generated City Prototype/Visible building access roads");
             Transform fixedMarkings = prototype.transform.Find(
@@ -965,6 +966,25 @@ namespace UrbanWildlife.EditorTools
                                                 .Select(line => line.startWidth)
                                                 .Distinct()
                                                 .Count() == 1;
+            float expectedSidewalkWidth =
+                CityRoadCandidateGenerator.AutomaticAccessSidewalkWidthUnits /
+                presentationCity.bounds.width_units * 12f;
+            bool narrowSidewalkRendering = footpathLines
+                .Where(line => line.name.EndsWith("surface", StringComparison.Ordinal))
+                .All(line => line.startWidth <= expectedSidewalkWidth * 0.86f) &&
+                footpathLines
+                    .Where(line => line.name.EndsWith("edge", StringComparison.Ordinal))
+                    .All(line => Mathf.Abs(line.startWidth - expectedSidewalkWidth) <= 0.001f);
+            float expectedRoadTotalWidth = 1.05f / presentationCity.bounds.width_units * 12f;
+            float expectedVehicleLaneWidth =
+                CityRoadCandidateGenerator.AutomaticAccessVehicleLaneWidthUnits /
+                presentationCity.bounds.width_units * 12f;
+            bool accessRoadUsesSingleOriginalWidth = accessRoadLayers
+                .Where(line => line.name.EndsWith("kerb", StringComparison.Ordinal))
+                .All(line => Mathf.Abs(line.startWidth - expectedRoadTotalWidth) <= 0.001f) &&
+                accessRoadLayers
+                    .Where(line => line.name.EndsWith("asphalt", StringComparison.Ordinal))
+                    .All(line => Mathf.Abs(line.startWidth - expectedVehicleLaneWidth) <= 0.001f);
             Transform wildlife = prototype.transform.Find("Generated City Prototype/City wildlife agents");
             SpriteRenderer[] wildlifeSprites = wildlife == null
                 ? Array.Empty<SpriteRenderer>()
@@ -992,6 +1012,7 @@ namespace UrbanWildlife.EditorTools
                 fixedMarkings == null || !everyLocalRoadHasCentreDashes ||
                 footpaths == null || !footpaths.gameObject.activeSelf ||
                 footpathLines.Length != 8 || !symmetricAccessSidewalks ||
+                !narrowSidewalkRendering || !accessRoadUsesSingleOriginalWidth ||
                 wildlife == null || wildlife.childCount != 15 ||
                 wildlifeSprites.Length != 15 ||
                 wildlifeHorizontalSpan < 5f || wildlifeVerticalSpan < 3f ||
@@ -1005,7 +1026,8 @@ namespace UrbanWildlife.EditorTools
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
                 "existing_street_hierarchy_visible=True two_access_roads_visible=True " +
                 "access_roads_match_existing_style=True all_roads_dashed=True seamless_junctions=True " +
-                "pedestrian_paths_default_visible=True symmetric_access_sidewalks=True " +
+                "pedestrian_paths_default_visible=True symmetric_access_sidewalks=True narrow_sidewalk_edges=True " +
+                "single_original_road_width=True " +
                 $"wildlife_artwork=15 wildlife_span={wildlifeHorizontalSpan:0.0}x{wildlifeVerticalSpan:0.0} " +
                 "hedgehog_fallback=0 compact_buildings=True");
         }
@@ -1541,7 +1563,7 @@ namespace UrbanWildlife.EditorTools
                     point,
                     automaticSidewalk.points_norm[index],
                     placedCity.bounds))
-                .All(distance => distance >= 0.62f && distance <= 0.78f);
+                .All(distance => distance >= 0.42f && distance <= 0.47f);
             if (automatic.points_norm.Length != 11 ||
                 automaticConnection.source != CityNetworkSource.ExistingMap ||
                 automaticConnection.role == CityVehicleRoadRole.BuildingAccess ||

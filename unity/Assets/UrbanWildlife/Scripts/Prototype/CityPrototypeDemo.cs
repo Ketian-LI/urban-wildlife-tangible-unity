@@ -807,7 +807,7 @@ namespace UrbanWildlife.Prototype
                         clearingRoot.transform,
                         $"{road.id} compact cleared verge {runIndex}",
                         run,
-                        Mathf.Max(0.12f, roadWidth + 0.055f),
+                        Mathf.Max(0.12f, roadWidth + 0.014f),
                         clearedGround,
                         0.019f,
                         -26,
@@ -1066,11 +1066,16 @@ namespace UrbanWildlife.Prototype
                     ? buildingAccessRoadRoot.transform
                     : vehicleRoadRoot.transform;
                 float width = road.width_units / city.bounds.width_units * MapWidth;
+                bool isBuildingAccess = road.role == CityVehicleRoadRole.BuildingAccess;
+                float vehicleSurfaceWidth = isBuildingAccess
+                    ? CityRoadCandidateGenerator.AutomaticAccessVehicleLaneWidthUnits /
+                      city.bounds.width_units * MapWidth
+                    : width;
                 CreateLine(
                     roadParent,
                     road.id + " soft edge shadow",
                     road.points_norm,
-                    width + 0.070f,
+                    isBuildingAccess ? width + 0.012f : width + 0.070f,
                     new Color(216f / 255f, 220f / 255f, 214f / 255f, 0.20f),
                     0.041f,
                     -9,
@@ -1080,7 +1085,7 @@ namespace UrbanWildlife.Prototype
                     roadParent,
                     road.id + " kerb",
                     road.points_norm,
-                    width + 0.050f,
+                    isBuildingAccess ? width : width + 0.050f,
                     new Color(248f / 255f, 249f / 255f, 243f / 255f, 0.99f),
                     0.045f,
                     -8,
@@ -1090,7 +1095,7 @@ namespace UrbanWildlife.Prototype
                     roadParent,
                     road.id + " asphalt",
                     road.points_norm,
-                    width,
+                    vehicleSurfaceWidth,
                     new Color(237f / 255f, 239f / 255f, 235f / 255f, 0.99f),
                     0.055f,
                     -7,
@@ -1100,7 +1105,7 @@ namespace UrbanWildlife.Prototype
                     roadParent,
                     road.id,
                     road.points_norm,
-                    width,
+                    vehicleSurfaceWidth,
                     0f,
                     road.role == CityVehicleRoadRole.BuildingAccess
                         ? road.width_units * 1.15f
@@ -1153,7 +1158,7 @@ namespace UrbanWildlife.Prototype
                     link.id + " edge",
                     link.points_norm,
                     isAccessSidewalk
-                        ? Mathf.Max(0.070f, width + 0.018f)
+                        ? width
                         : Mathf.Max(0.105f, width + 0.045f),
                     isAccessSidewalk
                         ? new Color(236f / 255f, 238f / 255f, 232f / 255f, 0.99f)
@@ -1166,7 +1171,7 @@ namespace UrbanWildlife.Prototype
                     pedestrianRoot.transform,
                     link.id + " surface",
                     link.points_norm,
-                    Mathf.Max(0.070f, width),
+                    isAccessSidewalk ? width * 0.84f : Mathf.Max(0.070f, width),
                     isAccessSidewalk
                         ? new Color(248f / 255f, 249f / 255f, 243f / 255f, 0.99f)
                         : new Color(244f / 255f, 245f / 255f, 239f / 255f, 0.98f),
@@ -1307,7 +1312,7 @@ namespace UrbanWildlife.Prototype
                     parent,
                     $"{link.id} {sideName} edge",
                     sides[sideIndex],
-                    Mathf.Max(0.070f, width + 0.018f),
+                    width,
                     new Color(236f / 255f, 238f / 255f, 232f / 255f, 0.99f),
                     0.070f,
                     -5,
@@ -1317,7 +1322,7 @@ namespace UrbanWildlife.Prototype
                     parent,
                     $"{link.id} {sideName} surface",
                     sides[sideIndex],
-                    Mathf.Max(0.070f, width),
+                    width * 0.84f,
                     new Color(248f / 255f, 249f / 255f, 243f / 255f, 0.99f),
                     0.078f,
                     -4,

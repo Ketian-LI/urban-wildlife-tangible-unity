@@ -18,6 +18,7 @@ This pass aligns the playable Unity interface with the supplied Riverside Park r
 - Both green and red desktop previews can be repositioned immediately by clicking another map position; construction happens only after explicit confirmation. The camera workflow is unchanged in this pass.
 - The cleared warm-white ground after confirmation follows the compact building footprint and narrow access route instead of clearing whole planning cells.
 - Automatically generated building access uses the same warm-white kerb, pale-grey surface, centre dashes and width as the baked original streets; its narrow white pedestrian strip touches the grey carriageway edge so both read as one composite road, not two parallel roads.
+- Each automatic access route ends in a small same-colour junction blend over the baked street, with flat line caps, so the result reads as a continuous T-junction rather than a rounded white stem pasted onto the old road.
 - Building density comes from adding more compact buildings, not enlarging individual icons. Detached houses retain their established size; apartments, markets and community buildings use smaller type-specific display scales matched to the mature-city reference while their gameplay footprints remain unchanged.
 - Camera-free desktop play can continue placing repeated building types up to a 72-building city; the physical-camera edition remains constrained to its real Token inventory.
 

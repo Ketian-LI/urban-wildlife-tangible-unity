@@ -917,14 +917,18 @@ namespace UrbanWildlife.EditorTools
                 line.name.EndsWith(" asphalt", StringComparison.Ordinal));
             int accessCentreDashes = accessRoadLayers.Count(line =>
                 line.name.Contains(" centre dash "));
+            int accessJunctionBlends = accessRoads == null
+                ? 0
+                : accessRoads.GetComponentsInChildren<MeshRenderer>().Count(renderer =>
+                    renderer.name.EndsWith(" junction blend", StringComparison.Ordinal));
             bool accessPaletteMatchesExisting = accessRoadLayers
                 .Where(line => line.name.EndsWith(" asphalt", StringComparison.Ordinal))
                 .All(line =>
                 {
                     Color colour = line.sharedMaterial.color;
-                    return Math.Abs(colour.r - 239f / 255f) < 0.01f &&
-                           Math.Abs(colour.g - 241f / 255f) < 0.01f &&
-                           Math.Abs(colour.b - 237f / 255f) < 0.01f;
+                    return Math.Abs(colour.r - 237f / 255f) < 0.01f &&
+                           Math.Abs(colour.g - 239f / 255f) < 0.01f &&
+                           Math.Abs(colour.b - 235f / 255f) < 0.01f;
                 });
             Transform wildlife = prototype.transform.Find("Generated City Prototype/City wildlife agents");
             SpriteRenderer[] wildlifeSprites = wildlife == null
@@ -948,6 +952,7 @@ namespace UrbanWildlife.EditorTools
             if (roads == null || !roads.gameObject.activeSelf ||
                 accessRoads == null || !accessRoads.gameObject.activeSelf ||
                 accessKerbs != 2 || accessSurfaces != 2 || accessCentreDashes < 2 ||
+                accessJunctionBlends != 2 ||
                 !accessPaletteMatchesExisting ||
                 footpaths == null || !footpaths.gameObject.activeSelf ||
                 footpaths.GetComponentsInChildren<LineRenderer>().Length != 4 ||
@@ -963,7 +968,8 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_NEIGHBOURHOOD_PRESENTATION_SMOKE_OK " +
                 "existing_street_hierarchy_visible=True two_access_roads_visible=True " +
-                "access_roads_match_existing_style=True centre_dashes=True pedestrian_paths_default_visible=True " +
+                "access_roads_match_existing_style=True centre_dashes=True seamless_junctions=True " +
+                "pedestrian_paths_default_visible=True " +
                 $"wildlife_artwork=15 wildlife_span={wildlifeHorizontalSpan:0.0}x{wildlifeVerticalSpan:0.0} " +
                 "hedgehog_fallback=0 compact_buildings=True");
         }
@@ -1734,8 +1740,14 @@ namespace UrbanWildlife.EditorTools
                 line.name.EndsWith(" asphalt", StringComparison.Ordinal));
             int accessDashCount = accessLines.Count(line =>
                 line.name.Contains(" centre dash "));
+            int accessJunctionBlendCount = access == null
+                ? 0
+                : access.GetComponentsInChildren<MeshRenderer>().Count(renderer =>
+                    renderer.name.EndsWith(" junction blend", StringComparison.Ordinal));
             if (access == null || accessKerbCount != 3 || accessSurfaceCount != 3 ||
                 accessDashCount < 3 || prototype.GeneratedAccessRoadCentreDashCount != accessDashCount ||
+                accessJunctionBlendCount != 3 ||
+                prototype.GeneratedAccessRoadJunctionBlendCount != accessJunctionBlendCount ||
                 accessLines.Max(line => line.startWidth) > 0.20f)
             {
                 throw new InvalidOperationException(
@@ -1817,6 +1829,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_DESKTOP_PLAY_SMOKE_OK default_mode=Desktop palette=True pointer_preview=True " +
                 "confirm_build=True compact_site_clearings=True access_matches_original_roads=True " +
+                "seamless_t_junctions=True " +
                 "valid_preview=green invalid_preview=red building_ghost=True exact_footprint_only=True " +
                 "valid_reposition_without_cancel=True invalid_retry_without_cancel=True " +
                 "continuous_position=True responsive_sidebar=True " +

@@ -46,7 +46,7 @@
 
 `CityRoadCandidateGenerator` 为每栋尚未接入机动车网络的 Proposed Building 生成三条独立候选：Direct投影到最近的既有道路段，Existing-network连接最近的既有网络端点，Low-impact在直连两侧建立绕行点，并以Woodland/ShrubGarden采样代价选择影响较低的一侧。候选公开长度、敏感绿地影响与按建筑Vehicle Demand标定的交通压力。该实现是确定性的几何/代价采样V0.1，不宣称等同真实交通模型；需要更复杂地图时可将内部求解器替换为隐藏Grid+A*，而不改变候选数据接口。
 
-`CityNetworkPlanningManager` 在Route Selection Preview中要求每栋建筑选且只选一个机动车候选。确认后把选择结果写为`BuildingAccess` VehicleRoad，并更新Building引用。自动接入道路与底图原始道路使用同一视觉规格：1.05单位路宽、暖白路缘、取自底图的浅灰路面和灰色中心虚线，不再显示为米色引道。Pedestrian Network仍使用独立数据数组，但几何从车辆道路派生：主路人行道按真实地图单位沿道路切线做恒定法向偏移，建筑`BasicBuildingAccess`使用0.42单位白色步行带并紧贴灰色车道侧缘，与车道共同组成一条复合道路，而不是两条分离的平行道路；玩家改选Direct、Existing-network或Low-impact时两者同步重算。玩家仍可在屏幕中新增、调整或删除`ScreenEdited ExtraFootpath`。确认是原子事务，删除ExtraFootpath时同步移除建筑引用；任何State验证失败都保留上一版CityState。正式输入中没有机动车或步行彩带字段。
+`CityNetworkPlanningManager` 在Route Selection Preview中要求每栋建筑选且只选一个机动车候选。确认后把选择结果写为`BuildingAccess` VehicleRoad，并更新Building引用。自动接入道路与底图原始道路使用同一视觉规格：1.05单位路宽、暖白路缘、按底图实机像素重取的浅灰路面和灰色中心虚线；接入旧路的一端使用无圆帽线段和浅灰融合面消除接缝，形成连续丁字路口。Pedestrian Network仍使用独立数据数组，但几何从车辆道路派生：主路人行道按真实地图单位沿道路切线做恒定法向偏移，建筑`BasicBuildingAccess`使用0.42单位白色步行带并紧贴灰色车道侧缘，与车道共同组成一条复合道路，而不是两条分离的平行道路；玩家改选Direct、Existing-network或Low-impact时两者同步重算。玩家仍可在屏幕中新增、调整或删除`ScreenEdited ExtraFootpath`。确认是原子事务，删除ExtraFootpath时同步移除建筑引用；任何State验证失败都保留上一版CityState。正式输入中没有机动车或步行彩带字段。
 
 ### 代表性人流与车辆
 

@@ -195,6 +195,7 @@ namespace UrbanWildlife.Prototype
         public int GeneratedVehicleRoadCount { get; private set; }
         public int GeneratedPedestrianLinkCount { get; private set; }
         public int GeneratedAccessRoadCentreDashCount { get; private set; }
+        public int GeneratedAccessRoadJunctionBlendCount { get; private set; }
         public int GeneratedAmenityCount { get; private set; }
         public int GeneratedPlanningCellCount { get; private set; }
         public int AvailablePlanningCellCount { get; private set; }
@@ -944,6 +945,7 @@ namespace UrbanWildlife.Prototype
             vehicleRoadRoot = ChildRoot("Vehicle road network");
             buildingAccessRoadRoot = ChildRoot("Visible building access roads");
             GeneratedAccessRoadCentreDashCount = 0;
+            GeneratedAccessRoadJunctionBlendCount = 0;
             CityVehicleRoad[] activeRoads = city.vehicle_roads.Where(item =>
                 item.construction_state == CityConstructionState.Existing).ToArray();
             foreach (CityVehicleRoad road in activeRoads)
@@ -964,22 +966,35 @@ namespace UrbanWildlife.Prototype
                     road.id + " kerb",
                     road.points_norm,
                     width + 0.050f,
-                    new Color(252f / 255f, 252f / 255f, 247f / 255f, 0.99f),
+                    new Color(248f / 255f, 249f / 255f, 243f / 255f, 0.99f),
                     0.045f,
-                    -8);
+                    -8,
+                    false,
+                    road.role == CityVehicleRoadRole.BuildingAccess ? 0 : 5);
                 CreateLine(
                     roadParent,
                     road.id + " asphalt",
                     road.points_norm,
                     width,
-                    new Color(239f / 255f, 241f / 255f, 237f / 255f, 0.99f),
+                    new Color(237f / 255f, 239f / 255f, 235f / 255f, 0.99f),
                     0.055f,
-                    -7);
+                    -7,
+                    false,
+                    road.role == CityVehicleRoadRole.BuildingAccess ? 0 : 5);
                 GeneratedAccessRoadCentreDashCount += CreateRoadCentreDashes(
                     roadParent,
                     road.id,
                     road.points_norm,
                     width);
+                if (road.role == CityVehicleRoadRole.BuildingAccess)
+                {
+                    CreateAccessRoadJunctionBlend(
+                        roadParent,
+                        road.id,
+                        road.points_norm[road.points_norm.Length - 1],
+                        road.width_units);
+                    GeneratedAccessRoadJunctionBlendCount += 1;
+                }
             }
             vehicleRoadRoot.SetActive(showVehicleNetwork);
 
@@ -1006,20 +1021,24 @@ namespace UrbanWildlife.Prototype
                         ? Mathf.Max(0.070f, width + 0.018f)
                         : Mathf.Max(0.105f, width + 0.045f),
                     isAccessSidewalk
-                        ? new Color(236f / 255f, 239f / 255f, 233f / 255f, 0.99f)
+                        ? new Color(236f / 255f, 238f / 255f, 232f / 255f, 0.99f)
                         : new Color(252f / 255f, 252f / 255f, 247f / 255f, 0.97f),
                     0.070f,
-                    -5);
+                    -5,
+                    false,
+                    isAccessSidewalk ? 0 : 5);
                 CreateLine(
                     pedestrianRoot.transform,
                     link.id + " surface",
                     link.points_norm,
                     Mathf.Max(0.070f, width),
                     isAccessSidewalk
-                        ? new Color(252f / 255f, 252f / 255f, 247f / 255f, 0.99f)
+                        ? new Color(248f / 255f, 249f / 255f, 243f / 255f, 0.99f)
                         : new Color(244f / 255f, 245f / 255f, 239f / 255f, 0.98f),
                     0.078f,
-                    -4);
+                    -4,
+                    false,
+                    isAccessSidewalk ? 0 : 5);
             }
             pedestrianRoot.SetActive(showPedestrianNetwork);
             GeneratedVehicleRoadCount = activeRoads.Length;
@@ -1090,7 +1109,7 @@ namespace UrbanWildlife.Prototype
                             $"{roadId} centre dash {dashIndex}",
                             dash,
                             Mathf.Clamp(roadWidth * 0.075f, 0.007f, 0.013f),
-                            new Color(229f / 255f, 232f / 255f, 229f / 255f, 0.92f),
+                            new Color(223f / 255f, 226f / 255f, 223f / 255f, 0.92f),
                             0.063f,
                             -6,
                             true);
@@ -1101,6 +1120,40 @@ namespace UrbanWildlife.Prototype
                 }
             }
             return dashIndex;
+        }
+
+        private void CreateAccessRoadJunctionBlend(
+            Transform parent,
+            string roadId,
+            float[] connectionPoint,
+            float roadWidthUnits)
+        {
+            if (connectionPoint == null || connectionPoint.Length < 2 || city?.bounds == null)
+            {
+                return;
+            }
+            const int segmentCount = 24;
+            float radiusUnits = roadWidthUnits * 0.56f;
+            float[][] points = Enumerable.Range(0, segmentCount)
+                .Select(index =>
+                {
+                    float angle = Mathf.PI * 2f * index / segmentCount;
+                    return new[]
+                    {
+                        connectionPoint[0] + Mathf.Cos(angle) *
+                            radiusUnits / city.bounds.width_units,
+                        connectionPoint[1] + Mathf.Sin(angle) *
+                            radiusUnits / city.bounds.height_units,
+                    };
+                })
+                .ToArray();
+            CreatePolygon(
+                parent,
+                roadId + " junction blend",
+                points,
+                0.060f,
+                new Color(237f / 255f, 239f / 255f, 235f / 255f, 0.99f),
+                -6);
         }
 
         private void BuildBuildings()
@@ -5306,7 +5359,8 @@ namespace UrbanWildlife.Prototype
             Color colour,
             float height,
             int sortingOrder,
-            bool transparent = false)
+            bool transparent = false,
+            int capVertices = 5)
         {
             GameObject lineObject = new GameObject(name);
             lineObject.transform.SetParent(parent, false);
@@ -5316,7 +5370,7 @@ namespace UrbanWildlife.Prototype
             line.startWidth = width;
             line.endWidth = width;
             line.numCornerVertices = 5;
-            line.numCapVertices = 5;
+            line.numCapVertices = capVertices;
             line.startColor = Color.white;
             line.endColor = Color.white;
             line.material = transparent

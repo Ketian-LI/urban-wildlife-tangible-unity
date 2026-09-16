@@ -112,6 +112,12 @@ namespace UrbanWildlife.Input
                 {
                     return false;
                 }
+                if (!desktopRecognition &&
+                    CityTokenInventory.IsDesktopVirtualTokenId(token.id))
+                {
+                    error = $"Virtual desktop Token ID {token.id} cannot enter a camera scan.";
+                    return false;
+                }
                 if (!UnitValue(token.x_norm) || !UnitValue(token.y_norm) ||
                     !Finite(token.rotation_deg) || token.rotation_deg < -180f ||
                     token.rotation_deg > 180f || !UnitValue(token.confidence))
@@ -121,13 +127,16 @@ namespace UrbanWildlife.Input
                 }
             }
 
-            foreach (CityPhysicalTokenType type in Enum.GetValues(typeof(CityPhysicalTokenType)))
+            if (!desktopRecognition)
             {
-                int detected = tokens.Count(token => token.type == type);
-                if (detected > CityTokenInventory.MaximumFor(type))
+                foreach (CityPhysicalTokenType type in Enum.GetValues(typeof(CityPhysicalTokenType)))
                 {
-                    error = $"City scan exceeds the physical inventory for {type}.";
-                    return false;
+                    int detected = tokens.Count(token => token.type == type);
+                    if (detected > CityTokenInventory.MaximumFor(type))
+                    {
+                        error = $"City scan exceeds the physical inventory for {type}.";
+                        return false;
+                    }
                 }
             }
             return true;

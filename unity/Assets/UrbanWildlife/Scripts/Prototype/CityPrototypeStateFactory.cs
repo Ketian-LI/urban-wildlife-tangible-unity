@@ -285,7 +285,9 @@ namespace UrbanWildlife.Prototype
             {
                 cols = CityPlanningGrid.DefaultColumns,
                 rows = CityPlanningGrid.DefaultRows,
-                max_active_player_buildings = 9,
+                // Desktop play can grow into the dense late-stage reference city.
+                // Camera play remains naturally bounded by the physical Token inventory.
+                max_active_player_buildings = 72,
                 cells = Enumerable.Range(0, CityPlanningGrid.DefaultRows)
                     .SelectMany(row => Enumerable.Range(0, CityPlanningGrid.DefaultColumns)
                         .Select(col => CreateGridCell(row, col)))

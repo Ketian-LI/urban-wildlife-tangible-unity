@@ -6,6 +6,12 @@ namespace UrbanWildlife.Input
 {
     public static class CityTokenInventory
     {
+        private const int DesktopApartmentStart = 1000;
+        private const int DesktopDetachedStart = 1200;
+        private const int DesktopCommercialStart = 1400;
+        private const int DesktopCommunityStart = 1600;
+        private const int DesktopRangeSize = 200;
+
         private static readonly Dictionary<int, CityPhysicalTokenType> TypeById =
             new Dictionary<int, CityPhysicalTokenType>
             {
@@ -34,7 +40,51 @@ namespace UrbanWildlife.Input
 
         public static bool TryGetExpectedType(int id, out CityPhysicalTokenType type)
         {
-            return TypeById.TryGetValue(id, out type);
+            return TypeById.TryGetValue(id, out type) ||
+                   TryGetDesktopVirtualType(id, out type);
+        }
+
+        public static bool IsPhysicalTokenId(int id)
+        {
+            return TypeById.ContainsKey(id);
+        }
+
+        public static bool IsDesktopVirtualTokenId(int id)
+        {
+            return TryGetDesktopVirtualType(id, out _);
+        }
+
+        public static int NextDesktopVirtualId(
+            CityPhysicalTokenType type,
+            IEnumerable<int> usedIds)
+        {
+            int start;
+            switch (type)
+            {
+                case CityPhysicalTokenType.Apartment:
+                    start = DesktopApartmentStart;
+                    break;
+                case CityPhysicalTokenType.DetachedHouse:
+                    start = DesktopDetachedStart;
+                    break;
+                case CityPhysicalTokenType.Commercial:
+                    start = DesktopCommercialStart;
+                    break;
+                case CityPhysicalTokenType.CommunityFacility:
+                    start = DesktopCommunityStart;
+                    break;
+                default:
+                    return 0;
+            }
+            HashSet<int> used = new HashSet<int>(usedIds ?? Enumerable.Empty<int>());
+            for (int id = start; id < start + DesktopRangeSize; id += 1)
+            {
+                if (!used.Contains(id))
+                {
+                    return id;
+                }
+            }
+            return 0;
         }
 
         public static int[] IdsFor(CityPhysicalTokenType type)
@@ -64,6 +114,38 @@ namespace UrbanWildlife.Input
                 return false;
             }
             return true;
+        }
+
+        private static bool TryGetDesktopVirtualType(
+            int id,
+            out CityPhysicalTokenType type)
+        {
+            if (id >= DesktopApartmentStart &&
+                id < DesktopApartmentStart + DesktopRangeSize)
+            {
+                type = CityPhysicalTokenType.Apartment;
+                return true;
+            }
+            if (id >= DesktopDetachedStart &&
+                id < DesktopDetachedStart + DesktopRangeSize)
+            {
+                type = CityPhysicalTokenType.DetachedHouse;
+                return true;
+            }
+            if (id >= DesktopCommercialStart &&
+                id < DesktopCommercialStart + DesktopRangeSize)
+            {
+                type = CityPhysicalTokenType.Commercial;
+                return true;
+            }
+            if (id >= DesktopCommunityStart &&
+                id < DesktopCommunityStart + DesktopRangeSize)
+            {
+                type = CityPhysicalTokenType.CommunityFacility;
+                return true;
+            }
+            type = default;
+            return false;
         }
     }
 }

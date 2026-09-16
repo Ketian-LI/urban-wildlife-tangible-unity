@@ -248,6 +248,8 @@ namespace UrbanWildlife.Prototype
             : DefaultSeasonIndex(DisplayStageNumber);
         public bool MainMenuVisible => showMainMenu;
         public bool EndScreenVisible => showEndScreen;
+        public int BuildingCapacity => city?.planning_grid?.max_active_player_buildings ?? 0;
+        public static int MatureCityBuildingThreshold => 23;
         public int DisplayStageNumber => StageNumberForBuildingCount(
             Mathf.Max(GeneratedBuildingCount, city?.buildings?.Length ?? 0));
         public int ActiveSidebarTab => sidebarTab;
@@ -1106,28 +1108,48 @@ namespace UrbanWildlife.Prototype
                     resourcePath = building.source_token_id % 2 == 0
                         ? CityResidentialLotBlueResourcePath
                         : CityResidentialLotCoralResourcePath;
-                    footprintScale = 0.72f;
+                    footprintScale = ReferenceBuildingVisualScale(building.type);
                     return true;
                 case CityBuildingType.Apartment:
                     resourcePath = building.id == "apartment-court"
                         ? CityResidentialLotBResourcePath
                         : CityResidentialLotCResourcePath;
-                    footprintScale = 1.05f;
+                    footprintScale = ReferenceBuildingVisualScale(building.type);
                     return true;
                 case CityBuildingType.Commercial:
                     resourcePath = BuildingVariantResourcePath(
                         building,
                         CityCommercialResourcePaths);
-                    footprintScale = 1.00f;
+                    footprintScale = ReferenceBuildingVisualScale(building.type);
                     return true;
                 case CityBuildingType.CommunityFacility:
                     resourcePath = BuildingVariantResourcePath(
                         building,
                         CityCommunityResourcePaths);
-                    footprintScale = 0.88f;
+                    footprintScale = ReferenceBuildingVisualScale(building.type);
                     return true;
                 default:
                     return false;
+            }
+        }
+
+        public static float ReferenceBuildingVisualScale(CityBuildingType type)
+        {
+            // Calibrated from the supplied 1216 px-wide Riverside map area. The
+            // detached house was already close; taller/public buildings needed
+            // smaller artwork so density comes from building count, not icon size.
+            switch (type)
+            {
+                case CityBuildingType.DetachedHouse:
+                    return 0.72f;
+                case CityBuildingType.Apartment:
+                    return 0.56f;
+                case CityBuildingType.Commercial:
+                    return 0.72f;
+                case CityBuildingType.CommunityFacility:
+                    return 0.66f;
+                default:
+                    return 1f;
             }
         }
 
@@ -4503,7 +4525,7 @@ namespace UrbanWildlife.Prototype
             {
                 return 1;
             }
-            if (buildingCount <= 16)
+            if (buildingCount < MatureCityBuildingThreshold)
             {
                 return 2;
             }

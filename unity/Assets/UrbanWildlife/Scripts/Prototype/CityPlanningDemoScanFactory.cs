@@ -146,8 +146,12 @@ namespace UrbanWildlife.Prototype
                 .FirstOrDefault(id => !usedIds.Contains(id));
             if (tokenId == 0)
             {
-                error = $"All {type} pieces are already in use.";
-                return false;
+                tokenId = CityTokenInventory.NextDesktopVirtualId(type, usedIds);
+                if (tokenId == 0)
+                {
+                    error = $"The desktop city has reached its {type} building limit.";
+                    return false;
+                }
             }
 
             tokens.Add(new CityTokenState

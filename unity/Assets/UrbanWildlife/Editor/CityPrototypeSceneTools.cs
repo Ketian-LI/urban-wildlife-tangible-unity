@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -335,6 +336,7 @@ namespace UrbanWildlife.EditorTools
             VerifyPlanningWorkflow();
             VerifyGridConstructionRules();
             VerifyFreePlacementAndAutomaticAccess();
+            VerifyDesktopGrowthCapacity(prototype);
             VerifyDesktopPlayableFlow(prototype);
             VerifyVehicleRoutesStayOnRoad();
             Debug.Log(
@@ -349,7 +351,8 @@ namespace UrbanWildlife.EditorTools
                 "animal_activity_heatmap=True heatmap_hotkey_h=True heatmap_sidebar_bottom_right=True heatmap_world_overlay=False footprints_removed=True info_tabs=city_animals_events city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
-                "sparse_opening_map=True road_following=True no_premature_buildings=True " +
+                "sparse_opening_map=True dense_desktop_growth=True reference_building_scale=True " +
+                "road_following=True no_premature_buildings=True " +
                 "bilingual_ui_switch=True cjk_font_fallback=True");
         }
 
@@ -749,7 +752,11 @@ namespace UrbanWildlife.EditorTools
                 renderer.sprite.name == "apartment-riverside-v04");
             if (residentialBlueCount != 1 || residentialCoralCount != 1 ||
                 apartmentCount != 0 ||
-                Resources.Load<Sprite>("UrbanWildlife/Buildings/apartment-riverside-v04") == null)
+                Resources.Load<Sprite>("UrbanWildlife/Buildings/apartment-riverside-v04") == null ||
+                Math.Abs(CityPrototypeDemo.ReferenceBuildingVisualScale(
+                    CityBuildingType.DetachedHouse) - 0.72f) > 0.001f ||
+                Math.Abs(CityPrototypeDemo.ReferenceBuildingVisualScale(
+                    CityBuildingType.Apartment) - 0.56f) > 0.001f)
             {
                 throw new InvalidOperationException(
                     "The sparse opening must contain two reference-scaled detached houses while retaining the apartment asset; " +
@@ -757,7 +764,7 @@ namespace UrbanWildlife.EditorTools
             }
             Debug.Log(
                 "UNITY_CITY_RESIDENTIAL_VISUAL_SMOKE_OK opening_blue=1 opening_coral=1 apartment_available=True " +
-                "transparent_building_only=True map_controls_ground=True " +
+                "detached_scale=0.72 apartment_scale=0.56 transparent_building_only=True map_controls_ground=True " +
                 "placeholder_blocks=False");
         }
 
@@ -781,7 +788,11 @@ namespace UrbanWildlife.EditorTools
                  communityVariants.Contains(renderer.sprite.name)));
             bool variantsLoad = commercialVariants.Concat(communityVariants).All(name =>
                 Resources.Load<Sprite>($"UrbanWildlife/Buildings/{name}") != null);
-            if (laterDestinationCount != 0 || !variantsLoad)
+            if (laterDestinationCount != 0 || !variantsLoad ||
+                Math.Abs(CityPrototypeDemo.ReferenceBuildingVisualScale(
+                    CityBuildingType.Commercial) - 0.72f) > 0.001f ||
+                Math.Abs(CityPrototypeDemo.ReferenceBuildingVisualScale(
+                    CityBuildingType.CommunityFacility) - 0.66f) > 0.001f)
             {
                 throw new InvalidOperationException(
                     "Later public destinations must stay available without appearing in the opening map; " +
@@ -790,6 +801,7 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_COMMERCIAL_VISUAL_SMOKE_OK opening_public_buildings=0 " +
                 "commercial_reference_asset=1 community_reference_asset=1 " +
+                "commercial_scale=0.72 community_scale=0.66 " +
                 "transparent_building_only=True placeholder_blocks=False");
         }
 
@@ -1469,6 +1481,79 @@ namespace UrbanWildlife.EditorTools
                 "smooth_access_curve=11_points nearest_existing_local_street=True " +
                 "parallel_sidewalk=True sidewalk_tracks_route_choice=True " +
                 "woodland_to_white=True");
+        }
+
+        private static void VerifyDesktopGrowthCapacity(CityPrototypeDemo prototype)
+        {
+            CityState growthCity = CityPrototypeStateFactory.Create();
+            var buildings = growthCity.buildings.ToList();
+            buildings.Add(CityConstructionFactory.CreateBuilding(
+                new CityTokenState
+                {
+                    id = 112,
+                    type = CityPhysicalTokenType.DetachedHouse,
+                    x_norm = 0.42f,
+                    y_norm = 0.18f,
+                    rotation_deg = 0f,
+                    confidence = 1f,
+                },
+                CityConstructionState.Existing));
+            buildings.Add(CityConstructionFactory.CreateBuilding(
+                new CityTokenState
+                {
+                    id = 113,
+                    type = CityPhysicalTokenType.DetachedHouse,
+                    x_norm = 0.58f,
+                    y_norm = 0.18f,
+                    rotation_deg = 0f,
+                    confidence = 1f,
+                },
+                CityConstructionState.Existing));
+            growthCity.buildings = buildings.ToArray();
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            if (!CityPlanningDemoScanFactory.TryCreateDesktopPlacementScan(
+                    growthCity,
+                    CityPhysicalTokenType.DetachedHouse,
+                    0.50f,
+                    0.80f,
+                    timestamp,
+                    out CityTokenScanPacket desktopScan,
+                    out string createError))
+            {
+                throw new InvalidOperationException(
+                    $"Desktop growth could not continue beyond the physical pieces: {createError}");
+            }
+            CityTokenState virtualToken = desktopScan.token_states.SingleOrDefault(token =>
+                CityTokenInventory.IsDesktopVirtualTokenId(token.id));
+            bool desktopAccepted = CityTokenScanReader.TryParseAndValidate(
+                JsonConvert.SerializeObject(desktopScan),
+                -1,
+                out _,
+                out string desktopError);
+
+            desktopScan.capture.mode = "camera_frame";
+            desktopScan.recognition.marker_backend = "aruco";
+            bool cameraAcceptedVirtual = CityTokenScanReader.TryParseAndValidate(
+                JsonConvert.SerializeObject(desktopScan),
+                -1,
+                out _,
+                out _);
+            if (prototype.BuildingCapacity != 72 ||
+                CityPrototypeDemo.MatureCityBuildingThreshold != 23 ||
+                virtualToken == null ||
+                virtualToken.type != CityPhysicalTokenType.DetachedHouse ||
+                !desktopAccepted || cameraAcceptedVirtual)
+            {
+                throw new InvalidOperationException(
+                    "Desktop play must support dense late-stage growth while camera scans stay physical-only. " +
+                    $"capacity={prototype.BuildingCapacity}, virtual={virtualToken?.id}, " +
+                    $"desktopAccepted={desktopAccepted}, desktopError={desktopError}, " +
+                    $"cameraAcceptedVirtual={cameraAcceptedVirtual}.");
+            }
+            Debug.Log(
+                "UNITY_CITY_DESKTOP_GROWTH_SMOKE_OK capacity=72 mature_threshold=23 " +
+                $"virtual_token={virtualToken.id} desktop_repeat_buildings=True " +
+                "camera_virtual_tokens_rejected=True");
         }
 
         private static void VerifyDesktopPlayableFlow(CityPrototypeDemo prototype)

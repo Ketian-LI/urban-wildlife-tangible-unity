@@ -15,5 +15,7 @@ This pass aligns the playable Unity interface with the supplied Riverside Park r
 - UI rectangles block map placement clicks so interface interaction cannot place buildings accidentally.
 - During placement, the exact building footprint and a translucent building preview are shown together: green is valid and red is blocked. Fine planning-cell outlines are secondary guidance only; the pointer remains continuously placeable rather than grid-snapped.
 - The cleared warm-white ground after confirmation follows the compact building footprint and narrow access route instead of clearing whole planning cells.
+- Building density comes from adding more compact buildings, not enlarging individual icons. Detached houses retain their established size; apartments, markets and community buildings use smaller type-specific display scales matched to the mature-city reference while their gameplay footprints remain unchanged.
+- Camera-free desktop play can continue placing repeated building types up to a 72-building city; the physical-camera edition remains constrained to its real Token inventory.
 
 `city-riverside-ui-layout-preview-v01.png` is a layout composite made from the verified Unity map capture and the verified UI layer capture. It documents the intended combined presentation; it is not presented as a single runtime screenshot.

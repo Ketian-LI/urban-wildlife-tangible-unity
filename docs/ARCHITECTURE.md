@@ -56,9 +56,9 @@
 
 ### 城市可视化集成壳
 
-参考图中的完整游戏流程通过同一套HUD表达：左上卡片显示Stage 1–3与Early/Mid/Late阶段，顶部显示年份、季节和城市指标，底部固定为Build、Info、Trace、Pause四项主导航。阶段由实时建筑数量推进；开局为Year 1 / Spring，扩展期为Year 3 / Autumn，成熟期为Year 5 / Winter。Build与Info切换右侧工具内容，Trace控制动物活动热点，Pause直接控制模拟运行。
+参考图中的完整游戏流程通过同一套HUD表达：左上卡片显示Stage 1–3与Early/Mid/Late阶段，顶部显示年份、季节和城市指标，底部固定为Build、Info、Trace、Pause四项主导航。阶段由实时建筑数量推进；开局为Year 1 / Spring，扩展期为Year 3 / Autumn，成熟期为Year 5 / Winter。Build切换建筑工具，Info将右侧栏重构为City Status / Animals / Events，Trace控制全地图活动分析，Pause直接控制模拟运行。
 
-Build模式在地图左上显示当前建筑说明、影响指标及确认/取消操作；非Build模式不会响应地图放置点击。Trace模式提供Normal、Human、Animal、Combined四档选择，并将同一批`CityObservationTracker`样本按模式聚合到右下信息卡：人类使用橙红色、动物使用蓝青色、综合使用青紫色。Info模式中的动物缩略图可以切换物种说明与行为标签。Roadkill或WasteOverflow首次出现时使用中央事件卡提示，玩家确认后按事件ID消隐。
+Build模式在地图左上显示当前建筑说明、影响指标及确认/取消操作；非Build模式不会响应地图放置点击。Trace模式提供Normal、Human、Animal、Combined四档选择，并将同一批`CityObservationTracker`样本绘制为覆盖地图的轻量活动层：人类以橙红热点和路径表达，动物以蓝青热点和路径表达，综合模式叠加两层。右下角卡片与Trace模式解耦，始终只显示动物热点，并由`H`单独开关。Info模式的City Status展示五维实时评分，Animals显示物种资料，Events显示最近城市事件。Roadkill或WasteOverflow首次出现时仍使用中央事件卡提示，玩家确认后按事件ID消隐。
 
 时间控件独立维护Pause、1×、2×与四季显示，不修改模拟内部的确定性步进关系。返回按钮打开覆盖式主菜单，Continue恢复进入菜单前的暂停状态，New Game明确重建初始城市与观测记录。结算页读取实时城市平衡、路网、垃圾和物种数据计算分项与总分，并提供View Map与Play Again；两个覆盖层都会禁用底层地图及侧栏交互，但保留“进入Unity直接游玩”的默认入口。
 
@@ -72,7 +72,7 @@ Build模式在地图左上显示当前建筑说明、影响指标及确认/取�
 
 `CityStrategySimulation`管理DP、施工/拆除项目、四个日内Time Block和五个Development Phase。项目开始后转为UnderConstruction/Demolishing，经过规定Time Block才完成；City Balance五维等权计算，最后一个Natural Food Patch受到硬约束保护。暂停与运行速度只允许0、1、2倍。
 
-`CityObservationTracker`从Mobility与Wildlife公开快照采样Human/Animal/Combined Trace，去重生成Overflow、Crowding、Feeding、Migration、Roadkill、Project Completed和Balance Warning事件。阶段报告冻结Before/After五维分数；`CityResearchLogWriter`输出不含参与者身份字段的JSONL与CSV。`CityTraceVisualizer`只消费快照并聚合18 × 12动物活动强度，不再在主地图上生成鞋印、轮迹、爪印或热点几何。右侧栏底部固定显示与参考界面同层级的小地图卡片；按H或点击卡片开关后，只在卡片内叠加蓝—黄—红柔和热点，不反向修改模拟状态。
+`CityObservationTracker`从Mobility与Wildlife公开快照采样Human/Animal/Combined Trace，去重生成Overflow、Crowding、Feeding、Migration、Roadkill、Project Completed和Balance Warning事件。阶段报告冻结Before/After五维分数；`CityResearchLogWriter`输出不含参与者身份字段的JSONL与CSV。`CityTraceVisualizer`只消费快照并分别聚合18 × 12人类与动物活动强度，不在Unity世界中生成鞋印、轮迹、爪印或热点几何。Trace模式由UI在全地图上绘制低透明度活动层；右侧栏底部的小地图卡片只读取Animal层，按H或点击卡片开关后叠加蓝—黄—红柔和热点，不反向修改模拟状态。
 
 ## 已确定的实体输入基线
 

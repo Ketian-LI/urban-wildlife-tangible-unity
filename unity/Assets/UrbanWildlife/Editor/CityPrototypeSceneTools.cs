@@ -327,6 +327,7 @@ namespace UrbanWildlife.EditorTools
             VerifyCompactNeighbourhoodPresentation(prototype);
             VerifyBilingualUi(prototype);
             VerifyRiversideUi(prototype);
+            VerifyInformationPanel(prototype);
             VerifyActivityHeatmap(prototype);
             VerifyStreetLifeVisuals(prototype);
             VerifyResponsiveCameraFit();
@@ -342,10 +343,10 @@ namespace UrbanWildlife.EditorTools
                 "pedestrian_links=6 amenities=0 food_sources=True waste_pressure=True " +
                 "wildlife_agents=15 species=4 utility_targets=True " +
                 "development_phases=5 city_balance=True dp=True time_blocks=4 " +
-                "human_animal_combined_trace=True city_feed=True phase_report=True " +
+                "human_animal_combined_trace=True full_map_activity_views=True city_feed=True phase_report=True " +
                 "representative_agents=6 represented_population=24 walk_trips=4 vehicle_trips=2 " +
                 "external_return_routes=True live_vehicle_agents=True visible_pedestrian_paths=True shared_road_corridor=True pedestrians_on_sidewalk=True max_speed=2x no_questionnaire=True " +
-                "animal_activity_heatmap=True heatmap_hotkey_h=True heatmap_sidebar_bottom_right=True heatmap_world_overlay=False footprints_removed=True city_feed_panel=True phase_snapshot=True " +
+                "animal_activity_heatmap=True heatmap_hotkey_h=True heatmap_sidebar_bottom_right=True heatmap_world_overlay=False footprints_removed=True info_tabs=city_animals_events city_feed_panel=True phase_snapshot=True " +
                 "desktop_play_default=True click_preview_confirm_build=True camera_mode_retained=True " +
                 "camera_scan_file_bridge=True scan_preview_route_dp_construction=True " +
                 "sparse_opening_map=True road_following=True no_premature_buildings=True " +
@@ -381,6 +382,7 @@ namespace UrbanWildlife.EditorTools
             Rect cityStatus = CityPrototypeDemo.CityStatusRectForScreen(width, height);
             Rect toolbar = CityPrototypeDemo.ToolbarRectForScreen(width, height);
             Rect buildingMode = CityPrototypeDemo.BuildingModeRectForScreen(width, height);
+            Rect activityLegend = CityPrototypeDemo.ActivityLegendRectForScreen(width, height);
             Rect traceMode = CityPrototypeDemo.TraceModeRectForScreen(width, height);
             Rect eventPopup = CityPrototypeDemo.EventPopupRectForScreen(width, height);
             Rect timeControl = CityPrototypeDemo.TimeControlRectForScreen(width, height);
@@ -418,6 +420,8 @@ namespace UrbanWildlife.EditorTools
                          prototype.ActiveBottomNavigationIndex == 0 &&
                          prototype.BuildingPlacementCardEnabled &&
                          prototype.TraceViewSelectorEnabled &&
+                         prototype.FullMapActivityViewEnabled &&
+                         prototype.InformationPanelEnabled &&
                          prototype.ActiveTraceViewIndex == 0 &&
                          initialTime && normalSpeed && pausedSpeed && seasonAdvanced &&
                          mainMenuFlow && endScreenFlow &&
@@ -428,8 +432,10 @@ namespace UrbanWildlife.EditorTools
                          cityStatus.y >= height * 0.70f && cityStatus.yMax <= height &&
                          toolbar.x >= cityStatus.xMax && toolbar.xMax < mapWidth &&
                          toolbar.y >= height * 0.80f && toolbar.yMax <= height &&
-                         buildingMode.x >= 0f && buildingMode.xMax < mapWidth &&
-                         buildingMode.y > 100f && buildingMode.yMax < toolbar.y &&
+                          buildingMode.x >= 0f && buildingMode.xMax < mapWidth &&
+                          buildingMode.y > 100f && buildingMode.yMax < toolbar.y &&
+                          activityLegend.x >= 0f && activityLegend.xMax < mapWidth &&
+                          activityLegend.y > 100f && activityLegend.yMax < toolbar.y &&
                          traceMode.x == toolbar.x && traceMode.xMax == toolbar.xMax &&
                          traceMode.yMax < toolbar.y &&
                          eventPopup.x >= 0f && eventPopup.xMax < mapWidth &&
@@ -455,26 +461,51 @@ namespace UrbanWildlife.EditorTools
                 "building_catalog=True environment_catalog=True heatmap_bottom_right=True active_tab=buildings");
         }
 
+        private static void VerifyInformationPanel(CityPrototypeDemo prototype)
+        {
+            prototype.SetBottomNavigation(1);
+            bool cityTab = prototype.InformationPanelEnabled &&
+                           prototype.ActiveBottomNavigationIndex == 1 &&
+                           prototype.ActiveInformationTab == 0;
+            prototype.SetInformationTab(1);
+            bool animalTab = prototype.ActiveInformationTab == 1;
+            prototype.SetInformationTab(2);
+            bool eventsTab = prototype.ActiveInformationTab == 2;
+            prototype.SetBottomNavigation(0);
+            if (!cityTab || !animalTab || !eventsTab ||
+                prototype.ActiveBottomNavigationIndex != 0)
+            {
+                throw new InvalidOperationException(
+                    "The information panel must expose City Status, Animals and Events tabs.");
+            }
+            Debug.Log(
+                "UNITY_CITY_INFORMATION_PANEL_SMOKE_OK tabs=city_status_animals_events " +
+                "dynamic_scores=True bilingual=True");
+        }
+
         private static void VerifyActivityHeatmap(CityPrototypeDemo prototype)
         {
             if (prototype.HeatmapVisible)
             {
                 throw new InvalidOperationException("The activity heatmap must start hidden.");
             }
+            prototype.SetBottomNavigation(2);
             prototype.SetTraceView(1);
-            bool humanView = prototype.HeatmapVisible &&
-                             !prototype.HeatmapUsesAnimalData &&
+            bool humanView = !prototype.HeatmapVisible &&
+                             prototype.FullMapActivityOverlayVisible &&
                              prototype.ActiveTraceViewIndex == 1;
             prototype.SetTraceView(3);
-            bool combinedView = prototype.HeatmapVisible &&
-                                !prototype.HeatmapUsesAnimalData &&
+            bool combinedView = !prototype.HeatmapVisible &&
+                                prototype.FullMapActivityOverlayVisible &&
                                 prototype.ActiveTraceViewIndex == 3;
             prototype.SetTraceView(0);
-            if (!humanView || !combinedView || prototype.HeatmapVisible)
+            if (!humanView || !combinedView || prototype.HeatmapVisible ||
+                prototype.FullMapActivityOverlayVisible)
             {
                 throw new InvalidOperationException(
-                    "Human, animal and combined activity views must share the trace selector.");
+                    "Human, animal and combined activity views must render over the full map.");
             }
+            prototype.SetBottomNavigation(0);
             prototype.SetHeatmapVisible(true);
             Rect sidebarCard = CityPrototypeDemo.HeatmapCardRectForScreen(1920, 1080);
             bool bottomRightCard = sidebarCard.x >= 1920f *
@@ -505,6 +536,17 @@ namespace UrbanWildlife.EditorTools
                 bool animalOnly = visualizer.VisibleCellCount == 1 &&
                                   visualizer.CellCount(14, 9) == 1 &&
                                   visualizer.CellIntensity(14, 9) > 0.99f;
+                bool independentLayers =
+                    visualizer.VisibleCellCountFor(CityTraceDisplayMode.HumanTrace) == 1 &&
+                    visualizer.VisibleCellCountFor(CityTraceDisplayMode.AnimalTrace) == 1 &&
+                    visualizer.CellIntensity(
+                        CityTraceDisplayMode.HumanTrace,
+                        3,
+                        2) > 0.99f &&
+                    visualizer.CellIntensity(
+                        CityTraceDisplayMode.AnimalTrace,
+                        14,
+                        9) > 0.99f;
                 bool noWorldOverlay = !visualizer.WorldOverlayActive;
                 bool noFootprintObjects = !host.GetComponentsInChildren<Transform>(true)
                     .Any(item =>
@@ -512,10 +554,11 @@ namespace UrbanWildlife.EditorTools
                         item.name.IndexOf("tyre", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         item.name.IndexOf("paw", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         item.name.IndexOf("toe", StringComparison.OrdinalIgnoreCase) >= 0);
-                if (!prototypeToggleOn || !animalOnly || !noWorldOverlay || !noFootprintObjects)
+                if (!prototypeToggleOn || !animalOnly || !independentLayers ||
+                    !noWorldOverlay || !noFootprintObjects)
                 {
                     throw new InvalidOperationException(
-                        "The animal heatmap must aggregate trace samples in the fixed sidebar card without overlaying the map.");
+                        "The animal hotspot card must stay independent from the full-map activity views.");
                 }
             }
             finally
@@ -525,8 +568,9 @@ namespace UrbanWildlife.EditorTools
             Debug.Log(
                 "UNITY_CITY_ACTIVITY_HEATMAP_SMOKE_OK default_hidden=True h_toggle=True " +
                 "views=normal_human_animal_combined " +
-                "animal_only=True animal_cells=1 human_samples_excluded=True individual_marks=False " +
-                "sidebar_bottom_right=True world_map_overlay=False");
+                "full_map_activity=True independent_layers=True animal_only=True animal_cells=1 " +
+                "human_samples_excluded=True individual_marks=False sidebar_bottom_right=True " +
+                "animal_hotspot_world_overlay=False");
         }
 
         private static CityTracePoint HeatSample(

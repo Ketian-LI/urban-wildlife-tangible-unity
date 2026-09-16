@@ -25,7 +25,11 @@ namespace UrbanWildlife.Reporting
         private object cachedSourceReference;
         private int cachedSourceCount = -1;
         private int[,] selectedCounts = new int[HeatmapColumns, HeatmapRows];
+        private int[,] humanCounts = new int[HeatmapColumns, HeatmapRows];
+        private int[,] animalCounts = new int[HeatmapColumns, HeatmapRows];
         private int selectedPeak;
+        private int humanPeak;
+        private int animalPeak;
 
         public CityTraceVisualizer(Transform parent, float mapWidth, float mapHeight)
         {
@@ -62,6 +66,55 @@ namespace UrbanWildlife.Reporting
             return selectedPeak <= 0 || count <= 0
                 ? 0f
                 : Mathf.Sqrt(count / (float)selectedPeak);
+        }
+
+        public int CellCount(CityTraceDisplayMode mode, int column, int row)
+        {
+            if (column < 0 || column >= HeatmapColumns || row < 0 || row >= HeatmapRows)
+            {
+                return 0;
+            }
+            switch (mode)
+            {
+                case CityTraceDisplayMode.HumanTrace:
+                    return humanCounts[column, row];
+                case CityTraceDisplayMode.AnimalTrace:
+                    return animalCounts[column, row];
+                default:
+                    return humanCounts[column, row] + animalCounts[column, row];
+            }
+        }
+
+        public float CellIntensity(
+            CityTraceDisplayMode mode,
+            int column,
+            int row)
+        {
+            int count = CellCount(mode, column, row);
+            int peak = mode == CityTraceDisplayMode.HumanTrace
+                ? humanPeak
+                : mode == CityTraceDisplayMode.AnimalTrace
+                    ? animalPeak
+                    : CombinedPeak();
+            return peak <= 0 || count <= 0
+                ? 0f
+                : Mathf.Sqrt(count / (float)peak);
+        }
+
+        public int VisibleCellCountFor(CityTraceDisplayMode mode)
+        {
+            int visible = 0;
+            for (int column = 0; column < HeatmapColumns; column += 1)
+            {
+                for (int row = 0; row < HeatmapRows; row += 1)
+                {
+                    if (CellCount(mode, column, row) > 0)
+                    {
+                        visible += 1;
+                    }
+                }
+            }
+            return visible;
         }
 
         public void Render(IEnumerable<CityTracePoint> source)
@@ -118,7 +171,9 @@ namespace UrbanWildlife.Reporting
             ClearChildren(animalRoot);
             ClearChildren(combinedRoot);
             selectedCounts = new int[HeatmapColumns, HeatmapRows];
-            foreach (CityTracePoint point in cachedPoints.Where(MatchesMode))
+            humanCounts = new int[HeatmapColumns, HeatmapRows];
+            animalCounts = new int[HeatmapColumns, HeatmapRows];
+            foreach (CityTracePoint point in cachedPoints)
             {
                 int column = Mathf.Clamp(
                     Mathf.FloorToInt(point.position_norm[0] * HeatmapColumns),
@@ -128,15 +183,30 @@ namespace UrbanWildlife.Reporting
                     Mathf.FloorToInt(point.position_norm[1] * HeatmapRows),
                     0,
                     HeatmapRows - 1);
-                selectedCounts[column, row] += 1;
+                if (point.layer == CityTraceLayer.Human)
+                {
+                    humanCounts[column, row] += 1;
+                }
+                else
+                {
+                    animalCounts[column, row] += 1;
+                }
+                if (MatchesMode(point))
+                {
+                    selectedCounts[column, row] += 1;
+                }
             }
 
             selectedPeak = 0;
+            humanPeak = 0;
+            animalPeak = 0;
             for (int column = 0; column < HeatmapColumns; column += 1)
             {
                 for (int row = 0; row < HeatmapRows; row += 1)
                 {
                     selectedPeak = Math.Max(selectedPeak, selectedCounts[column, row]);
+                    humanPeak = Math.Max(humanPeak, humanCounts[column, row]);
+                    animalPeak = Math.Max(animalPeak, animalCounts[column, row]);
                 }
             }
             if (selectedPeak == 0)
@@ -159,6 +229,21 @@ namespace UrbanWildlife.Reporting
                 }
             }
             VisibleMarkCount = visibleCells;
+        }
+
+        private int CombinedPeak()
+        {
+            int peak = 0;
+            for (int column = 0; column < HeatmapColumns; column += 1)
+            {
+                for (int row = 0; row < HeatmapRows; row += 1)
+                {
+                    peak = Math.Max(
+                        peak,
+                        humanCounts[column, row] + animalCounts[column, row]);
+                }
+            }
+            return peak;
         }
 
         private bool MatchesMode(CityTracePoint point)
